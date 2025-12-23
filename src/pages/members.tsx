@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Trash2, Edit, Save, X, Upload, Download, Search, Filter, Home, Users, DollarSign, Calendar, Eye, Settings, ArrowLeft, User, Pencil } from "lucide-react";
+import { Plus, Trash2, Edit, Save, X, Upload, Download, Search, Filter, Home, Users, DollarSign, Calendar, Eye, Settings, ArrowLeft, User, Pencil, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/router";
 
 const TEAMS_BY_CATEGORY = {
@@ -76,22 +76,51 @@ interface Member {
 
 export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  
+  // Photo Preview State
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = useState(false);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState("");
-  const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterTeam, setFilterTeam] = useState("all");
-  const [filterCategory, setFilterCategory] = useState("all");
+  
+  // Import Dialog State
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  
+  // Validation State
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Form Data State
   const [formData, setFormData] = useState<Partial<Member>>({
     category: "Junior",
     type: "Member",
     role: "Player",
     coachingCredits: 0,
+    teamAssignment: "",
   });
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Filtering State
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterType, setFilterType] = useState(""); // This refers to Member/Sponsored/Scholarship in some contexts, but let's align with UI
+  const [filterRole, setFilterRole] = useState("");
+  const [filterMembershipCategory, setFilterMembershipCategory] = useState(""); // Payment status
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
   const router = useRouter();
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterCategory("all");
+    setFilterTeam("all");
+    setFilterType("");
+    setFilterRole("");
+    setFilterMembershipCategory("");
+    setCurrentPage(1);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -1555,18 +1584,38 @@ export default function Members() {
     a.click();
   };
 
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = 
-      member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.teamAssignment.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredAndSortedMembers = members.filter((member) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.contactNumber?.includes(searchTerm);
+
+    // Filter by Category (Age Group: Junior, Youth, Adult)
     const matchesCategory = filterCategory === "all" || member.category === filterCategory;
+
+    // Filter by Team
     const matchesTeam = filterTeam === "all" || member.teamAssignment === filterTeam;
+
+    // Filter by Role (Player, Coach, Admin)
+    const matchesRole = filterRole === "" || member.role === filterRole;
+
+    // Filter by Membership Type/Status (Member, Sponsored, Scholarship)
+    // Note: In the UI, 'filterMembershipCategory' select is used for this.
+    const matchesMembershipStatus = filterMembershipCategory === "" || member.type === filterMembershipCategory;
     
-    return matchesSearch && matchesCategory && matchesTeam;
-  });
+    // Legacy filterType check if used
+    const matchesLegacyType = filterType === "" || member.category === filterType;
+
+    return matchesSearch && matchesCategory && matchesTeam && matchesRole && matchesMembershipStatus && matchesLegacyType;
+  }).sort((a, b) => a.firstName.localeCompare(b.firstName));
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredAndSortedMembers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentMembers = filteredAndSortedMembers.slice(startIndex, endIndex);
 
   return (
     <>
@@ -1638,7 +1687,7 @@ export default function Members() {
           <Card className="p-6 shadow-lg border-2 border-blue-100">
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search members..."
                   value={searchTerm}
@@ -1674,39 +1723,127 @@ export default function Members() {
 
             <div className="flex flex-wrap gap-3 mb-6">
               <Button 
+                onClick={handleLoadLegends}
+                className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Load Legends Data
+              </Button>
+              <Button
+                onClick={() => setShowImportDialog(true)}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button
                 onClick={() => {
                   resetForm();
                   setIsDialogOpen(true);
                 }}
-                className="bg-blue-700 hover:bg-blue-800 h-12 px-6 font-bold"
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <Plus className="w-5 h-5 mr-2" />
+                <UserPlus className="w-4 h-4 mr-2" />
                 Add Member
               </Button>
-              <Button 
-                onClick={handleLoadLegends}
-                className="bg-yellow-500 hover:bg-yellow-600 font-bold"
-              >
-                <Download className="mr-2 h-4 w-4" /> Load Legends Data
-              </Button>
-              <Button variant="outline" onClick={() => document.getElementById("csv-upload")?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Import CSV
-              </Button>
-              <input
-                id="csv-upload"
-                type="file"
-                accept=".csv"
-                onChange={handleImportCSV}
-                className="border-2 border-blue-700 text-blue-700 hover:bg-blue-50 h-12 px-6 font-bold"
-              />
-              <Button 
-                onClick={handleExportCSV}
-                variant="outline"
-                className="border-2 border-green-600 text-green-600 hover:bg-green-50 h-12 px-6 font-bold"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                Export CSV
-              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+              <div className="lg:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search by name, email, or contact..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Teams</SelectItem>
+                  {teamOptions.map((team) => (
+                    <SelectItem key={team} value={team}>
+                      {team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="Junior">Junior</SelectItem>
+                  <SelectItem value="Youth">Youth</SelectItem>
+                  <SelectItem value="Adult">Adult</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Roles</SelectItem>
+                  <SelectItem value="Player">Player</SelectItem>
+                  <SelectItem value="Coach">Coach</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filterMembershipCategory} onValueChange={setFilterMembershipCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="Standard">Standard</SelectItem>
+                  <SelectItem value="Sponsored">Sponsored</SelectItem>
+                  <SelectItem value="Scholarship">Scholarship</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(searchTerm || selectedTeam || filterType || filterRole || filterMembershipCategory) && (
+                <Button
+                  onClick={handleClearFilters}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Showing <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}</span> to{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">{Math.min(endIndex, filteredAndSortedMembers.length)}</span> of{" "}
+                <span className="font-semibold text-gray-900 dark:text-white">{filteredAndSortedMembers.length}</span> members
+              </p>
+              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 per page</SelectItem>
+                  <SelectItem value="25">25 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                  <SelectItem value="100">100 per page</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="overflow-x-auto rounded-xl border-2 border-blue-100">
@@ -1725,7 +1862,7 @@ export default function Members() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMembers.map((member) => (
+                  {currentMembers.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell>
                         {member.photoUrl ? (
@@ -1785,6 +1922,57 @@ export default function Members() {
                 </TableBody>
               </Table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <Button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 7) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 4) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 3) {
+                      pageNumber = totalPages - 6 + i;
+                    } else {
+                      pageNumber = currentPage - 3 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        variant={currentPage === pageNumber ? "default" : "outline"}
+                        size="sm"
+                        className={currentPage === pageNumber ? "bg-blue-600" : ""}
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  variant="outline"
+                  size="sm"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
       </div>
