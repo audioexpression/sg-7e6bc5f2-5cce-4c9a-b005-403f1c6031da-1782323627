@@ -11,6 +11,40 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit, Search, Upload, Download, Plus, ArrowLeft, User } from "lucide-react";
 
+// Define teams by category
+const TEAMS_BY_CATEGORY = {
+  Junior: [
+    "Toddler",
+    "Kindy/U6 1",
+    "Kindy/U6 2",
+    "U8 Dev",
+    "U8 Adv",
+    "U10 Dev",
+    "U10 Adv",
+    "U12 Girls",
+    "U12 Dev",
+    "U12 Adv"
+  ],
+  Youth: [
+    "U14",
+    "U14 Girls",
+    "U16",
+    "U18 Girls",
+    "U18"
+  ],
+  Adult: [
+    "1st Team",
+    "Social Team",
+    "Legends 35+",
+    "Masters 45+"
+  ]
+};
+
+const ROLES = ["Player", "Player-Coach", "Coach", "Admin"];
+
+// Create a flat list of all teams for the filter dropdown
+const ALL_TEAMS = Object.values(TEAMS_BY_CATEGORY).flat();
+
 interface Member {
   id: string;
   firstName: string;
@@ -19,28 +53,21 @@ interface Member {
   nationality: string;
   address: string;
   email: string;
-  contactNumber: string;
   shirtNumber: string;
-  category: "Junior" | "Youth" | "Adult"; // Age group
-  type: "Member" | "Sponsored" | "Scholarship"; // Payment status
-  role: "Player" | "Coach" | "Admin";
+  category: "Junior" | "Youth" | "Adult";
+  type: "Member" | "Sponsored" | "Scholarship";
+  role: string;
   teamAssignment: string;
   joiningDate: string;
-  photoUrl?: string;
+  contactNumber: string;
   primaryContact: string;
   primaryContactNumber: string;
   secondaryContact: string;
   secondaryContactNumber: string;
   medicalNotes: string;
   coachingCredits: number;
+  photoUrl?: string;
 }
-
-const teamOptions = [
-  "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv",
-  "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
-  "U14", "U14 Girls", "U16", "U18 Girls", "U18",
-  "Women", "Masters", "Legends", "Social", "1st Team"
-];
 
 export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -50,6 +77,8 @@ export default function Members() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterTeam, setFilterTeam] = useState<string>("all");
+
+  const teamOptions = ALL_TEAMS;
 
   const [formData, setFormData] = useState<Partial<Member>>({
     firstName: "",
@@ -621,22 +650,53 @@ export default function Members() {
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="teamAssignment" className="font-semibold">Team Assignment *</Label>
-                <Select
-                  value={formData.teamAssignment}
-                  onValueChange={(value) => setFormData({...formData, teamAssignment: value})}
-                >
-                  <SelectTrigger className="border-2 border-blue-200">
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teamOptions.map(team => (
-                      <SelectItem key={team} value={team}>{team}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="category">Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value: "Junior" | "Youth" | "Adult") => {
+                  setFormData({ 
+                    ...formData, 
+                    category: value,
+                    teamAssignment: "" // Reset team when category changes
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Junior">Junior</SelectItem>
+                  <SelectItem value="Youth">Youth</SelectItem>
+                  <SelectItem value="Adult">Adult</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="teamAssignment">Team Assignment *</Label>
+              <Select
+                value={formData.teamAssignment}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, teamAssignment: value })
+                }
+                disabled={!formData.category}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={formData.category ? "Select team" : "Select category first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {formData.category && TEAMS_BY_CATEGORY[formData.category].map((team) => (
+                    <SelectItem key={team} value={team}>
+                      {team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!formData.category && (
+                <p className="text-sm text-gray-500 mt-1">Please select a category first to see available teams</p>
+              )}
+            </div>
 
               <div>
                 <Label htmlFor="joiningDate" className="font-semibold">Joining Date *</Label>
