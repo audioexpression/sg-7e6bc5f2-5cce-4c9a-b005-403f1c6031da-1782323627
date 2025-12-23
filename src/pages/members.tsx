@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { UserPlus, Search, Edit, Trash2, ArrowLeft, Download, Upload } from "lucide-react";
+import { Search, Edit, Trash2, ArrowLeft, UserPlus, Upload, Download } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 
 interface Member {
@@ -43,11 +44,13 @@ const teams = [
 
 export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [filterTeam, setFilterTeam] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
+  const [importStatus, setImportStatus] = useState("");
 
   const [formData, setFormData] = useState<Member>({
     id: "",
@@ -78,6 +81,104 @@ export default function Members() {
       setMembers(JSON.parse(stored));
     }
   }, []);
+
+  const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const rows = text.split("\n").map(row => row.split(",").map(cell => cell.trim()));
+      
+      if (rows.length < 2) {
+        setImportStatus("❌ Invalid CSV file");
+        return;
+      }
+
+      const headers = rows[0].map(h => h.toLowerCase());
+      const importedMembers: Member[] = [];
+      let successCount = 0;
+      let skipCount = 0;
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length < 2 || !row[0]) {
+          skipCount++;
+          continue;
+        }
+
+        const member: Member = {
+          id: Date.now().toString() + i,
+          firstName: row[headers.indexOf("first name")] || row[headers.indexOf("firstname")] || "",
+          lastName: row[headers.indexOf("last name")] || row[headers.indexOf("lastname")] || "",
+          dateOfBirth: row[headers.indexOf("date of birth")] || row[headers.indexOf("dob")] || "",
+          nationality: row[headers.indexOf("nationality")] || "",
+          address: row[headers.indexOf("address")] || row[headers.indexOf("area")] || "",
+          email: row[headers.indexOf("email")] || "",
+          shirtNumber: parseInt(row[headers.indexOf("shirt nr")] || row[headers.indexOf("shirt number")] || "0"),
+          type: (row[headers.indexOf("type")] as "Junior" | "Youth" | "Adult") || "Junior",
+          role: (row[headers.indexOf("role")] as "Player" | "Coach" | "Admin") || "Player",
+          team: (row[headers.indexOf("team")] || row[headers.indexOf("team assignment")] as any) || "U6",
+          membershipCategory: (row[headers.indexOf("membership category")] || row[headers.indexOf("category")] as any) || "Standard",
+          joiningDate: row[headers.indexOf("joining date")] || new Date().toISOString().split("T")[0],
+          contactNumber: row[headers.indexOf("contact number")] || row[headers.indexOf("phone")] || "",
+          primaryContact: row[headers.indexOf("primary contact")] || "",
+          primaryContactNumber: row[headers.indexOf("primary contact number")] || "",
+          secondaryContact: row[headers.indexOf("secondary contact")] || "",
+          secondaryContactNumber: row[headers.indexOf("secondary contact number")] || "",
+          medicalNotes: row[headers.indexOf("medical notes")] || "",
+          privateCoachingCredits: parseInt(row[headers.indexOf("private coaching credits")] || row[headers.indexOf("credits")] || "0"),
+        };
+
+        if (member.firstName && member.lastName) {
+          importedMembers.push(member);
+          successCount++;
+        } else {
+          skipCount++;
+        }
+      }
+
+      const updatedMembers = [...members, ...importedMembers];
+      setMembers(updatedMembers);
+      localStorage.setItem("members", JSON.stringify(updatedMembers));
+      setImportStatus(`✅ Imported ${successCount} members${skipCount > 0 ? ` (${skipCount} rows skipped)` : ""}`);
+      
+      setTimeout(() => {
+        setIsImportDialogOpen(false);
+        setImportStatus("");
+      }, 2000);
+    };
+
+    reader.readAsText(file);
+  };
+
+  const exportToCSV = () => {
+    const headers = [
+      "First Name", "Last Name", "Date of Birth", "Nationality", "Address", "Email",
+      "Shirt Nr", "Type", "Role", "Team", "Membership Category", "Joining Date",
+      "Contact Number", "Primary Contact", "Primary Contact Number",
+      "Secondary Contact", "Secondary Contact Number", "Medical Notes",
+      "Private Coaching Credits"
+    ];
+
+    const rows = members.map(m => [
+      m.firstName, m.lastName, m.dateOfBirth, m.nationality, m.address, m.email,
+      m.shirtNumber, m.type, m.role, m.team, m.membershipCategory, m.joiningDate,
+      m.contactNumber, m.primaryContact, m.primaryContactNumber,
+      m.secondaryContact, m.secondaryContactNumber, m.medicalNotes,
+      m.privateCoachingCredits
+    ]);
+
+    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bali-bulldogs-members-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   const saveMember = () => {
     let updatedMembers: Member[];
@@ -126,13 +227,13 @@ export default function Members() {
       privateCoachingCredits: 0,
     });
     setEditingMember(null);
-    setIsAddDialogOpen(false);
+    setIsDialogOpen(false);
   };
 
   const openEditDialog = (member: Member) => {
     setFormData(member);
     setEditingMember(member);
-    setIsAddDialogOpen(true);
+    setIsDialogOpen(true);
   };
 
   const filteredMembers = members.filter(member => {
@@ -147,35 +248,11 @@ export default function Members() {
     return matchesSearch && matchesTeam && matchesType;
   });
 
-  const exportToCSV = () => {
-    const headers = [
-      "First Name", "Last Name", "Date of Birth", "Nationality", "Address", "Email",
-      "Shirt Number", "Type", "Role", "Team", "Membership Category", "Joining Date",
-      "Contact Number", "Primary Contact", "Primary Contact Number",
-      "Secondary Contact", "Secondary Contact Number", "Medical Notes", "Private Coaching Credits"
-    ];
-    
-    const rows = members.map(m => [
-      m.firstName, m.lastName, m.dateOfBirth, m.nationality, m.address, m.email,
-      m.shirtNumber || "", m.type, m.role, m.team, m.membershipCategory, m.joiningDate,
-      m.contactNumber, m.primaryContact, m.primaryContactNumber,
-      m.secondaryContact || "", m.secondaryContactNumber || "", m.medicalNotes || "", m.privateCoachingCredits
-    ]);
-    
-    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bali-bulldogs-members-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-  };
-
   return (
     <>
       <SEO 
         title="Member Database - Bali Bulldogs Club Manager"
-        description="Manage all club members, contacts, and details"
+        description="Complete member registry and management system"
       />
       
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-blue-100">
@@ -198,19 +275,65 @@ export default function Members() {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <CardTitle className="text-2xl font-black text-bulldogs-blue">All Members</CardTitle>
-                  <CardDescription>Total: {filteredMembers.length} members</CardDescription>
+                  <CardTitle className="text-2xl font-black text-bulldogs-blue">Members</CardTitle>
+                  <CardDescription>Total: {filteredMembers.length} of {members.length} members</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={exportToCSV} variant="outline" className="gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={exportToCSV}
+                  >
                     <Download className="h-4 w-4" />
                     Export CSV
                   </Button>
-                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="gap-2">
+                        <Upload className="h-4 w-4" />
+                        Import CSV
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="text-2xl font-black text-bulldogs-blue">
+                          Import Members from CSV
+                        </DialogTitle>
+                        <DialogDescription>
+                          Upload your Excel/CSV file to import members
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="csv-file">CSV File</Label>
+                          <Input
+                            id="csv-file"
+                            type="file"
+                            accept=".csv"
+                            onChange={handleCSVImport}
+                          />
+                          <p className="text-xs text-gray-500">
+                            Expected columns: First Name, Last Name, Date of Birth, Nationality, Address, Email, 
+                            Shirt Nr, Type, Role, Team, Membership Category, Joining Date, Contact Number, 
+                            Primary Contact, Primary Contact Number, Secondary Contact, Secondary Contact Number, 
+                            Medical Notes, Private Coaching Credits
+                          </p>
+                        </div>
+
+                        {importStatus && (
+                          <Alert className={importStatus.startsWith("✅") ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}>
+                            <AlertDescription>{importStatus}</AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="gap-2 bg-bulldogs-blue hover:bg-bulldogs-blue/90">
                         <UserPlus className="h-4 w-4" />
