@@ -554,7 +554,10 @@ export default function Settings() {
                                     </div>
                                   ) : (
                                     <div className="flex justify-end gap-2">
-                                      <Button size="sm" variant="outline" onClick={() => setEditingTeam(team)}>
+                                      <Button size="sm" variant="outline" onClick={() => setEditingTeam({ 
+                                        ...team,
+                                        category: team.category as Team["category"]
+                                      })}>
                                         <Edit className="h-4 w-4" />
                                       </Button>
                                       <Button size="sm" variant="destructive" onClick={() => handleDeleteTeam(team.id)}>
