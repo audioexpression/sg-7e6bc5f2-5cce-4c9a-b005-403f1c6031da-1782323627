@@ -1730,7 +1730,7 @@ export default function Members() {
                 Load Legends Data
               </Button>
               <Button
-                onClick={() => setShowImportDialog(true)}
+                onClick={() => setIsImportOpen(true)}
                 variant="outline"
                 className="border-blue-600 text-blue-600 hover:bg-blue-50"
               >
@@ -1747,6 +1747,16 @@ export default function Members() {
                 <UserPlus className="w-4 h-4 mr-2" />
                 Add Member
               </Button>
+              {(searchTerm || filterTeam !== "all" || filterCategory !== "all" || filterRole || filterMembershipCategory) && (
+                <Button
+                  onClick={handleClearFilters}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -1762,12 +1772,12 @@ export default function Members() {
                 </div>
               </div>
 
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <Select value={filterTeam} onValueChange={setFilterTeam}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Teams" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Teams</SelectItem>
+                  <SelectItem value="all">All Teams</SelectItem>
                   {teamOptions.map((team) => (
                     <SelectItem key={team} value={team}>
                       {team}
@@ -1775,53 +1785,6 @@ export default function Members() {
                   ))}
                 </SelectContent>
               </Select>
-
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
-                  <SelectItem value="Junior">Junior</SelectItem>
-                  <SelectItem value="Youth">Youth</SelectItem>
-                  <SelectItem value="Adult">Adult</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterRole} onValueChange={setFilterRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Roles</SelectItem>
-                  <SelectItem value="Player">Player</SelectItem>
-                  <SelectItem value="Coach">Coach</SelectItem>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filterMembershipCategory} onValueChange={setFilterMembershipCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
-                  <SelectItem value="Standard">Standard</SelectItem>
-                  <SelectItem value="Sponsored">Sponsored</SelectItem>
-                  <SelectItem value="Scholarship">Scholarship</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {(searchTerm || selectedTeam || filterType || filterRole || filterMembershipCategory) && (
-                <Button
-                  onClick={handleClearFilters}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
-              )}
             </div>
 
             <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
