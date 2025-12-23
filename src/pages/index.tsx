@@ -111,33 +111,43 @@ export default function Dashboard() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-blue-100">
         <header className="bg-bulldogs-blue text-white shadow-xl">
           <div className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h1 className="text-4xl font-black tracking-tight mb-2">BALI BULLDOGS</h1>
-                <p className="text-yellow-300 text-lg font-bold">Club Management Dashboard</p>
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                  Bali Bulldogs Club Manager
+                </h1>
+                <p className="text-gray-600">
+                  Welcome back! Here's what's happening with your club today.
+                </p>
               </div>
               <div className="flex gap-3">
                 <Link href="/members">
-                  <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold shadow-lg">
-                    <Users className="mr-2 h-5 w-5" />
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
                     Members
                   </Button>
                 </Link>
+                <Link href="/teams">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Teams
+                  </Button>
+                </Link>
                 <Link href="/invoices">
-                  <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold shadow-lg">
-                    <DollarSign className="mr-2 h-5 w-5" />
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4" />
                     Invoices
                   </Button>
                 </Link>
                 <Link href="/coaching">
-                  <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold shadow-lg">
-                    <Calendar className="mr-2 h-5 w-5" />
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
                     Coaching
                   </Button>
                 </Link>
                 <Link href="/settings">
-                  <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold shadow-lg">
-                    <Settings className="mr-2 h-5 w-5" />
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
                     Settings
                   </Button>
                 </Link>

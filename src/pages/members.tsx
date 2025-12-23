@@ -8,9 +8,24 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Edit, Trash2, ArrowLeft, UserPlus, Upload, Download } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
+import * as XLSX from "xlsx";
+import {
+  Search,
+  Edit,
+  Trash2,
+  ArrowLeft,
+  UserPlus,
+  Upload,
+  Download,
+  Plus,
+  Edit2,
+  X,
+  AlertCircle,
+  CheckCircle,
+  FileSpreadsheet,
+} from "lucide-react";
 
 interface Member {
   id: string;
@@ -43,6 +58,8 @@ export default function Members() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<string[][]>([]);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [importStatus, setImportStatus] = useState("");
 
@@ -94,6 +111,37 @@ export default function Members() {
     
     setFilteredMembers(filtered);
   }, [members, searchTerm, selectedTeam]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const rows = text.split("\n").map((row) => row.split(","));
+      setPreviewData(rows);
+      setShowImportDialog(true);
+    };
+    
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    
+    if (fileExtension === "csv") {
+      reader.readAsText(file);
+    } else if (fileExtension === "xls" || fileExtension === "xlsx") {
+      reader.onload = (event) => {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const csvData = XLSX.utils.sheet_to_csv(worksheet);
+        const rows = csvData.split("\n").map((row) => row.split(","));
+        setPreviewData(rows);
+        setShowImportDialog(true);
+      };
+      reader.readAsBinaryString(file);
+    }
+  };
 
   const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
