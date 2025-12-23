@@ -11,6 +11,11 @@ import {
   Users,
   CheckSquare,
   Square,
+  X,
+  User,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +29,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -32,69 +45,28 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-
-const TEAMS = [
-  "Toddler",
-  "Kindy 1",
-  "Kindy 2",
-  "U6",
-  "U8 Dev",
-  "U8 Adv",
-  "U10 Dev",
-  "U10 Adv",
-  "U12 Dev",
-  "U12 Adv",
-  "U12 Girls",
-  "U14",
-  "U14 Girls",
-  "U16",
-  "U18 Girls",
-  "U18",
-  "Women",
-  "Masters",
-  "Legends",
-  "Social",
-  "1st Team",
-];
-
-const ROLES = ["Player", "Coach", "Admin"];
-const TYPES = ["Junior", "Youth", "Adult"];
-const MEMBERSHIP_CATEGORIES = ["Standard", "Sponsored", "Scholarship"];
-
-interface Member {
-  id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  nationality: string;
-  address: string;
-  email: string;
-  shirtNumber?: number;
-  type: "Junior" | "Youth" | "Adult";
-  role: "Player" | "Coach" | "Admin";
-  team: string;
-  membershipCategory: "Standard" | "Sponsored" | "Scholarship";
-  joiningDate: string;
-  contactNumber: string;
-  primaryContact: string;
-  primaryContactNumber: string;
-  secondaryContact?: string;
-  secondaryContactNumber?: string;
-  medicalNotes?: string;
-  coachingCredits: number;
-}
+import {
+  Member,
+  TEAMS,
+  ROLES,
+  TYPES,
+  MEMBERSHIP_CATEGORIES,
+  SAMPLE_MEMBERS
+} from "@/lib/members-data";
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [teamFilter, setTeamFilter] = useState("all");
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [sortField, setSortField] = useState<keyof Member | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   
   const [bulkEditFields, setBulkEditFields] = useState({
     team: "no-change",
@@ -106,6 +78,7 @@ export default function MembersPage() {
   const [formData, setFormData] = useState<Partial<Member>>({
     firstName: "",
     lastName: "",
+    photo: undefined,
     dateOfBirth: "",
     nationality: "",
     address: "",
@@ -133,14 +106,13 @@ export default function MembersPage() {
     loadMembers();
   }, []);
 
-  useEffect(() => {
-    filterMembers();
-  }, [members, searchQuery, teamFilter]);
-
   const loadMembers = () => {
     const stored = localStorage.getItem("members");
     if (stored) {
       setMembers(JSON.parse(stored));
+    } else {
+      setMembers(SAMPLE_MEMBERS);
+      localStorage.setItem("members", JSON.stringify(SAMPLE_MEMBERS));
     }
   };
 
@@ -149,25 +121,61 @@ export default function MembersPage() {
     setMembers(updatedMembers);
   };
 
-  const filterMembers = () => {
-    let filtered = [...members];
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          m.firstName.toLowerCase().includes(query) ||
-          m.lastName.toLowerCase().includes(query) ||
-          m.email.toLowerCase().includes(query)
-      );
+  const handleSort = (field: keyof Member) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
     }
-
-    if (teamFilter !== "all") {
-      filtered = filtered.filter((m) => m.team === teamFilter);
-    }
-
-    setFilteredMembers(filtered);
   };
+
+  const getSortIcon = (field: keyof Member) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 text-gray-400" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4 text-blue-600" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4 text-blue-600" />
+    );
+  };
+
+  const filteredMembers = members
+    .filter((member) => {
+      const matchesSearch =
+        member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.team.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesType =
+        filterType === "all" || member.type === filterType;
+
+      const matchesTeam =
+        filterTeam === "all" || member.team === filterTeam;
+
+      return matchesSearch && matchesType && matchesTeam;
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+
+      if (aValue === undefined || bValue === undefined) return 0;
+
+      let comparison = 0;
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        comparison = aValue.localeCompare(bValue);
+      } else if (typeof aValue === "number" && typeof bValue === "number") {
+        comparison = aValue - bValue;
+      } else {
+        comparison = String(aValue).localeCompare(String(bValue));
+      }
+
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,14 +185,14 @@ export default function MembersPage() {
         m.id === editingMember.id ? { ...formData, id: m.id } as Member : m
       );
       saveMembers(updated);
-      setShowEditDialog(false);
+      setIsDialogOpen(false);
     } else {
       const newMember: Member = {
         ...formData,
         id: Date.now().toString(),
       } as Member;
       saveMembers([...members, newMember]);
-      setShowAddDialog(false);
+      setIsDialogOpen(false);
     }
 
     resetForm();
@@ -193,16 +201,15 @@ export default function MembersPage() {
   const handleEdit = (member: Member) => {
     setEditingMember(member);
     setFormData(member);
-    setShowEditDialog(true);
+    setIsDialogOpen(true);
   };
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this member?")) {
       saveMembers(members.filter((m) => m.id !== id));
-      // Remove from selection if deleted
-      if (selectedMembers.has(id)) {
-        const newSelected = new Set(selectedMembers);
-        newSelected.delete(id);
+      if (selectedMembers.includes(id)) {
+        const newSelected = [...selectedMembers];
+        newSelected.splice(newSelected.indexOf(id), 1);
         setSelectedMembers(newSelected);
       }
     }
@@ -212,6 +219,7 @@ export default function MembersPage() {
     setFormData({
       firstName: "",
       lastName: "",
+      photo: undefined,
       dateOfBirth: "",
       nationality: "",
       address: "",
@@ -300,7 +308,7 @@ export default function MembersPage() {
 
       setCsvHeaders(headers);
       setCsvData(data);
-      setShowImportDialog(true);
+      setIsImportOpen(true);
     };
     reader.readAsText(file);
   };
@@ -332,41 +340,41 @@ export default function MembersPage() {
     });
 
     saveMembers([...members, ...imported]);
-    setShowImportDialog(false);
+    setIsImportOpen(false);
     setCsvMapping({});
     setCsvHeaders([]);
     setCsvData([]);
   };
 
   const toggleSelectMember = (id: string) => {
-    const newSelected = new Set(selectedMembers);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
+    const newSelected = [...selectedMembers];
+    if (newSelected.includes(id)) {
+      newSelected.splice(newSelected.indexOf(id), 1);
     } else {
-      newSelected.add(id);
+      newSelected.push(id);
     }
     setSelectedMembers(newSelected);
   };
 
   const toggleSelectAll = () => {
-    if (selectedMembers.size === filteredMembers.length) {
-      setSelectedMembers(new Set());
+    if (selectedMembers.length === filteredMembers.length) {
+      setSelectedMembers([]);
     } else {
-      setSelectedMembers(new Set(filteredMembers.map((m) => m.id)));
+      setSelectedMembers(filteredMembers.map((m) => m.id));
     }
   };
 
   const handleBulkEdit = () => {
-    if (selectedMembers.size === 0) {
+    if (selectedMembers.length === 0) {
       alert("Please select at least one member");
       return;
     }
-    setShowBulkEditDialog(true);
+    setIsBulkEditOpen(true);
   };
 
   const applyBulkEdit = () => {
     const updated = members.map((member) => {
-      if (selectedMembers.has(member.id)) {
+      if (selectedMembers.includes(member.id)) {
         const changes: Partial<Member> = {};
         
         if (bulkEditFields.team && bulkEditFields.team !== "no-change") {
@@ -388,8 +396,8 @@ export default function MembersPage() {
     });
 
     saveMembers(updated);
-    setSelectedMembers(new Set());
-    setShowBulkEditDialog(false);
+    setSelectedMembers([]);
+    setIsBulkEditOpen(false);
     setBulkEditFields({
       team: "no-change",
       role: "no-change",
@@ -436,13 +444,13 @@ export default function MembersPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              {selectedMembers.size > 0 && (
+              {selectedMembers.length > 0 && (
                 <Button
                   onClick={handleBulkEdit}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  Bulk Edit ({selectedMembers.size})
+                  Bulk Edit ({selectedMembers.length})
                 </Button>
               )}
               <Button
@@ -471,7 +479,7 @@ export default function MembersPage() {
               <Button
                 onClick={() => {
                   resetForm();
-                  setShowAddDialog(true);
+                  setIsDialogOpen(true);
                 }}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
@@ -488,12 +496,25 @@ export default function MembersPage() {
                 <Input
                   type="text"
                   placeholder="Search by name or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterTeam} onValueChange={setFilterTeam}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by team" />
                 </SelectTrigger>
@@ -511,126 +532,254 @@ export default function MembersPage() {
 
           <div className="bg-white rounded-xl shadow-lg border-2 border-blue-100 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
                       <button
-                        onClick={toggleSelectAll}
-                        className="hover:bg-blue-500 rounded p-1 transition-colors"
+                        onClick={() => {
+                          if (selectedMembers.length === filteredMembers.length) {
+                            setSelectedMembers([]);
+                          } else {
+                            setSelectedMembers(filteredMembers.map((m) => m.id));
+                          }
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
                       >
-                        {selectedMembers.size === filteredMembers.length && filteredMembers.length > 0 ? (
-                          <CheckSquare className="w-5 h-5" />
+                        {selectedMembers.length === filteredMembers.length &&
+                        filteredMembers.length > 0 ? (
+                          <CheckSquare className="h-5 w-5 text-blue-600" />
                         ) : (
-                          <Square className="w-5 h-5" />
+                          <Square className="h-5 w-5 text-gray-400" />
                         )}
                       </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold">Name</th>
-                    <th className="px-4 py-3 text-left font-semibold">Team</th>
-                    <th className="px-4 py-3 text-left font-semibold">Type</th>
-                    <th className="px-4 py-3 text-left font-semibold">Role</th>
-                    <th className="px-4 py-3 text-left font-semibold">Membership</th>
-                    <th className="px-4 py-3 text-left font-semibold">Contact</th>
-                    <th className="px-4 py-3 text-center font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredMembers.map((member, index) => (
-                    <tr
-                      key={member.id}
-                      className={`hover:bg-blue-50 transition-colors ${
-                        selectedMembers.has(member.id) ? "bg-blue-50" : ""
-                      } ${index % 2 === 0 ? "bg-gray-50" : ""}`}
+                    </TableHead>
+                    <TableHead 
+                      className="w-16 cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("photo")}
                     >
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => toggleSelectMember(member.id)}
-                          className="hover:bg-blue-100 rounded p-1 transition-colors"
-                        >
-                          {selectedMembers.has(member.id) ? (
-                            <CheckSquare className="w-5 h-5 text-blue-600" />
-                          ) : (
-                            <Square className="w-5 h-5 text-gray-400" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-gray-900">
-                          {member.firstName} {member.lastName}
-                        </div>
-                        <div className="text-sm text-gray-500">{member.shirtNumber || "—"}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-gray-900">{member.team}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="font-medium">
-                          {member.type}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-gray-900">{member.role}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          className={
-                            member.membershipCategory === "Scholarship"
-                              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                              : member.membershipCategory === "Sponsored"
-                              ? "bg-blue-100 text-blue-800 border-blue-200"
-                              : "bg-green-100 text-green-800 border-green-200"
-                          }
-                        >
-                          {member.membershipCategory}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <a
-                          href={`https://wa.me/${member.contactNumber.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 hover:underline"
-                        >
-                          <Phone className="w-4 h-4" />
-                          WhatsApp
-                        </a>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(member)}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      <div className="flex items-center">
+                        Photo
+                        {getSortIcon("photo")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("firstName")}
+                    >
+                      <div className="flex items-center">
+                        Name
+                        {getSortIcon("firstName")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("email")}
+                    >
+                      <div className="flex items-center">
+                        Email
+                        {getSortIcon("email")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("team")}
+                    >
+                      <div className="flex items-center">
+                        Team
+                        {getSortIcon("team")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("type")}
+                    >
+                      <div className="flex items-center">
+                        Type
+                        {getSortIcon("type")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("role")}
+                    >
+                      <div className="flex items-center">
+                        Role
+                        {getSortIcon("role")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("membershipCategory")}
+                    >
+                      <div className="flex items-center">
+                        Membership
+                        {getSortIcon("membershipCategory")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("shirtNumber")}
+                    >
+                      <div className="flex items-center">
+                        Shirt #
+                        {getSortIcon("shirtNumber")}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => handleSort("coachingCredits")}
+                    >
+                      <div className="flex items-center">
+                        Credits
+                        {getSortIcon("coachingCredits")}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                        No members found. {members.length === 0 ? "Add your first member to get started." : "Try adjusting your filters."}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredMembers.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <button
+                            onClick={() => {
+                              setSelectedMembers((prev) =>
+                                prev.includes(member.id)
+                                  ? prev.filter((id) => id !== member.id)
+                                  : [...prev, member.id]
+                              );
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded"
                           >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(member.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            {selectedMembers.includes(member.id) ? (
+                              <CheckSquare className="h-5 w-5 text-blue-600" />
+                            ) : (
+                              <Square className="h-5 w-5 text-gray-400" />
+                            )}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => setLightboxPhoto(member.photo || null)}
+                            className="hover:opacity-80 transition-opacity"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            {member.photo ? (
+                              <img
+                                src={member.photo}
+                                alt={`${member.firstName} ${member.lastName}`}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
+                              />
+                            ) : (
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+                                style={{
+                                  backgroundColor: `hsl(${
+                                    (member.firstName.charCodeAt(0) + member.lastName.charCodeAt(0)) % 360
+                                  }, 70%, 50%)`,
+                                }}
+                              >
+                                {member.firstName[0]}
+                                {member.lastName[0]}
+                              </div>
+                            )}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-gray-900">
+                            {member.firstName} {member.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500">{member.shirtNumber || "—"}</div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-gray-900">{member.team}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-medium">
+                            {member.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-gray-900">{member.role}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              member.membershipCategory === "Scholarship"
+                                ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                : member.membershipCategory === "Sponsored"
+                                ? "bg-blue-100 text-blue-800 border-blue-200"
+                                : "bg-green-100 text-green-800 border-green-200"
+                            }
+                          >
+                            {member.membershipCategory}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            href={`https://wa.me/${member.contactNumber.replace(/\D/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 hover:underline"
+                          >
+                            <Phone className="w-4 h-4" />
+                            WhatsApp
+                          </a>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(member)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(member.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
 
-            {filteredMembers.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No members found</p>
-                <p className="text-gray-400 text-sm mt-1">
-                  {searchQuery || teamFilter !== "all"
-                    ? "Try adjusting your filters"
-                    : "Add your first member to get started"}
-                </p>
+            {/* Photo Lightbox */}
+            {lightboxPhoto && (
+              <div
+                className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer"
+                onClick={() => setLightboxPhoto(null)}
+              >
+                <div className="relative max-w-4xl max-h-[90vh]">
+                  <button
+                    className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+                    onClick={() => setLightboxPhoto(null)}
+                  >
+                    <X className="h-8 w-8" />
+                  </button>
+                  <img
+                    src={lightboxPhoto}
+                    alt="Member photo"
+                    className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -639,11 +788,10 @@ export default function MembersPage() {
 
       {/* Add/Edit Member Dialog */}
       <Dialog
-        open={showAddDialog || showEditDialog}
+        open={isDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setShowAddDialog(false);
-            setShowEditDialog(false);
+            setIsDialogOpen(false);
             resetForm();
           }
         }}
@@ -661,6 +809,66 @@ export default function MembersPage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Photo Upload Section */}
+            <div className="space-y-2">
+              <Label>Profile Photo</Label>
+              <div className="flex items-start gap-4">
+                {/* Photo Preview */}
+                <div className="relative">
+                  {formData.photo ? (
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
+                      <img
+                        src={formData.photo}
+                        alt="Profile preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, photo: undefined })}
+                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border-2 border-gray-200">
+                      <User className="w-5 h-5 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Button */}
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    id="photo-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormData({ ...formData, photo: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="photo-upload"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Photo
+                  </label>
+                  <p className="text-xs text-gray-500 mt-2">
+                    JPG, PNG or GIF (max 2MB)
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="firstName">First Name *</Label>
@@ -909,8 +1117,7 @@ export default function MembersPage() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setShowAddDialog(false);
-                  setShowEditDialog(false);
+                  setIsDialogOpen(false);
                   resetForm();
                 }}
               >
@@ -925,14 +1132,14 @@ export default function MembersPage() {
       </Dialog>
 
       {/* Bulk Edit Dialog */}
-      <Dialog open={showBulkEditDialog} onOpenChange={setShowBulkEditDialog}>
+      <Dialog open={isBulkEditOpen} onOpenChange={setIsBulkEditOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-purple-900">
               Bulk Edit Members
             </DialogTitle>
             <DialogDescription>
-              Update common fields for {selectedMembers.size} selected member(s). Leave fields empty to
+              Update common fields for {selectedMembers.length} selected member(s). Leave fields empty to
               keep existing values.
             </DialogDescription>
           </DialogHeader>
@@ -1022,7 +1229,7 @@ export default function MembersPage() {
 
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900 font-medium">
-                📝 {selectedMembers.size} member(s) will be updated with the selected values
+                📝 {selectedMembers.length} member(s) will be updated with the selected values
               </p>
             </div>
           </div>
@@ -1032,7 +1239,7 @@ export default function MembersPage() {
               type="button"
               variant="outline"
               onClick={() => {
-                setShowBulkEditDialog(false);
+                setIsBulkEditOpen(false);
                 setBulkEditFields({
                   team: "no-change",
                   role: "no-change",
@@ -1054,7 +1261,7 @@ export default function MembersPage() {
       </Dialog>
 
       {/* CSV Import Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-blue-900">Import Members from CSV</DialogTitle>
@@ -1103,7 +1310,7 @@ export default function MembersPage() {
               type="button"
               variant="outline"
               onClick={() => {
-                setShowImportDialog(false);
+                setIsImportOpen(false);
                 setCsvMapping({});
                 setCsvHeaders([]);
                 setCsvData([]);
