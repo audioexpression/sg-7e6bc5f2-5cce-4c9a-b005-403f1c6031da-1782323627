@@ -745,12 +745,12 @@ export default function Members() {
       </Dialog>
 
       <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
-        <DialogContent className="max-w-2xl bg-black/95 p-0 border-0 overflow-hidden" closeButton={true}>
+        <DialogContent className="max-w-2xl bg-black/95 p-0 border-0 overflow-hidden">
           <div className="relative flex items-center justify-center p-4">
             <img
               src={previewPhotoUrl}
               alt="Member preview"
-              className="max-w-full max-h-[85vh] object-contain rounded-sm"
+              className="max-w-full max-h-[85vh] object-contain rounded-sm cursor-pointer"
               onClick={() => setIsPhotoPreviewOpen(false)}
             />
           </div>
