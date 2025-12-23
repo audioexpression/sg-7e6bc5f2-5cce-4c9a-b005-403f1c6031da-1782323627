@@ -10,6 +10,15 @@ import { ArrowLeft, Settings, Edit, Trash2, Plus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 
+interface Settings {
+  teams: string[];
+  membershipPricing: {
+    junior: number;
+    youth: number;
+    adult: number;
+  };
+}
+
 const DEFAULT_TEAMS = [
   "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", 
   "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
@@ -23,6 +32,14 @@ export default function SettingsPage() {
   const [editingTeam, setEditingTeam] = useState<string | null>(null);
   const [teamName, setTeamName] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
+  const [settings, setSettings] = useState<Settings>({
+    teams: DEFAULT_TEAMS,
+    membershipPricing: {
+      junior: 0,
+      youth: 0,
+      adult: 0
+    }
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem("teams");
@@ -264,6 +281,76 @@ export default function SettingsPage() {
                   <li>• <strong>Reset to defaults</strong> restores the original 21 team names</li>
                   <li>• Team names appear in Member Database, Invoicing, and dashboard charts</li>
                 </ul>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold mb-4 text-gray-900">Membership Pricing</h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Set quarterly membership fees for each age category (in Rp)
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Junior Membership (per quarter)
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.membershipPricing.junior}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        membershipPricing: {
+                          ...settings.membershipPricing,
+                          junior: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      className="w-full p-2 border rounded"
+                      placeholder="e.g., 1500000"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Youth Membership (per quarter)
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.membershipPricing.youth}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        membershipPricing: {
+                          ...settings.membershipPricing,
+                          youth: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      className="w-full p-2 border rounded"
+                      placeholder="e.g., 2000000"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Adult Membership (per quarter)
+                    </label>
+                    <input
+                      type="number"
+                      value={settings.membershipPricing.adult}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        membershipPricing: {
+                          ...settings.membershipPricing,
+                          adult: parseInt(e.target.value) || 0
+                        }
+                      })}
+                      className="w-full p-2 border rounded"
+                      placeholder="e.g., 2500000"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-3 bg-blue-50 rounded text-sm text-blue-900">
+                  💡 These prices will be used when generating invoices. Sponsored and Scholarship members are automatically excluded from billing.
+                </div>
               </div>
             </CardContent>
           </Card>

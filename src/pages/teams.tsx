@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
-import { Users, Search, Mail, Phone, Calendar, Award } from "lucide-react";
+import { Users, Search, Mail, Phone, Calendar, Award, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -219,6 +219,20 @@ export default function Teams() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6 bg-white">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-3xl font-black">{group.name}</h2>
+                      <Button 
+                        onClick={() => {
+                          // Navigate to members page with team pre-selected
+                          localStorage.setItem("preselected_team", group.name);
+                          window.location.href = "/members";
+                        }}
+                        className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Member to Team
+                      </Button>
+                    </div>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {group.members.map((member) => (
                         <Card
