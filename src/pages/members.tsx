@@ -755,161 +755,664 @@ export default function Members() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Reset validation errors
-    const errors: Record<string, string> = {};
-    
-    // Required field validation
-    if (!formData.firstName?.trim()) {
-      errors.firstName = "First name is required";
-    }
-    if (!formData.lastName?.trim()) {
-      errors.lastName = "Last name is required";
-    }
-    if (!formData.dateOfBirth) {
-      errors.dateOfBirth = "Date of birth is required";
-    } else {
-      // Validate age (must be at least 3 years old, max 100)
-      const birthDate = new Date(formData.dateOfBirth);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      if (age < 3 || age > 100) {
-        errors.dateOfBirth = "Please enter a valid date of birth (age 3-100)";
-      }
-    }
-    if (!formData.nationality?.trim()) {
-      errors.nationality = "Nationality is required";
-    }
-    if (!formData.address?.trim()) {
-      errors.address = "Address is required";
-    }
-    if (!formData.email?.trim()) {
-      errors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = "Please enter a valid email address";
-    }
-    if (!formData.category) {
-      errors.category = "Category is required";
-    }
-    if (!formData.type) {
-      errors.type = "Type is required";
-    }
-    if (!formData.role) {
-      errors.role = "Role is required";
-    }
-    if (!formData.teamAssignment) {
-      errors.teamAssignment = "Team assignment is required";
-    }
-    if (!formData.joiningDate) {
-      errors.joiningDate = "Joining date is required";
-    }
-    if (!formData.contactNumber?.trim()) {
-      errors.contactNumber = "Contact number is required";
-    } else if (!/^\+?[0-9\s\-()]+$/.test(formData.contactNumber)) {
-      errors.contactNumber = "Please enter a valid phone number";
-    }
-    
-    // Optional field validation
-    if (formData.shirtNumber && (parseInt(formData.shirtNumber) < 1 || parseInt(formData.shirtNumber) > 99)) {
-      errors.shirtNumber = "Shirt number must be between 1 and 99";
-    }
-    if (formData.coachingCredits && formData.coachingCredits < 0) {
-      errors.coachingCredits = "Coaching credits cannot be negative";
-    }
-    if (formData.primaryContactNumber && !/^\+?[0-9\s\-()]+$/.test(formData.primaryContactNumber)) {
-      errors.primaryContactNumber = "Please enter a valid phone number";
-    }
-    if (formData.secondaryContactNumber && !/^\+?[0-9\s\-()]+$/.test(formData.secondaryContactNumber)) {
-      errors.secondaryContactNumber = "Please enter a valid phone number";
-    }
-    
-    // Check for duplicate email (excluding current member when editing)
-    const duplicateEmail = members.find(m => 
-      m.email.toLowerCase() === formData.email?.toLowerCase() && 
-      m.id !== editingMember?.id
-    );
-    if (duplicateEmail) {
-      errors.email = "This email is already registered";
-    }
-    
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    
-    if (editingMember) {
-      const updated = members.map(m => 
-        m.id === editingMember.id ? { ...formData, id: editingMember.id } as Member : m
-      );
-      setMembers(updated);
-      localStorage.setItem("members", JSON.stringify(updated));
-    } else {
-      const newMember: Member = {
-        ...formData,
-        id: Date.now().toString(),
-        whatsappLink: `https://wa.me/${formData.contactNumber?.replace(/\D/g, "")}`,
-      } as Member;
-      const updated = [...members, newMember];
-      setMembers(updated);
-      localStorage.setItem("members", JSON.stringify(updated));
-    }
+  const handleLoadLegends = () => {
+    if (!confirm("This will add 27 Legends players to your database. Continue?")) return;
 
-    setIsDialogOpen(false);
-    setEditingMember(null);
-    setValidationErrors({});
-    resetForm();
-  };
+    const legendsMembers: Member[] = [
+        {
+          id: crypto.randomUUID(),
+          firstName: "Pradana",
+          lastName: "Ardhabanu",
+          dateOfBirth: "1985-01-01",
+          nationality: "Indonesia",
+          address: "",
+          email: "",
+          shirtNumber: "1",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "628777",
+          whatsappLink: "https://wa.me/628777",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Markez",
+          lastName: "Laws",
+          dateOfBirth: "1985-01-01",
+          nationality: "Bermuda",
+          address: "",
+          email: "",
+          shirtNumber: "2",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "144159",
+          whatsappLink: "https://wa.me/144159",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Justin",
+          lastName: "Becker",
+          dateOfBirth: "1985-01-01",
+          nationality: "USA",
+          address: "",
+          email: "",
+          shirtNumber: "3",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "168280",
+          whatsappLink: "https://wa.me/168280",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "James",
+          lastName: "Demeester",
+          dateOfBirth: "1985-01-01",
+          nationality: "France",
+          address: "",
+          email: "",
+          shirtNumber: "4",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "336283",
+          whatsappLink: "https://wa.me/336283",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "John",
+          lastName: "Mcclelland",
+          dateOfBirth: "1985-01-01",
+          nationality: "Australia",
+          address: "",
+          email: "",
+          shirtNumber: "5",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "628123",
+          whatsappLink: "https://wa.me/628123",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Jon",
+          lastName: "Tarita",
+          dateOfBirth: "1985-01-01",
+          nationality: "Netherlands",
+          address: "",
+          email: "",
+          shirtNumber: "6",
+          category: "Adult",
+          type: "Sponsored",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "316147",
+          whatsappLink: "https://wa.me/316147",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Fudge",
+          lastName: "Jarcheh",
+          dateOfBirth: "1985-01-01",
+          nationality: "UK",
+          address: "",
+          email: "",
+          shirtNumber: "7",
+          category: "Adult",
+          type: "Sponsored",
+          role: "Coach",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "447940",
+          whatsappLink: "https://wa.me/447940",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Drigny",
+          lastName: "Fred",
+          dateOfBirth: "1985-01-01",
+          nationality: "France",
+          address: "",
+          email: "",
+          shirtNumber: "8",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "841203",
+          whatsappLink: "https://wa.me/841203",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Steffen",
+          lastName: "Hessel",
+          dateOfBirth: "1985-01-01",
+          nationality: "Germany",
+          address: "",
+          email: "",
+          shirtNumber: "9",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "659779",
+          whatsappLink: "https://wa.me/659779",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Rofiq",
+          lastName: "Ainur",
+          dateOfBirth: "1985-01-01",
+          nationality: "Indonesia",
+          address: "",
+          email: "",
+          shirtNumber: "10",
+          category: "Adult",
+          type: "Scholarship",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "628779",
+          whatsappLink: "https://wa.me/628779",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Antonius",
+          lastName: "Norman",
+          dateOfBirth: "1985-01-01",
+          nationality: "Indonesia",
+          address: "",
+          email: "",
+          shirtNumber: "11",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Antoine",
+          lastName: "Guerin",
+          dateOfBirth: "1985-01-01",
+          nationality: "",
+          address: "",
+          email: "",
+          shirtNumber: "12",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Richard",
+          lastName: "Muijono",
+          dateOfBirth: "1985-01-01",
+          nationality: "Indonesia",
+          address: "",
+          email: "",
+          shirtNumber: "13",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Izhary",
+          lastName: "Zac",
+          dateOfBirth: "1985-01-01",
+          nationality: "Singapore",
+          address: "",
+          email: "",
+          shirtNumber: "14",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "John",
+          lastName: "Stansbie",
+          dateOfBirth: "1985-01-01",
+          nationality: "UK",
+          address: "",
+          email: "",
+          shirtNumber: "15",
+          category: "Adult",
+          type: "Sponsored",
+          role: "Coach",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Max",
+          lastName: "Harrison",
+          dateOfBirth: "1985-01-01",
+          nationality: "UK",
+          address: "",
+          email: "",
+          shirtNumber: "16",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Karan",
+          lastName: "Bajaj",
+          dateOfBirth: "1985-01-01",
+          nationality: "",
+          address: "",
+          email: "",
+          shirtNumber: "17",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Mickael",
+          lastName: "Neto",
+          dateOfBirth: "1985-01-01",
+          nationality: "France",
+          address: "",
+          email: "",
+          shirtNumber: "18",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Awal",
+          lastName: "Rameh",
+          dateOfBirth: "1985-01-01",
+          nationality: "",
+          address: "",
+          email: "",
+          shirtNumber: "19",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Jordan",
+          lastName: "Godley",
+          dateOfBirth: "1985-01-01",
+          nationality: "Australia",
+          address: "",
+          email: "",
+          shirtNumber: "20",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Nicolas",
+          lastName: "Lapalus",
+          dateOfBirth: "1985-01-01",
+          nationality: "France",
+          address: "",
+          email: "",
+          shirtNumber: "21",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Thomas",
+          lastName: "Teressi",
+          dateOfBirth: "1985-01-01",
+          nationality: "Austria",
+          address: "",
+          email: "",
+          shirtNumber: "22",
+          category: "Adult",
+          type: "Sponsored",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Joe",
+          lastName: "Degood",
+          dateOfBirth: "1985-01-01",
+          nationality: "Indonesia",
+          address: "",
+          email: "",
+          shirtNumber: "23",
+          category: "Adult",
+          type: "Scholarship",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Lad",
+          lastName: "Durina",
+          dateOfBirth: "1985-01-01",
+          nationality: "",
+          address: "",
+          email: "",
+          shirtNumber: "24",
+          category: "Adult",
+          type: "Sponsored",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Nathan",
+          lastName: "Coe",
+          dateOfBirth: "1985-01-01",
+          nationality: "Australia",
+          address: "",
+          email: "",
+          shirtNumber: "25",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Maxence",
+          lastName: "Leurent",
+          dateOfBirth: "1985-01-01",
+          nationality: "France",
+          address: "",
+          email: "",
+          shirtNumber: "26",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        },
+        {
+          id: crypto.randomUUID(),
+          firstName: "Michael",
+          lastName: "Johansen",
+          dateOfBirth: "1985-01-01",
+          nationality: "Denmark",
+          address: "",
+          email: "",
+          shirtNumber: "27",
+          category: "Adult",
+          type: "Member",
+          role: "Player",
+          teamAssignment: "Legends",
+          joiningDate: new Date().toISOString().split("T")[0],
+          contactNumber: "",
+          whatsappLink: "",
+          primaryContact: "",
+          primaryContactNumber: "",
+          secondaryContact: "",
+          secondaryContactNumber: "",
+          medicalNotes: "",
+          coachingCredits: 0,
+          photoUrl: ""
+        }
+    ];
 
-  const handleEdit = (member: Member) => {
-    setEditingMember(member);
-    setFormData(member);
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this member?")) {
-      const updated = members.filter(m => m.id !== id);
-      setMembers(updated);
-      localStorage.setItem("members", JSON.stringify(updated));
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      nationality: "",
-      address: "",
-      email: "",
-      shirtNumber: "",
-      category: "Junior",
-      type: "Member",
-      role: "Player",
-      teamAssignment: "",
-      joiningDate: new Date().toISOString().split("T")[0],
-      contactNumber: "",
-      primaryContact: "",
-      primaryContactNumber: "",
-      secondaryContact: "",
-      secondaryContactNumber: "",
-      medicalNotes: "",
-      coachingCredits: 0,
-      photoUrl: "",
-    });
-  };
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, photoUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+    const updated = [...members, ...legendsMembers];
+    setMembers(updated);
+    localStorage.setItem("members", JSON.stringify(updated));
+    alert("27 Legends players added successfully!");
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1119,16 +1622,19 @@ export default function Members() {
                 <Plus className="w-5 h-5 mr-2" />
                 Add Member
               </Button>
-              
-              <Button 
-                onClick={() => setIsImportOpen(true)}
-                variant="outline"
-                className="border-2 border-blue-700 text-blue-700 hover:bg-blue-50 h-12 px-6 font-bold"
-              >
-                <Upload className="w-5 h-5 mr-2" />
-                Import CSV
+              <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="mr-2 h-4 w-4" /> Add Member
               </Button>
-              
+              <Button variant="outline" onClick={() => document.getElementById("csv-upload")?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Import CSV
+              </Button>
+              <input
+                id="csv-upload"
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="border-2 border-blue-700 text-blue-700 hover:bg-blue-50 h-12 px-6 font-bold"
+              />
               <Button 
                 onClick={handleExportCSV}
                 variant="outline"
@@ -1136,6 +1642,12 @@ export default function Members() {
               >
                 <Download className="w-5 h-5 mr-2" />
                 Export CSV
+              </Button>
+              <Button 
+                onClick={handleLoadLegends}
+                className="bg-yellow-500 hover:bg-yellow-600 font-bold"
+              >
+                <Download className="mr-2 h-4 w-4" /> Load Legends Data
               </Button>
             </div>
 
