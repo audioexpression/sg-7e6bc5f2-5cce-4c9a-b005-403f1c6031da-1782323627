@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Upload, Download, Search, Pencil, Trash2, User, ArrowLeft } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Trash2, Edit, Save, X, Upload, Download, Search, Filter, Home, Users, DollarSign, Calendar, Eye, Settings, ArrowLeft, User, Pencil } from "lucide-react";
+import { useRouter } from "next/router";
 
 const TEAMS_BY_CATEGORY = {
   Junior: [
@@ -88,6 +90,7 @@ export default function Members() {
     role: "Player",
     coachingCredits: 0,
   });
+  const router = useRouter();
 
   useEffect(() => {
     const stored = localStorage.getItem("members");
@@ -265,8 +268,41 @@ export default function Members() {
     <>
       <SEO 
         title="Members - Bali Bulldogs Club Manager"
-        description="Manage club members, teams, and contacts"
+        description="Manage club members, registrations, and player information"
       />
+      
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-blue-900 mb-2">Members</h1>
+              <p className="text-gray-600">Manage your club members and registrations</p>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={() => router.push("/")} variant="outline">
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button onClick={() => router.push("/teams")} variant="outline">
+                <Users className="h-4 w-4 mr-2" />
+                Teams
+              </Button>
+              <Button onClick={() => router.push("/invoices")} variant="outline">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Invoices
+              </Button>
+              <Button onClick={() => router.push("/coaching")} variant="outline">
+                <Calendar className="h-4 w-4 mr-2" />
+                Coaching
+              </Button>
+              <Button onClick={() => router.push("/settings")} variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
-import { Users, Search, Mail, Phone, Calendar, Award, Plus } from "lucide-react";
+import { Users, Search, Mail, Phone, Calendar, Award, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -145,16 +145,24 @@ export default function Teams() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-blue-100">
         <header className="bg-bulldogs-blue text-white shadow-lg">
           <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                  ← Back
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/">
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+                    ←
+                  </Button>
+                </Link>
+                <div>
+                  <h1 className="text-3xl font-black tracking-tight">TEAM ROSTER</h1>
+                  <p className="text-yellow-300 text-sm font-semibold">Bali Bulldogs Club Manager</p>
+                </div>
+              </div>
+              <Link href="/settings">
+                <Button variant="outline" className="text-blue-900 border-white hover:bg-blue-50">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
                 </Button>
               </Link>
-              <div>
-                <h1 className="text-3xl font-black tracking-tight">TEAM ROSTER</h1>
-                <p className="text-yellow-300 text-sm font-semibold">Bali Bulldogs Club Manager</p>
-              </div>
             </div>
           </div>
         </header>

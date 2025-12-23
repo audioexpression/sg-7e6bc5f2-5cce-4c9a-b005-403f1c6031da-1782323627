@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, TrendingUp, AlertCircle, DollarSign, Calendar, ArrowRight } from "lucide-react";
+import { Users, TrendingUp, AlertCircle, DollarSign, Calendar, ArrowRight, Settings } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useRouter } from "next/router";
 
@@ -334,7 +334,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-8">
             <Button
               onClick={() => router.push("/members")}
               className="h-20 text-lg bg-blue-600 hover:bg-blue-700"
@@ -365,6 +365,14 @@ export default function Dashboard() {
             >
               <Calendar className="mr-2 h-5 w-5" />
               Coaching Sessions
+              <ArrowRight className="ml-auto h-5 w-5" />
+            </Button>
+            <Button
+              onClick={() => router.push("/settings")}
+              className="h-20 text-lg bg-slate-600 hover:bg-slate-700"
+            >
+              <Settings className="mr-2 h-5 w-5" />
+              Club Settings
               <ArrowRight className="ml-auto h-5 w-5" />
             </Button>
           </div>
