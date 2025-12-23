@@ -47,7 +47,28 @@ export default function Settings() {
   const router = useRouter();
 
   // Teams State
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState([
+    { id: "toddler", name: "Toddler", category: "Junior", monthlyFee: 0 },
+    { id: "kindy1", name: "Kindy/U6 1", category: "Junior", monthlyFee: 0 },
+    { id: "kindy2", name: "Kindy/U6 2", category: "Junior", monthlyFee: 0 },
+    { id: "u8dev", name: "U8 Dev", category: "Junior", monthlyFee: 0 },
+    { id: "u8adv", name: "U8 Adv", category: "Junior", monthlyFee: 0 },
+    { id: "u10dev", name: "U10 Dev", category: "Junior", monthlyFee: 0 },
+    { id: "u10adv", name: "U10 Adv", category: "Junior", monthlyFee: 0 },
+    { id: "u12dev", name: "U12 Dev", category: "Junior", monthlyFee: 0 },
+    { id: "u12adv", name: "U12 Adv", category: "Junior", monthlyFee: 0 },
+    { id: "u12girls", name: "U12 Girls", category: "Junior", monthlyFee: 0 },
+    { id: "u14", name: "U14", category: "Youth", monthlyFee: 0 },
+    { id: "u14girls", name: "U14 Girls", category: "Youth", monthlyFee: 0 },
+    { id: "u16", name: "U16", category: "Youth", monthlyFee: 0 },
+    { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
+    { id: "u18girls", name: "U18 Girls", category: "Youth", monthlyFee: 0 },
+    { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
+    { id: "masters", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
+    { id: "legends", name: "Legends 35+", category: "Adult", monthlyFee: 0 },
+    { id: "social", name: "Social Team", category: "Adult", monthlyFee: 0 },
+    { id: "firstteam", name: "1st Team", category: "Adult", monthlyFee: 0 },
+  ]);
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [newTeam, setNewTeam] = useState({ name: "", category: "Junior" as Team["category"], monthlyFee: 0 });
@@ -103,7 +124,7 @@ export default function Settings() {
         { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
         // Adult Teams
         { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
-        { id: "masters", name: "Masters", category: "Adult", monthlyFee: 0 },
+        { id: "masters", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
         { id: "legends", name: "Legends", category: "Adult", monthlyFee: 0 },
         { id: "social", name: "Social", category: "Adult", monthlyFee: 0 },
         { id: "1stteam", name: "1st Team", category: "Adult", monthlyFee: 0 },

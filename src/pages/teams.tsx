@@ -1,355 +1,223 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import SEO from "@/components/SEO";
-import { Users, Search, Mail, Phone, Calendar, Award, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, ArrowLeft, Home, Users, DollarSign, Calendar, Settings, User } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 interface Member {
   id: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  nationality: string;
-  address: string;
-  email: string;
-  shirtNumber: string;
+  teamAssignment: string;
+  category: string;
   type: string;
   role: string;
-  team: string;
-  membershipCategory: string;
-  joiningDate: string;
-  contactNumber: string;
-  primaryContact: string;
-  primaryContactNumber: string;
-  secondaryContact: string;
-  secondaryContactNumber: string;
-  medicalNotes: string;
-  privateCoachingCredits: number;
-  teamAssignment: string;
-  category: "Junior" | "Youth" | "Adult";
   photoUrl?: string;
 }
 
-interface TeamGroup {
+interface TeamStats {
   name: string;
-  members: Member[];
-}
-
-interface Invoice {
-  id: string;
-  memberId: string;
-  memberName: string;
-  teamAssignment: string;
-  billingPeriod: string;
-  dueDate: string;
-  amount: number;
-  paymentLink: string;
-  status: "Draft" | "Sent" | "Paid" | "Overdue";
-  createdAt: string;
+  totalPlayers: number;
+  members: number;
+  sponsored: number;
+  scholarships: number;
+  players: Member[];
 }
 
 export default function TeamsPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
     if (savedMembers) {
-      try {
-        const parsedMembers = JSON.parse(savedMembers);
-        setMembers(parsedMembers);
-      } catch (error) {
-        console.error("Error loading members:", error);
-      }
+      setMembers(JSON.parse(savedMembers));
     }
   }, []);
 
-  const allTeams = [
-    "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv",
-    "U12 Dev", "U12 Adv", "U12 Girls", "U14", "U14 Girls", "U16", "U18 Girls", "U18",
-    "Women", "Masters", "Legends", "Social", "1st Team"
-  ];
+  const teamStats: TeamStats[] = [];
+  const teamMap = new Map<string, Member[]>();
 
-  const teamData = allTeams.map(teamName => {
-    const teamMembers = members.filter(m => m.teamAssignment === teamName);
-    
-    const total = teamMembers.length;
-    const standard = teamMembers.filter(m => m.membershipCategory === "Member").length;
-    const sponsored = teamMembers.filter(m => m.membershipCategory === "Sponsored").length;
-    const scholarship = teamMembers.filter(m => m.membershipCategory === "Scholarship").length;
+  members.forEach((member) => {
+    if (member.teamAssignment && member.teamAssignment !== "-") {
+      if (!teamMap.has(member.teamAssignment)) {
+        teamMap.set(member.teamAssignment, []);
+      }
+      teamMap.get(member.teamAssignment)!.push(member);
+    }
+  });
 
-    return {
+  teamMap.forEach((players, teamName) => {
+    const totalPlayers = players.length;
+    const membersCount = players.filter((m) => m.type === "Member").length;
+    const sponsoredCount = players.filter((m) => m.type === "Sponsored").length;
+    const scholarshipCount = players.filter((m) => m.type === "Scholarship").length;
+
+    teamStats.push({
       name: teamName,
-      members: teamMembers,
-      total,
-      standard,
-      sponsored,
-      scholarship
-    };
-  }).filter(team => team.total > 0);
+      totalPlayers,
+      members: membersCount,
+      sponsored: sponsoredCount,
+      scholarships: scholarshipCount,
+      players,
+    });
+  });
 
-  const filteredTeams = teamData.filter(team => {
-    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.members.some(m => 
-        `${m.firstName} ${m.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    
-    const matchesType = typeFilter === "all" || 
-      team.members.some(m => m.type === typeFilter);
-    
+  teamStats.sort((a, b) => b.totalPlayers - a.totalPlayers);
+
+  const filteredTeams = teamStats.filter((team) => {
+    const matchesSearch = searchTerm === "" || team.name.toLowerCase().includes(searchTerm.toLowerCase()) || team.players.some(p => `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesType = typeFilter === "all" || team.players.some(p => p.type === typeFilter);
     return matchesSearch && matchesType;
   });
 
-  const getMemberPaymentStatus = (memberId: string, quarter: string): Invoice | undefined => {
-    return invoices.find(inv => inv.memberId === memberId && inv.billingPeriod === quarter);
-  };
-
-  const calculateAge = (dob: string) => {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
   return (
     <>
-      <SEO
-        title="Teams - Bali Bulldogs Club Manager"
-        description="View all teams and their current members"
-      />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-blue-100">
-        <header className="bg-bulldogs-blue text-white shadow-lg">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/">
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                    ←
-                  </Button>
-                </Link>
-                <div>
-                  <h1 className="text-3xl font-black tracking-tight">TEAM ROSTER</h1>
-                  <p className="text-yellow-300 text-sm font-semibold">Bali Bulldogs Club Manager</p>
-                </div>
-              </div>
-              <Link href="/settings">
-                <Button variant="outline" className="text-blue-900 border-white hover:bg-blue-50">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </Button>
-              </Link>
+      <SEO title="Team Roster - Bali Bulldogs" description="View all teams and their members" />
+      
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
+        <nav className="bg-blue-800 text-white shadow-md">
+          <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div className="flex items-center font-bold text-lg">
+              <Users className="h-5 w-5 text-yellow-400 mr-2" />
+              Bali Bulldogs
+            </div>
+            <div className="flex space-x-1">
+              <Link href="/"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Home className="h-4 w-4 mr-1" />Home</Button></Link>
+              <Link href="/members"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Users className="h-4 w-4 mr-1" />Members</Button></Link>
+              <Link href="/invoices"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><DollarSign className="h-4 w-4 mr-1" />Invoices</Button></Link>
+              <Link href="/coaching"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Calendar className="h-4 w-4 mr-1" />Coaching</Button></Link>
+              <Link href="/settings"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Settings className="h-4 w-4 mr-1" />Settings</Button></Link>
             </div>
           </div>
-        </header>
+        </nav>
 
-        <main className="container mx-auto px-4 py-8">
-          <Card className="mb-6 border-bulldogs-blue/30 shadow-lg">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <Input
-                    placeholder="Search teams or members..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Junior">Junior</SelectItem>
-                    <SelectItem value="Youth">Youth</SelectItem>
-                    <SelectItem value="Adult">Adult</SelectItem>
-                  </SelectContent>
-                </Select>
+        <main className="max-w-7xl mx-auto w-full px-4 py-4">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Team Roster</h1>
+              <p className="text-sm text-gray-500">{teamStats.length} teams • {members.filter(m => m.teamAssignment && m.teamAssignment !== "-").length} assigned members</p>
+            </div>
+            <Button onClick={() => router.push("/members")} variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Members
+            </Button>
+          </div>
+
+          <div className="bg-white rounded-lg border shadow-sm p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search teams or members..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-            </CardContent>
-          </Card>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Member">Member</SelectItem>
+                  <SelectItem value="Sponsored">Sponsored</SelectItem>
+                  <SelectItem value="Scholarship">Scholarship</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-          <div className="space-y-8">
-            {filteredTeams.length === 0 ? (
-              <Card className="border-bulldogs-blue/30 shadow-lg">
-                <CardContent className="py-12 text-center">
-                  <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    No teams found
-                  </h3>
-                  <p className="text-gray-600">
-                    {searchTerm
-                      ? "Try adjusting your search filters"
-                      : "No members have been added to teams yet"}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredTeams.map((team) => (
-                <Card key={team.name} className="border-bulldogs-blue/30 shadow-lg overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-bulldogs-blue to-bulldogs-blue/90 text-white">
+          {filteredTeams.length === 0 ? (
+            <div className="bg-white rounded-lg border shadow-sm p-12 text-center">
+              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No teams found</h3>
+              <p className="text-gray-500 mb-4">No members have been assigned to teams yet</p>
+              <Button onClick={() => router.push("/members")} className="bg-blue-600">
+                Go to Members
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {filteredTeams.map((team) => (
+                <Card key={team.name} className="shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-2xl font-black">{team.name}</CardTitle>
-                        <CardDescription className="text-yellow-300 font-semibold">
-                          {team.total} member{team.total !== 1 ? "s" : ""}
-                        </CardDescription>
+                      <CardTitle className="text-xl font-bold">{team.name}</CardTitle>
+                      <div className="flex gap-2">
+                        <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                          {team.totalPlayers} {team.totalPlayers === 1 ? "Player" : "Players"}
+                        </Badge>
                       </div>
-                      <div className="bg-bulldogs-yellow/20 rounded-full p-3">
-                        <Users className="w-6 h-6 text-bulldogs-yellow" />
-                      </div>
+                    </div>
+                    <div className="flex gap-3 mt-2 text-sm">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                        {team.members} Members
+                      </span>
+                      {team.sponsored > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                          {team.sponsored} Sponsored
+                        </span>
+                      )}
+                      {team.scholarships > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                          {team.scholarships} Scholarships
+                        </span>
+                      )}
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-6 bg-white">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-3xl font-black">{team.name}</h2>
-                      <Button 
-                        onClick={() => {
-                          // Navigate to members page with team pre-selected
-                          localStorage.setItem("preselected_team", team.name);
-                          window.location.href = "/members";
-                        }}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Member to Team
-                      </Button>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {team.members.map((member) => (
-                        <Card
-                          key={member.id}
-                          className="border-gray-200 hover:border-bulldogs-yellow hover:shadow-md transition-all"
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {team.players.map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                         >
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <h4 className="font-bold text-lg text-bulldogs-blue">
-                                  {member.firstName} {member.lastName}
-                                </h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  {member.shirtNumber && (
-                                    <Badge variant="outline" className="text-xs border-bulldogs-blue text-bulldogs-blue">
-                                      #{member.shirtNumber}
-                                    </Badge>
-                                  )}
-                                  <Badge
-                                    variant={
-                                      member.membershipCategory === "Scholarship"
-                                        ? "destructive"
-                                        : member.membershipCategory === "Sponsored"
-                                        ? "default"
-                                        : "secondary"
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {member.membershipCategory}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                <Badge className="bg-bulldogs-yellow text-bulldogs-blue font-bold text-xs">
-                                  {member.role}
+                          {player.photoUrl ? (
+                            <img
+                              src={player.photoUrl}
+                              alt={`${player.firstName} ${player.lastName}`}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                              <User className="w-6 h-6 text-blue-600" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">
+                              {player.firstName} {player.lastName}
+                            </p>
+                            <div className="flex gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs">
+                                {player.role}
+                              </Badge>
+                              {player.type !== "Member" && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {player.type}
                                 </Badge>
-                                <span className="text-xs text-gray-500">
-                                  {member.type}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2 text-sm text-gray-600">
-                              {member.dateOfBirth && (
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="w-4 h-4 text-bulldogs-blue/60" />
-                                  <span>Age {calculateAge(member.dateOfBirth)}</span>
-                                </div>
-                              )}
-                              {member.email && (
-                                <div className="flex items-center gap-2">
-                                  <Mail className="w-4 h-4 text-bulldogs-blue/60" />
-                                  <span className="truncate">{member.email}</span>
-                                </div>
-                              )}
-                              {member.contactNumber && (
-                                <div className="flex items-center gap-2">
-                                  <Phone className="w-4 h-4 text-bulldogs-blue/60" />
-                                  <span>{member.contactNumber}</span>
-                                </div>
-                              )}
-                              {member.joiningDate && (
-                                <div className="flex items-center gap-2">
-                                  <Award className="w-4 h-4 text-bulldogs-blue/60" />
-                                  <span>Joined {formatDate(member.joiningDate)}</span>
-                                </div>
                               )}
                             </div>
-
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <p className="text-xs font-semibold text-gray-700 mb-2">2026 Payment Status:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {["2026 Q1", "2026 Q2", "2026 Q3", "2026 Q4"].map(quarter => {
-                                  const invoice = getMemberPaymentStatus(member.id, quarter);
-                                  const isPaid = invoice?.status === "Paid";
-                                  return (
-                                    <Badge
-                                      key={quarter}
-                                      variant={isPaid ? "default" : "outline"}
-                                      className={`text-xs ${
-                                        isPaid
-                                          ? "bg-green-100 text-green-800 border-green-300"
-                                          : "bg-gray-100 text-gray-600 border-gray-300"
-                                      }`}
-                                    >
-                                      {quarter.split(" ")[1]}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </main>
       </div>
     </>

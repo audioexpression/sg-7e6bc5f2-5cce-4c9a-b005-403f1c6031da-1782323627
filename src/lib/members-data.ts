@@ -16,7 +16,7 @@ export const TEAMS = [
   "U18 Girls",
   "U18",
   "Women",
-  "Masters",
+  "Masters 45+",
   "Legends",
   "Social",
   "1st Team",
@@ -100,3 +100,9 @@ export const SAMPLE_MEMBERS: Member[] = [
     coachingCredits: 0,
   }
 ];
+
+const TEAMS_BY_CATEGORY = {
+  Junior: ["Toddler", "Kindy/U6 1", "Kindy/U6 2", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Girls", "U12 Dev", "U12 Adv"],
+  Youth: ["U14", "U14 Girls", "U16", "U18 Girls", "U18"],
+  Adult: ["1st Team", "Social Team", "Legends 35+", "Masters 45+"],
+};
