@@ -30,7 +30,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign } from "lucide-react";
 import { useRouter } from "next/router";
-import { TEAMS } from "@/lib/members-data";
 
 interface Member {
   id: string;
@@ -51,19 +50,6 @@ interface Invoice {
   status: "Draft" | "Sent" | "Paid" | "Overdue";
 }
 
-const BILLING_PERIODS = [
-  "2026 Q1",
-  "2026 Q2",
-  "2026 Q3",
-  "2026 Q4",
-  "2027 Q1",
-  "2027 Q2",
-  "2027 Q3",
-  "2027 Q4",
-  "Annual 2026",
-  "Annual 2027",
-];
-
 export default function Invoices() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
@@ -72,20 +58,28 @@ export default function Invoices() {
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
-
-  // Form state
-  const [selectedMember, setSelectedMember] = useState("");
-  const [billingPeriod, setBillingPeriod] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [amount, setAmount] = useState("");
-  const [paymentLink, setPaymentLink] = useState("");
-  const [status, setStatus] = useState<"Draft" | "Sent" | "Paid" | "Overdue">("Draft");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Bulk generation state
-  const [selectedTeam, setSelectedTeam] = useState("");
-  const [selectedQuarter, setSelectedQuarter] = useState("");
-  const [quarterAmount, setQuarterAmount] = useState("");
+  // Validation State
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Single Invoice Form State
+  const [formData, setFormData] = useState<Partial<Invoice>>({
+    memberId: "",
+    billingPeriod: "",
+    dueDate: "",
+    amount: 0,
+    paymentLink: "",
+    status: "Draft",
+  });
+
+  // Bulk Generation Form State
+  const [bulkFormData, setBulkFormData] = useState({
+    teamName: "",
+    billingPeriod: "",
+    dueDate: "",
+    amount: 0,
+  });
 
   useEffect(() => {
     const storedMembers = localStorage.getItem("members");
@@ -104,85 +98,30 @@ export default function Invoices() {
     localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedMember || !billingPeriod || !dueDate || !amount) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    const invoice: Invoice = {
-      id: editingId || Date.now().toString(),
-      memberId: selectedMember,
-      billingPeriod,
-      dueDate,
-      amount: parseFloat(amount),
-      paymentLink: paymentLink || undefined,
-      status,
-    };
-
-    let updatedInvoices;
-    if (editingId) {
-      updatedInvoices = invoices.map((inv) => (inv.id === editingId ? invoice : inv));
-    } else {
-      updatedInvoices = [...invoices, invoice];
-    }
-
-    saveInvoices(updatedInvoices);
-    resetForm();
-    setShowAddDialog(false);
-  };
-
-  const handleBulkGenerate = () => {
-    if (!selectedTeam || !selectedQuarter || !quarterAmount) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    // Filter members who are in the selected team AND have type "Member" (exclude Sponsored/Scholarship)
-    const teamMembers = members.filter(
-      (m) => m.teamAssignment === selectedTeam && m.type === "Member"
-    );
-
-    if (teamMembers.length === 0) {
-      alert("No paying members found in this team (Sponsored and Scholarship members excluded)");
-      return;
-    }
-
-    // Calculate due date (30 days from now for quarterly invoices)
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 30);
-    const dueDateStr = dueDate.toISOString().split("T")[0];
-
-    // Generate invoices for all team members
-    const newInvoices: Invoice[] = teamMembers.map((member) => ({
-      id: `${Date.now()}-${member.id}`,
-      memberId: member.id,
-      billingPeriod: selectedQuarter,
-      dueDate: dueDateStr,
-      amount: parseFloat(quarterAmount),
-      status: "Draft" as const,
-    }));
-
-    const updatedInvoices = [...invoices, ...newInvoices];
-    saveInvoices(updatedInvoices);
-
-    alert(`Successfully generated ${newInvoices.length} invoices for ${selectedTeam}`);
-    setShowBulkDialog(false);
-    setSelectedTeam("");
-    setSelectedQuarter("");
-    setQuarterAmount("");
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({
+      memberId: "",
+      billingPeriod: "",
+      dueDate: "",
+      amount: 0,
+      paymentLink: "",
+      status: "Draft",
+    });
+    setFormErrors({});
   };
 
   const handleEdit = (invoice: Invoice) => {
     setEditingId(invoice.id);
-    setSelectedMember(invoice.memberId);
-    setBillingPeriod(invoice.billingPeriod);
-    setDueDate(invoice.dueDate);
-    setAmount(invoice.amount.toString());
-    setPaymentLink(invoice.paymentLink || "");
-    setStatus(invoice.status);
+    setFormData({
+      memberId: invoice.memberId,
+      billingPeriod: invoice.billingPeriod,
+      dueDate: invoice.dueDate,
+      amount: invoice.amount,
+      paymentLink: invoice.paymentLink || "",
+      status: invoice.status,
+    });
+    setFormErrors({});
     setShowAddDialog(true);
   };
 
@@ -193,14 +132,116 @@ export default function Invoices() {
     }
   };
 
-  const resetForm = () => {
-    setEditingId(null);
-    setSelectedMember("");
-    setBillingPeriod("");
-    setDueDate("");
-    setAmount("");
-    setPaymentLink("");
-    setStatus("Draft");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Reset errors
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    // Validate member selection
+    if (!formData.memberId) {
+      errors.memberId = "Please select a member";
+    }
+
+    // Validate billing period
+    if (!formData.billingPeriod) {
+      errors.billingPeriod = "Please select a billing period";
+    }
+
+    // Validate due date
+    if (!formData.dueDate) {
+      errors.dueDate = "Due date is required";
+    }
+
+    // Validate amount
+    if (!formData.amount || formData.amount <= 0) {
+      errors.amount = "Amount must be greater than 0";
+    }
+
+    // Validate payment link format if provided
+    if (formData.paymentLink && !formData.paymentLink.match(/^https?:\/\/.+/)) {
+      errors.paymentLink = "Payment link must be a valid URL (starting with http:// or https://)";
+    }
+
+    // If there are errors, show them and stop submission
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    if (editingId) {
+      const updatedInvoices = invoices.map((invoice) =>
+        invoice.id === editingId
+          ? { ...invoice, ...formData } as Invoice
+          : invoice
+      );
+      saveInvoices(updatedInvoices);
+    } else {
+      const newInvoice: Invoice = {
+        id: Date.now().toString(),
+        memberId: formData.memberId!,
+        billingPeriod: formData.billingPeriod!,
+        dueDate: formData.dueDate!,
+        amount: formData.amount!,
+        paymentLink: formData.paymentLink || "",
+        status: formData.status || "Draft",
+      };
+      saveInvoices([...invoices, newInvoice]);
+    }
+
+    setShowAddDialog(false);
+    resetForm();
+  };
+
+  const handleBulkGenerate = () => {
+    // Reset errors
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    if (!bulkFormData.teamName) {
+      errors.teamName = "Please select a team";
+    }
+    if (!bulkFormData.billingPeriod) {
+      errors.billingPeriod = "Please select a billing period";
+    }
+    if (!bulkFormData.dueDate) {
+      errors.dueDate = "Due date is required";
+    }
+    if (!bulkFormData.amount || bulkFormData.amount <= 0) {
+      errors.amount = "Amount must be greater than 0";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const teamMembers = members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member");
+    
+    if (teamMembers.length === 0) {
+      setFormErrors({ teamName: "No paying members found in this team" });
+      return;
+    }
+
+    const newInvoices = teamMembers.map((member) => ({
+      id: Date.now().toString() + Math.random(),
+      memberId: member.id,
+      billingPeriod: bulkFormData.billingPeriod,
+      dueDate: bulkFormData.dueDate,
+      amount: bulkFormData.amount,
+      paymentLink: "",
+      status: "Draft" as const,
+    }));
+
+    saveInvoices([...invoices, ...newInvoices]);
+    setShowBulkDialog(false);
+    setBulkFormData({
+      teamName: "",
+      billingPeriod: "",
+      dueDate: "",
+      amount: 0,
+    });
   };
 
   // Filter invoices
@@ -457,72 +498,109 @@ export default function Invoices() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Member *</Label>
-              <Select value={selectedMember} onValueChange={setSelectedMember}>
-                <SelectTrigger>
+              <Select
+                value={formData.memberId}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, memberId: value });
+                  if (formErrors.memberId) {
+                    setFormErrors({ ...formErrors, memberId: "" });
+                  }
+                }}
+              >
+                <SelectTrigger className={formErrors.memberId ? "border-red-500" : ""}>
                   <SelectValue placeholder="Select member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {members
-                    .filter((m) => m.type === "Member")
-                    .map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.firstName} {member.lastName}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Billing Period *</Label>
-              <Select value={billingPeriod} onValueChange={setBillingPeriod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BILLING_PERIODS.map((period) => (
-                    <SelectItem key={period} value={period}>
-                      {period}
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.firstName} {member.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {formErrors.memberId && <p className="text-red-500 text-sm mt-1">{formErrors.memberId}</p>}
+            </div>
+
+            <div>
+              <Label>Billing Period *</Label>
+              <Select
+                value={formData.billingPeriod}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, billingPeriod: value });
+                  if (formErrors.billingPeriod) {
+                    setFormErrors({ ...formErrors, billingPeriod: "" });
+                  }
+                }}
+              >
+                <SelectTrigger className={formErrors.billingPeriod ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2026 Q1">2026 Q1</SelectItem>
+                  <SelectItem value="2026 Q2">2026 Q2</SelectItem>
+                  <SelectItem value="2026 Q3">2026 Q3</SelectItem>
+                  <SelectItem value="2026 Q4">2026 Q4</SelectItem>
+                  <SelectItem value="Annual">Annual</SelectItem>
+                </SelectContent>
+              </Select>
+              {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
             </div>
 
             <div>
               <Label>Due Date *</Label>
               <Input
                 type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                required
+                value={formData.dueDate}
+                onChange={(e) => {
+                  setFormData({ ...formData, dueDate: e.target.value });
+                  if (formErrors.dueDate) {
+                    setFormErrors({ ...formErrors, dueDate: "" });
+                  }
+                }}
+                className={formErrors.dueDate ? "border-red-500" : ""}
               />
+              {formErrors.dueDate && <p className="text-red-500 text-sm mt-1">{formErrors.dueDate}</p>}
             </div>
 
             <div>
-              <Label>Amount (IDR) *</Label>
+              <Label>Amount (Rp) *</Label>
               <Input
                 type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g., 2500000"
-                required
+                value={formData.amount}
+                onChange={(e) => {
+                  setFormData({ ...formData, amount: Number(e.target.value) });
+                  if (formErrors.amount) {
+                    setFormErrors({ ...formErrors, amount: "" });
+                  }
+                }}
+                className={formErrors.amount ? "border-red-500" : ""}
               />
+              {formErrors.amount && <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>}
             </div>
 
             <div>
-              <Label>Payment Link (Optional)</Label>
+              <Label>Payment Link</Label>
               <Input
                 type="url"
-                value={paymentLink}
-                onChange={(e) => setPaymentLink(e.target.value)}
-                placeholder="https://payment-provider.com/..."
+                placeholder="https://..."
+                value={formData.paymentLink}
+                onChange={(e) => {
+                  setFormData({ ...formData, paymentLink: e.target.value });
+                  if (formErrors.paymentLink) {
+                    setFormErrors({ ...formErrors, paymentLink: "" });
+                  }
+                }}
+                className={formErrors.paymentLink ? "border-red-500" : ""}
               />
+              {formErrors.paymentLink && <p className="text-red-500 text-sm mt-1">{formErrors.paymentLink}</p>}
             </div>
 
             <div>
-              <Label>Status *</Label>
-              <Select value={status} onValueChange={(val) => setStatus(val as any)}>
+              <Label>Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value as Invoice["status"] })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -558,57 +636,94 @@ export default function Invoices() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Team</Label>
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger>
+              <Label>Team *</Label>
+              <Select
+                value={bulkFormData.teamName}
+                onValueChange={(value) => {
+                  setBulkFormData({ ...bulkFormData, teamName: value });
+                  if (formErrors.teamName) {
+                    setFormErrors({ ...formErrors, teamName: "" });
+                  }
+                }}
+              >
+                <SelectTrigger className={formErrors.teamName ? "border-red-500" : ""}>
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEAMS.map((team) => (
-                    <SelectItem key={team} value={team}>
+                  {Array.from(new Set(members.map((m) => m.teamAssignment))).filter(Boolean).map((team) => (
+                    <SelectItem key={team} value={team!}>
                       {team}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {formErrors.teamName && <p className="text-red-500 text-sm mt-1">{formErrors.teamName}</p>}
             </div>
 
             <div>
-              <Label>Billing Period</Label>
-              <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select quarter" />
+              <Label>Billing Period *</Label>
+              <Select
+                value={bulkFormData.billingPeriod}
+                onValueChange={(value) => {
+                  setBulkFormData({ ...bulkFormData, billingPeriod: value });
+                  if (formErrors.billingPeriod) {
+                    setFormErrors({ ...formErrors, billingPeriod: "" });
+                  }
+                }}
+              >
+                <SelectTrigger className={formErrors.billingPeriod ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Select period" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BILLING_PERIODS.map((period) => (
-                    <SelectItem key={period} value={period}>
-                      {period}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="2026 Q1">2026 Q1</SelectItem>
+                  <SelectItem value="2026 Q2">2026 Q2</SelectItem>
+                  <SelectItem value="2026 Q3">2026 Q3</SelectItem>
+                  <SelectItem value="2026 Q4">2026 Q4</SelectItem>
+                  <SelectItem value="Annual">Annual</SelectItem>
                 </SelectContent>
               </Select>
+              {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
             </div>
 
             <div>
-              <Label>Amount per Member (IDR)</Label>
+              <Label>Due Date *</Label>
               <Input
-                type="number"
-                value={quarterAmount}
-                onChange={(e) => setQuarterAmount(e.target.value)}
-                placeholder="e.g., 2500000"
+                type="date"
+                value={bulkFormData.dueDate}
+                onChange={(e) => {
+                  setBulkFormData({ ...bulkFormData, dueDate: e.target.value });
+                  if (formErrors.dueDate) {
+                    setFormErrors({ ...formErrors, dueDate: "" });
+                  }
+                }}
+                className={formErrors.dueDate ? "border-red-500" : ""}
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Standard quarterly fee (11% tax): Rp 2,145,000
-              </p>
+              {formErrors.dueDate && <p className="text-red-500 text-sm mt-1">{formErrors.dueDate}</p>}
             </div>
 
-            {selectedTeam && (
+            <div>
+              <Label>Amount per Member (Rp) *</Label>
+              <Input
+                type="number"
+                value={bulkFormData.amount}
+                onChange={(e) => {
+                  setBulkFormData({ ...bulkFormData, amount: Number(e.target.value) });
+                  if (formErrors.amount) {
+                    setFormErrors({ ...formErrors, amount: "" });
+                  }
+                }}
+                className={formErrors.amount ? "border-red-500" : ""}
+              />
+              {formErrors.amount && <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>}
+            </div>
+
+            {bulkFormData.teamName && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <p className="text-sm text-blue-900">
                   <strong>
-                    {members.filter((m) => m.teamAssignment === selectedTeam && m.type === "Member").length}
+                    {members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member").length}
                   </strong>{" "}
-                  paying member{members.filter((m) => m.teamAssignment === selectedTeam && m.type === "Member").length !== 1 ? "s" : ""} in {selectedTeam}
+                  paying member{members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member").length !== 1 ? "s" : ""} in {bulkFormData.teamName}
                 </p>
               </div>
             )}

@@ -69,6 +69,7 @@ export default function Settings() {
   const [adminSearchTerm, setAdminSearchTerm] = useState("");
 
   const [successMessage, setSuccessMessage] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Load data from localStorage
   useEffect(() => {
@@ -101,7 +102,16 @@ export default function Settings() {
 
   // Teams Functions
   const handleAddTeam = () => {
-    if (!newTeam.name.trim()) return;
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    if (!newTeam.name.trim()) errors.teamName = "Team name is required";
+    if (newTeam.monthlyFee < 0) errors.monthlyFee = "Fee cannot be negative";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
     const team: Team = {
       id: Date.now().toString(),
@@ -133,7 +143,16 @@ export default function Settings() {
 
   // Coaches Functions
   const handleAddCoach = () => {
-    if (!newCoach.name.trim()) return;
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    if (!newCoach.name.trim()) errors.coachName = "Name is required";
+    if (!newCoach.phone.trim()) errors.coachPhone = "Phone is required";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
     const coach: Coach = {
       id: Date.now().toString(),
@@ -166,7 +185,22 @@ export default function Settings() {
 
   // Admin Staff Functions
   const handleAddAdmin = () => {
-    if (!newAdmin.name.trim()) return;
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    if (!newAdmin.name.trim()) errors.adminName = "Name is required";
+    if (!newAdmin.phone.trim()) errors.adminPhone = "Phone is required";
+    if (!newAdmin.email.trim()) errors.adminEmail = "Email is required";
+    if (!newAdmin.role.trim()) errors.adminRole = "Role is required";
+
+    if (newAdmin.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email)) {
+      errors.adminEmail = "Invalid email format";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
 
     const admin: AdminStaff = {
       id: Date.now().toString(),
@@ -324,9 +358,14 @@ export default function Settings() {
                         <Input
                           id="teamName"
                           value={newTeam.name}
-                          onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                          onChange={(e) => {
+                            setNewTeam({ ...newTeam, name: e.target.value });
+                            if (formErrors.teamName) setFormErrors({ ...formErrors, teamName: "" });
+                          }}
                           placeholder="e.g., U12 Dev"
+                          className={formErrors.teamName ? "border-red-500" : ""}
                         />
+                        {formErrors.teamName && <p className="text-red-500 text-sm mt-1">{formErrors.teamName}</p>}
                       </div>
                       <div>
                         <Label htmlFor="teamCategory">Category *</Label>
@@ -350,9 +389,14 @@ export default function Settings() {
                           id="monthlyFee"
                           type="number"
                           value={newTeam.monthlyFee}
-                          onChange={(e) => setNewTeam({ ...newTeam, monthlyFee: parseInt(e.target.value) || 0 })}
+                          onChange={(e) => {
+                            setNewTeam({ ...newTeam, monthlyFee: parseInt(e.target.value) || 0 });
+                            if (formErrors.monthlyFee) setFormErrors({ ...formErrors, monthlyFee: "" });
+                          }}
                           placeholder="e.g., 500000"
+                          className={formErrors.monthlyFee ? "border-red-500" : ""}
                         />
+                        {formErrors.monthlyFee && <p className="text-red-500 text-sm mt-1">{formErrors.monthlyFee}</p>}
                       </div>
                     </div>
                     <DialogFooter>
@@ -501,18 +545,28 @@ export default function Settings() {
                         <Input
                           id="coachName"
                           value={newCoach.name}
-                          onChange={(e) => setNewCoach({ ...newCoach, name: e.target.value })}
+                          onChange={(e) => {
+                            setNewCoach({ ...newCoach, name: e.target.value });
+                            if (formErrors.coachName) setFormErrors({ ...formErrors, coachName: "" });
+                          }}
                           placeholder="Coach name"
+                          className={formErrors.coachName ? "border-red-500" : ""}
                         />
+                        {formErrors.coachName && <p className="text-red-500 text-sm mt-1">{formErrors.coachName}</p>}
                       </div>
                       <div>
                         <Label htmlFor="coachPhone">Phone Number *</Label>
                         <Input
                           id="coachPhone"
                           value={newCoach.phone}
-                          onChange={(e) => setNewCoach({ ...newCoach, phone: e.target.value })}
+                          onChange={(e) => {
+                            setNewCoach({ ...newCoach, phone: e.target.value });
+                            if (formErrors.coachPhone) setFormErrors({ ...formErrors, coachPhone: "" });
+                          }}
                           placeholder="+62..."
+                          className={formErrors.coachPhone ? "border-red-500" : ""}
                         />
+                        {formErrors.coachPhone && <p className="text-red-500 text-sm mt-1">{formErrors.coachPhone}</p>}
                       </div>
                       <div>
                         <Label htmlFor="coachTier">Tier *</Label>
@@ -691,18 +745,28 @@ export default function Settings() {
                         <Input
                           id="adminName"
                           value={newAdmin.name}
-                          onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
+                          onChange={(e) => {
+                            setNewAdmin({ ...newAdmin, name: e.target.value });
+                            if (formErrors.adminName) setFormErrors({ ...formErrors, adminName: "" });
+                          }}
                           placeholder="Staff name"
+                          className={formErrors.adminName ? "border-red-500" : ""}
                         />
+                        {formErrors.adminName && <p className="text-red-500 text-sm mt-1">{formErrors.adminName}</p>}
                       </div>
                       <div>
                         <Label htmlFor="adminPhone">Phone Number *</Label>
                         <Input
                           id="adminPhone"
                           value={newAdmin.phone}
-                          onChange={(e) => setNewAdmin({ ...newAdmin, phone: e.target.value })}
+                          onChange={(e) => {
+                            setNewAdmin({ ...newAdmin, phone: e.target.value });
+                            if (formErrors.adminPhone) setFormErrors({ ...formErrors, adminPhone: "" });
+                          }}
                           placeholder="+62..."
+                          className={formErrors.adminPhone ? "border-red-500" : ""}
                         />
+                        {formErrors.adminPhone && <p className="text-red-500 text-sm mt-1">{formErrors.adminPhone}</p>}
                       </div>
                       <div>
                         <Label htmlFor="adminEmail">Email *</Label>
@@ -710,18 +774,28 @@ export default function Settings() {
                           id="adminEmail"
                           type="email"
                           value={newAdmin.email}
-                          onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                          onChange={(e) => {
+                            setNewAdmin({ ...newAdmin, email: e.target.value });
+                            if (formErrors.adminEmail) setFormErrors({ ...formErrors, adminEmail: "" });
+                          }}
                           placeholder="email@example.com"
+                          className={formErrors.adminEmail ? "border-red-500" : ""}
                         />
+                        {formErrors.adminEmail && <p className="text-red-500 text-sm mt-1">{formErrors.adminEmail}</p>}
                       </div>
                       <div>
                         <Label htmlFor="adminRole">Role *</Label>
                         <Input
                           id="adminRole"
                           value={newAdmin.role}
-                          onChange={(e) => setNewAdmin({ ...newAdmin, role: e.target.value })}
+                          onChange={(e) => {
+                            setNewAdmin({ ...newAdmin, role: e.target.value });
+                            if (formErrors.adminRole) setFormErrors({ ...formErrors, adminRole: "" });
+                          }}
                           placeholder="e.g., Club Manager, Secretary"
+                          className={formErrors.adminRole ? "border-red-500" : ""}
                         />
+                        {formErrors.adminRole && <p className="text-red-500 text-sm mt-1">{formErrors.adminRole}</p>}
                       </div>
                     </div>
                     <DialogFooter>

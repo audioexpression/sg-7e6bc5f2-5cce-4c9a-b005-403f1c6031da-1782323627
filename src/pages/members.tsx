@@ -90,6 +90,7 @@ export default function Members() {
     role: "Player",
     coachingCredits: 0,
   });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -102,6 +103,87 @@ export default function Members() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Reset validation errors
+    const errors: Record<string, string> = {};
+    
+    // Required field validation
+    if (!formData.firstName?.trim()) {
+      errors.firstName = "First name is required";
+    }
+    if (!formData.lastName?.trim()) {
+      errors.lastName = "Last name is required";
+    }
+    if (!formData.dateOfBirth) {
+      errors.dateOfBirth = "Date of birth is required";
+    } else {
+      // Validate age (must be at least 3 years old, max 100)
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      if (age < 3 || age > 100) {
+        errors.dateOfBirth = "Please enter a valid date of birth (age 3-100)";
+      }
+    }
+    if (!formData.nationality?.trim()) {
+      errors.nationality = "Nationality is required";
+    }
+    if (!formData.address?.trim()) {
+      errors.address = "Address is required";
+    }
+    if (!formData.email?.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    if (!formData.category) {
+      errors.category = "Category is required";
+    }
+    if (!formData.type) {
+      errors.type = "Type is required";
+    }
+    if (!formData.role) {
+      errors.role = "Role is required";
+    }
+    if (!formData.teamAssignment) {
+      errors.teamAssignment = "Team assignment is required";
+    }
+    if (!formData.joiningDate) {
+      errors.joiningDate = "Joining date is required";
+    }
+    if (!formData.contactNumber?.trim()) {
+      errors.contactNumber = "Contact number is required";
+    } else if (!/^\+?[0-9\s\-()]+$/.test(formData.contactNumber)) {
+      errors.contactNumber = "Please enter a valid phone number";
+    }
+    
+    // Optional field validation
+    if (formData.shirtNumber && (parseInt(formData.shirtNumber) < 1 || parseInt(formData.shirtNumber) > 99)) {
+      errors.shirtNumber = "Shirt number must be between 1 and 99";
+    }
+    if (formData.coachingCredits && formData.coachingCredits < 0) {
+      errors.coachingCredits = "Coaching credits cannot be negative";
+    }
+    if (formData.primaryContactNumber && !/^\+?[0-9\s\-()]+$/.test(formData.primaryContactNumber)) {
+      errors.primaryContactNumber = "Please enter a valid phone number";
+    }
+    if (formData.secondaryContactNumber && !/^\+?[0-9\s\-()]+$/.test(formData.secondaryContactNumber)) {
+      errors.secondaryContactNumber = "Please enter a valid phone number";
+    }
+    
+    // Check for duplicate email (excluding current member when editing)
+    const duplicateEmail = members.find(m => 
+      m.email.toLowerCase() === formData.email?.toLowerCase() && 
+      m.id !== editingMember?.id
+    );
+    if (duplicateEmail) {
+      errors.email = "This email is already registered";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
     if (editingMember) {
       const updated = members.map(m => 
         m.id === editingMember.id ? { ...formData, id: editingMember.id } as Member : m
@@ -112,6 +194,7 @@ export default function Members() {
       const newMember: Member = {
         ...formData,
         id: Date.now().toString(),
+        whatsappLink: `https://wa.me/${formData.contactNumber?.replace(/\D/g, "")}`,
       } as Member;
       const updated = [...members, newMember];
       setMembers(updated);
@@ -120,6 +203,7 @@ export default function Members() {
 
     setIsDialogOpen(false);
     setEditingMember(null);
+    setValidationErrors({});
     resetForm();
   };
 
@@ -495,9 +579,16 @@ export default function Members() {
                 <Input
                   id="firstName"
                   value={formData.firstName || ""}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, firstName: e.target.value });
+                    setValidationErrors({ ...validationErrors, firstName: "" });
+                  }}
                   required
+                  className={validationErrors.firstName ? "border-red-500" : ""}
                 />
+                {validationErrors.firstName && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.firstName}</p>
+                )}
               </div>
 
               <div>
@@ -505,9 +596,16 @@ export default function Members() {
                 <Input
                   id="lastName"
                   value={formData.lastName || ""}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, lastName: e.target.value });
+                    setValidationErrors({ ...validationErrors, lastName: "" });
+                  }}
                   required
+                  className={validationErrors.lastName ? "border-red-500" : ""}
                 />
+                {validationErrors.lastName && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.lastName}</p>
+                )}
               </div>
 
               <div>
@@ -527,9 +625,10 @@ export default function Members() {
                   value={formData.category}
                   onValueChange={(value) => {
                     setFormData({ ...formData, category: value as "Junior" | "Youth" | "Adult", teamAssignment: "" });
+                    setValidationErrors({ ...validationErrors, category: "" });
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -538,6 +637,9 @@ export default function Members() {
                     <SelectItem value="Adult">Adult</SelectItem>
                   </SelectContent>
                 </Select>
+                {validationErrors.category && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.category}</p>
+                )}
               </div>
 
               <div>
@@ -546,9 +648,16 @@ export default function Members() {
                   id="dateOfBirth"
                   type="date"
                   value={formData.dateOfBirth || ""}
-                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, dateOfBirth: e.target.value });
+                    setValidationErrors({ ...validationErrors, dateOfBirth: "" });
+                  }}
                   required
+                  className={validationErrors.dateOfBirth ? "border-red-500" : ""}
                 />
+                {validationErrors.dateOfBirth && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.dateOfBirth}</p>
+                )}
               </div>
 
               <div>
@@ -556,9 +665,16 @@ export default function Members() {
                 <Input
                   id="nationality"
                   value={formData.nationality || ""}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, nationality: e.target.value });
+                    setValidationErrors({ ...validationErrors, nationality: "" });
+                  }}
                   required
+                  className={validationErrors.nationality ? "border-red-500" : ""}
                 />
+                {validationErrors.nationality && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.nationality}</p>
+                )}
               </div>
 
               <div>
@@ -566,9 +682,16 @@ export default function Members() {
                 <Input
                   id="address"
                   value={formData.address || ""}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, address: e.target.value });
+                    setValidationErrors({ ...validationErrors, address: "" });
+                  }}
                   required
+                  className={validationErrors.address ? "border-red-500" : ""}
                 />
+                {validationErrors.address && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.address}</p>
+                )}
               </div>
 
               <div>
@@ -577,9 +700,16 @@ export default function Members() {
                   id="email"
                   type="email"
                   value={formData.email || ""}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    setValidationErrors({ ...validationErrors, email: "" });
+                  }}
                   required
+                  className={validationErrors.email ? "border-red-500" : ""}
                 />
+                {validationErrors.email && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -587,18 +717,30 @@ export default function Members() {
                 <Input
                   id="shirtNumber"
                   type="number"
+                  min="1"
+                  max="99"
                   value={formData.shirtNumber || ""}
-                  onChange={(e) => setFormData({ ...formData, shirtNumber: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, shirtNumber: e.target.value });
+                    setValidationErrors({ ...validationErrors, shirtNumber: "" });
+                  }}
+                  className={validationErrors.shirtNumber ? "border-red-500" : ""}
                 />
+                {validationErrors.shirtNumber && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.shirtNumber}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="type">Type (Payment Status) *</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value) => setFormData({ ...formData, type: value as "Member" | "Sponsored" | "Scholarship" })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, type: value as "Member" | "Sponsored" | "Scholarship" });
+                    setValidationErrors({ ...validationErrors, type: "" });
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={validationErrors.type ? "border-red-500" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -607,15 +749,21 @@ export default function Members() {
                     <SelectItem value="Scholarship">Scholarship (Free)</SelectItem>
                   </SelectContent>
                 </Select>
+                {validationErrors.type && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.type}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="role">Role *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, role: value });
+                    setValidationErrors({ ...validationErrors, role: "" });
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={validationErrors.role ? "border-red-500" : ""}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -626,15 +774,21 @@ export default function Members() {
                     ))}
                   </SelectContent>
                 </Select>
+                {validationErrors.role && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.role}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="teamAssignment">Team Assignment *</Label>
                 <Select
                   value={formData.teamAssignment}
-                  onValueChange={(value) => setFormData({ ...formData, teamAssignment: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, teamAssignment: value });
+                    setValidationErrors({ ...validationErrors, teamAssignment: "" });
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={validationErrors.teamAssignment ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
@@ -645,6 +799,9 @@ export default function Members() {
                     ))}
                   </SelectContent>
                 </Select>
+                {validationErrors.teamAssignment && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.teamAssignment}</p>
+                )}
               </div>
 
               <div>
@@ -653,9 +810,16 @@ export default function Members() {
                   id="joiningDate"
                   type="date"
                   value={formData.joiningDate || ""}
-                  onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, joiningDate: e.target.value });
+                    setValidationErrors({ ...validationErrors, joiningDate: "" });
+                  }}
                   required
+                  className={validationErrors.joiningDate ? "border-red-500" : ""}
                 />
+                {validationErrors.joiningDate && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.joiningDate}</p>
+                )}
               </div>
 
               <div>
@@ -664,9 +828,15 @@ export default function Members() {
                   id="contactNumber"
                   required
                   value={formData.contactNumber}
-                  onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
-                  className="border-2 border-blue-200"
+                  onChange={(e) => {
+                    setFormData({...formData, contactNumber: e.target.value});
+                    setValidationErrors({ ...validationErrors, contactNumber: "" });
+                  }}
+                  className={validationErrors.contactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
                 />
+                {validationErrors.contactNumber && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.contactNumber}</p>
+                )}
               </div>
 
               <div>
@@ -684,9 +854,15 @@ export default function Members() {
                 <Input
                   id="primaryContactNumber"
                   value={formData.primaryContactNumber}
-                  onChange={(e) => setFormData({...formData, primaryContactNumber: e.target.value})}
-                  className="border-2 border-blue-200"
+                  onChange={(e) => {
+                    setFormData({...formData, primaryContactNumber: e.target.value});
+                    setValidationErrors({ ...validationErrors, primaryContactNumber: "" });
+                  }}
+                  className={validationErrors.primaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
                 />
+                {validationErrors.primaryContactNumber && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.primaryContactNumber}</p>
+                )}
               </div>
 
               <div>
@@ -704,9 +880,15 @@ export default function Members() {
                 <Input
                   id="secondaryContactNumber"
                   value={formData.secondaryContactNumber}
-                  onChange={(e) => setFormData({...formData, secondaryContactNumber: e.target.value})}
-                  className="border-2 border-blue-200"
+                  onChange={(e) => {
+                    setFormData({...formData, secondaryContactNumber: e.target.value});
+                    setValidationErrors({ ...validationErrors, secondaryContactNumber: "" });
+                  }}
+                  className={validationErrors.secondaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
                 />
+                {validationErrors.secondaryContactNumber && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.secondaryContactNumber}</p>
+                )}
               </div>
 
               <div>
@@ -716,9 +898,15 @@ export default function Members() {
                   type="number"
                   min="0"
                   value={formData.coachingCredits}
-                  onChange={(e) => setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0})}
-                  className="border-2 border-blue-200"
+                  onChange={(e) => {
+                    setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0});
+                    setValidationErrors({ ...validationErrors, coachingCredits: "" });
+                  }}
+                  className={validationErrors.coachingCredits ? "border-2 border-red-500" : "border-2 border-blue-200"}
                 />
+                {validationErrors.coachingCredits && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.coachingCredits}</p>
+                )}
               </div>
             </div>
 

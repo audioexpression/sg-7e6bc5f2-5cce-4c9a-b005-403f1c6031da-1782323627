@@ -112,6 +112,9 @@ export default function Coaching() {
   const [sessionLocationDetails, setSessionLocationDetails] = useState("");
   const [repeatWeeks, setRepeatWeeks] = useState(1);
 
+  // Validation State
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   // Load data
   useEffect(() => {
     const savedCoaches = localStorage.getItem("coaches");
@@ -137,8 +140,14 @@ export default function Coaching() {
 
   // Add coach
   const handleAddCoach = () => {
-    if (!coachName || !coachPhone) {
-      alert("Please fill in all fields");
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    if (!coachName.trim()) errors.coachName = "Name is required";
+    if (!coachPhone.trim()) errors.coachPhone = "Phone number is required";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
@@ -155,6 +164,7 @@ export default function Coaching() {
     setCoachName("");
     setCoachPhone("");
     setCoachTier("Assistant Coach");
+    setFormErrors({});
   };
 
   // Check for double booking
@@ -180,19 +190,27 @@ export default function Coaching() {
 
   // Book session
   const handleBookSession = () => {
-    if (!sessionMemberId || !sessionCoachId || !sessionDate || !sessionTime || !sessionHours || !sessionLocation) {
-      alert("Please fill in all fields");
-      return;
-    }
+    setFormErrors({});
+    const errors: Record<string, string> = {};
 
-    if (sessionLocation === "Other" && !sessionLocationDetails) {
-      alert("Please provide location details");
-      return;
+    if (!sessionMemberId) errors.sessionMemberId = "Please select a member";
+    if (!sessionCoachId) errors.sessionCoachId = "Please select a coach";
+    if (!sessionDate) errors.sessionDate = "Date is required";
+    if (!sessionTime) errors.sessionTime = "Time is required";
+    if (!sessionHours) errors.sessionHours = "Duration is required";
+    if (!sessionLocation) errors.sessionLocation = "Location is required";
+    
+    if (sessionLocation === "Other" && !sessionLocationDetails.trim()) {
+      errors.sessionLocationDetails = "Please provide location details";
     }
 
     const hours = parseFloat(sessionHours);
-    if (hours <= 0 || hours > 8) {
-      alert("Please enter valid hours (0.5 - 8)");
+    if (isNaN(hours) || hours <= 0 || hours > 8) {
+      errors.sessionHours = "Please enter valid hours (0.5 - 8)";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
@@ -208,9 +226,8 @@ export default function Coaching() {
       const dateStr = targetDate.toISOString().split("T")[0];
 
       if (!isCoachAvailable(sessionCoachId, dateStr, sessionTime, hours)) {
-        alert(
-          `${coach.name} is not available on ${dateStr} at ${sessionTime}. Please choose a different time.`
-        );
+        errors.availability = `${coach.name} is not available on ${dateStr} at ${sessionTime}`;
+        setFormErrors(errors);
         return;
       }
     }
@@ -247,6 +264,10 @@ export default function Coaching() {
     localStorage.setItem("members", JSON.stringify(updatedMembers));
 
     setShowSessionDialog(false);
+    resetSessionForm();
+  };
+
+  const resetSessionForm = () => {
     setSessionMemberId("");
     setSessionCoachId("");
     setSessionDate("");
@@ -255,6 +276,7 @@ export default function Coaching() {
     setSessionLocation("");
     setSessionLocationDetails("");
     setRepeatWeeks(1);
+    setFormErrors({});
   };
 
   // Delete session
@@ -280,7 +302,7 @@ export default function Coaching() {
   const handleDeleteCoach = (id: string) => {
     const hasBookings = sessions.some((s) => s.coachId === id);
     if (hasBookings) {
-      alert("Cannot delete coach with existing bookings");
+      setFormErrors({ coachId: "Cannot delete coach with existing bookings" });
       return;
     }
     if (confirm("Are you sure you want to delete this coach?")) {
@@ -721,22 +743,32 @@ export default function Coaching() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="coachName">Name</Label>
+                <Label htmlFor="coachName">Name *</Label>
                 <Input
                   id="coachName"
                   value={coachName}
-                  onChange={(e) => setCoachName(e.target.value)}
+                  onChange={(e) => {
+                    setCoachName(e.target.value);
+                    if (formErrors.coachName) setFormErrors({ ...formErrors, coachName: "" });
+                  }}
                   placeholder="Coach name"
+                  className={formErrors.coachName ? "border-red-500" : ""}
                 />
+                {formErrors.coachName && <p className="text-red-500 text-sm mt-1">{formErrors.coachName}</p>}
               </div>
               <div>
-                <Label htmlFor="coachPhone">Phone Number</Label>
+                <Label htmlFor="coachPhone">Phone Number *</Label>
                 <Input
                   id="coachPhone"
                   value={coachPhone}
-                  onChange={(e) => setCoachPhone(e.target.value)}
+                  onChange={(e) => {
+                    setCoachPhone(e.target.value);
+                    if (formErrors.coachPhone) setFormErrors({ ...formErrors, coachPhone: "" });
+                  }}
                   placeholder="+62..."
+                  className={formErrors.coachPhone ? "border-red-500" : ""}
                 />
+                {formErrors.coachPhone && <p className="text-red-500 text-sm mt-1">{formErrors.coachPhone}</p>}
               </div>
               <div>
                 <Label htmlFor="coachTier">Tier</Label>
@@ -779,12 +811,23 @@ export default function Coaching() {
                 Schedule a private coaching session. Session times cannot overlap for the same coach.
               </DialogDescription>
             </DialogHeader>
+            {formErrors.availability && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4">
+                {formErrors.availability}
+              </div>
+            )}
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="sessionMember">Member</Label>
-                  <Select value={sessionMemberId} onValueChange={setSessionMemberId}>
-                    <SelectTrigger>
+                  <Label htmlFor="sessionMember">Member *</Label>
+                  <Select 
+                    value={sessionMemberId} 
+                    onValueChange={(val) => {
+                      setSessionMemberId(val);
+                      if (formErrors.sessionMemberId) setFormErrors({ ...formErrors, sessionMemberId: "" });
+                    }}
+                  >
+                    <SelectTrigger className={formErrors.sessionMemberId ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select member" />
                     </SelectTrigger>
                     <SelectContent>
@@ -795,11 +838,18 @@ export default function Coaching() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {formErrors.sessionMemberId && <p className="text-red-500 text-sm mt-1">{formErrors.sessionMemberId}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="sessionCoach">Coach</Label>
-                  <Select value={sessionCoachId} onValueChange={setSessionCoachId}>
-                    <SelectTrigger>
+                  <Label htmlFor="sessionCoach">Coach *</Label>
+                  <Select 
+                    value={sessionCoachId} 
+                    onValueChange={(val) => {
+                      setSessionCoachId(val);
+                      if (formErrors.sessionCoachId) setFormErrors({ ...formErrors, sessionCoachId: "" });
+                    }}
+                  >
+                    <SelectTrigger className={formErrors.sessionCoachId ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select coach" />
                     </SelectTrigger>
                     <SelectContent>
@@ -810,29 +860,40 @@ export default function Coaching() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {formErrors.sessionCoachId && <p className="text-red-500 text-sm mt-1">{formErrors.sessionCoachId}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="sessionDate">Date</Label>
+                  <Label htmlFor="sessionDate">Date *</Label>
                   <Input
                     id="sessionDate"
                     type="date"
                     value={sessionDate}
-                    onChange={(e) => setSessionDate(e.target.value)}
+                    onChange={(e) => {
+                      setSessionDate(e.target.value);
+                      if (formErrors.sessionDate) setFormErrors({ ...formErrors, sessionDate: "" });
+                    }}
+                    className={formErrors.sessionDate ? "border-red-500" : ""}
                   />
+                  {formErrors.sessionDate && <p className="text-red-500 text-sm mt-1">{formErrors.sessionDate}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="sessionTime">Time</Label>
+                  <Label htmlFor="sessionTime">Time *</Label>
                   <Input
                     id="sessionTime"
                     type="time"
                     value={sessionTime}
-                    onChange={(e) => setSessionTime(e.target.value)}
+                    onChange={(e) => {
+                      setSessionTime(e.target.value);
+                      if (formErrors.sessionTime) setFormErrors({ ...formErrors, sessionTime: "" });
+                    }}
+                    className={formErrors.sessionTime ? "border-red-500" : ""}
                   />
+                  {formErrors.sessionTime && <p className="text-red-500 text-sm mt-1">{formErrors.sessionTime}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="sessionHours">Hours</Label>
+                  <Label htmlFor="sessionHours">Hours *</Label>
                   <Input
                     id="sessionHours"
                     type="number"
@@ -840,15 +901,26 @@ export default function Coaching() {
                     min="0.5"
                     max="8"
                     value={sessionHours}
-                    onChange={(e) => setSessionHours(e.target.value)}
+                    onChange={(e) => {
+                      setSessionHours(e.target.value);
+                      if (formErrors.sessionHours) setFormErrors({ ...formErrors, sessionHours: "" });
+                    }}
                     placeholder="1.5"
+                    className={formErrors.sessionHours ? "border-red-500" : ""}
                   />
+                  {formErrors.sessionHours && <p className="text-red-500 text-sm mt-1">{formErrors.sessionHours}</p>}
                 </div>
               </div>
               <div>
-                <Label htmlFor="sessionLocation">Location</Label>
-                <Select value={sessionLocation} onValueChange={setSessionLocation}>
-                  <SelectTrigger>
+                <Label htmlFor="sessionLocation">Location *</Label>
+                <Select 
+                  value={sessionLocation} 
+                  onValueChange={(val) => {
+                    setSessionLocation(val);
+                    if (formErrors.sessionLocation) setFormErrors({ ...formErrors, sessionLocation: "" });
+                  }}
+                >
+                  <SelectTrigger className={formErrors.sessionLocation ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -859,16 +931,22 @@ export default function Coaching() {
                     ))}
                   </SelectContent>
                 </Select>
+                {formErrors.sessionLocation && <p className="text-red-500 text-sm mt-1">{formErrors.sessionLocation}</p>}
               </div>
               {sessionLocation === "Other" && (
                 <div>
-                  <Label htmlFor="locationDetails">Location Details</Label>
+                  <Label htmlFor="locationDetails">Location Details *</Label>
                   <Input
                     id="locationDetails"
                     value={sessionLocationDetails}
-                    onChange={(e) => setSessionLocationDetails(e.target.value)}
+                    onChange={(e) => {
+                      setSessionLocationDetails(e.target.value);
+                      if (formErrors.sessionLocationDetails) setFormErrors({ ...formErrors, sessionLocationDetails: "" });
+                    }}
                     placeholder="Enter specific location details"
+                    className={formErrors.sessionLocationDetails ? "border-red-500" : ""}
                   />
+                  {formErrors.sessionLocationDetails && <p className="text-red-500 text-sm mt-1">{formErrors.sessionLocationDetails}</p>}
                 </div>
               )}
               <div>
