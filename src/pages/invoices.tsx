@@ -1,407 +1,609 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
+import {
+  Search,
+  Edit,
+  Trash2,
+  ArrowLeft,
+  FileText,
+  DollarSign,
+  Calendar,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Plus,
+  Users,
+  Settings,
+  TrendingUp,
+  Download
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Receipt, Search, Edit, Trash2, ArrowLeft, DollarSign, Plus, Send } from "lucide-react";
-import Link from "next/link";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Member {
   id: string;
   firstName: string;
   lastName: string;
-  team: string;
-  membershipCategory: "Standard" | "Sponsored" | "Scholarship";
+  email: string;
+  teamAssignment: string;
+  membershipCategory: string;
 }
 
 interface Invoice {
   id: string;
   memberId: string;
   memberName: string;
-  team: string;
+  teamAssignment: string;
   billingPeriod: string;
   dueDate: string;
   amount: number;
   paymentLink: string;
   status: "Draft" | "Sent" | "Paid" | "Overdue";
+  createdAt: string;
 }
 
-const billingPeriods = [
-  "2025 Q1", "2025 Q2", "2025 Q3", "2025 Q4", "2025 Annual",
-  "2026 Q1", "2026 Q2", "2026 Q3", "2026 Q4", "2026 Annual",
-  "2027 Q1", "2027 Q2", "2027 Q3", "2027 Q4", "2027 Annual"
+interface TeamPricing {
+  teamName: string;
+  monthlyCost: number;
+}
+
+const TEAMS = [
+  "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", 
+  "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
+  "U14", "U14 Girls", "U16", "U18 Girls", "U18",
+  "Women", "Masters", "Legends", "Social", "1st Team"
 ];
 
-export default function Invoices() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+const QUARTERS = ["2026 Q1", "2026 Q2", "2026 Q3", "2026 Q4"];
+
+export default function InvoicesPage() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [teamPricing, setTeamPricing] = useState<TeamPricing[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPeriod, setFilterPeriod] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("all");
-  const [isSingleDialogOpen, setIsSingleDialogOpen] = useState(false);
-  const [teams, setTeams] = useState<string[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [showBulkGenerate, setShowBulkGenerate] = useState(false);
+  const [showPricingConfig, setShowPricingConfig] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [selectedQuarter, setSelectedQuarter] = useState("");
+  const [pricingTeam, setPricingTeam] = useState("");
+  const [pricingAmount, setPricingAmount] = useState("");
 
-  const [formData, setFormData] = useState<Omit<Invoice, "id" | "memberName" | "team">>({
+  const [formData, setFormData] = useState({
     memberId: "",
-    billingPeriod: "2026 Q1",
+    billingPeriod: "",
     dueDate: "",
-    amount: 0,
+    amount: "",
     paymentLink: "",
-    status: "Draft",
-  });
-
-  const [bulkData, setBulkData] = useState({
-    team: "",
-    billingPeriod: "2026 Q1",
-    dueDate: "",
-    amount: 0,
+    status: "Draft" as Invoice["status"]
   });
 
   useEffect(() => {
-    const storedInvoices = localStorage.getItem("invoices");
     const storedMembers = localStorage.getItem("members");
-    
-    if (storedInvoices) {
-      setInvoices(JSON.parse(storedInvoices));
-    }
     if (storedMembers) {
       setMembers(JSON.parse(storedMembers));
     }
 
-    // Load teams from settings or use defaults
-    const storedTeams = localStorage.getItem("teams");
-    const defaultTeams = [
-      "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", 
-      "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
-      "U14", "U14 Girls", "U16", "U18 Girls", "U18",
-      "Women", "Masters", "Legends", "Social", "1st Team"
-    ];
-    
-    if (storedTeams) {
-      setTeams(JSON.parse(storedTeams));
-      if (JSON.parse(storedTeams).length > 0) {
-        setBulkData(prev => ({ ...prev, team: JSON.parse(storedTeams)[0] }));
-      }
-    } else {
-      setTeams(defaultTeams);
-      setBulkData(prev => ({ ...prev, team: defaultTeams[0] }));
+    const storedInvoices = localStorage.getItem("invoices");
+    if (storedInvoices) {
+      setInvoices(JSON.parse(storedInvoices));
+    }
+
+    const storedPricing = localStorage.getItem("teamPricing");
+    if (storedPricing) {
+      setTeamPricing(JSON.parse(storedPricing));
     }
   }, []);
 
-  const saveInvoice = () => {
+  const saveInvoices = (newInvoices: Invoice[]) => {
+    setInvoices(newInvoices);
+    localStorage.setItem("invoices", JSON.stringify(newInvoices));
+  };
+
+  const saveTeamPricing = (newPricing: TeamPricing[]) => {
+    setTeamPricing(newPricing);
+    localStorage.setItem("teamPricing", JSON.stringify(newPricing));
+  };
+
+  const calculateQuarterlyAmount = (monthlyCost: number): number => {
+    const quarterly = monthlyCost * 3;
+    const withTax = quarterly * 1.1; // 10% government tax
+    return Math.round(withTax);
+  };
+
+  const getTeamPricing = (teamName: string): number => {
+    const pricing = teamPricing.find(p => p.teamName === teamName);
+    return pricing ? pricing.monthlyCost : 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
     const member = members.find(m => m.id === formData.memberId);
     if (!member) return;
 
-    let updatedInvoices: Invoice[];
-    
     if (editingInvoice) {
-      updatedInvoices = invoices.map(inv => 
-        inv.id === editingInvoice.id 
-          ? { 
-              ...formData, 
-              id: editingInvoice.id,
+      const updated = invoices.map(inv =>
+        inv.id === editingInvoice.id
+          ? {
+              ...inv,
+              ...formData,
               memberName: `${member.firstName} ${member.lastName}`,
-              team: member.team
-            } 
+              teamAssignment: member.teamAssignment,
+              amount: parseFloat(formData.amount)
+            }
           : inv
       );
+      saveInvoices(updated);
     } else {
       const newInvoice: Invoice = {
-        ...formData,
         id: Date.now().toString(),
+        memberId: formData.memberId,
         memberName: `${member.firstName} ${member.lastName}`,
-        team: member.team,
+        teamAssignment: member.teamAssignment,
+        billingPeriod: formData.billingPeriod,
+        dueDate: formData.dueDate,
+        amount: parseFloat(formData.amount),
+        paymentLink: formData.paymentLink,
+        status: formData.status,
+        createdAt: new Date().toISOString()
       };
-      updatedInvoices = [...invoices, newInvoice];
+      saveInvoices([...invoices, newInvoice]);
     }
-    
-    setInvoices(updatedInvoices);
-    localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
+
     resetForm();
   };
 
-  const generateBulkInvoices = () => {
-    const teamMembers = members.filter(m => m.team === bulkData.team);
+  const handleBulkGenerate = () => {
+    if (!selectedTeam || !selectedQuarter) {
+      alert("Please select both team and quarter");
+      return;
+    }
+
+    const teamMembers = members.filter(m => m.teamAssignment === selectedTeam);
+    
     if (teamMembers.length === 0) {
       alert("No members found in this team");
       return;
     }
 
-    const newInvoices: Invoice[] = teamMembers.map(member => ({
-      id: `${Date.now()}-${member.id}`,
-      memberId: member.id,
-      memberName: `${member.firstName} ${member.lastName}`,
-      team: member.team,
-      billingPeriod: bulkData.billingPeriod,
-      dueDate: bulkData.dueDate,
-      amount: bulkData.amount,
-      paymentLink: "",
-      status: "Draft" as const,
-    }));
-
-    const updatedInvoices = [...invoices, ...newInvoices];
-    setInvoices(updatedInvoices);
-    localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
-    
-    setBulkData({
-      team: "",
-      billingPeriod: "2026 Q1",
-      dueDate: "",
-      amount: 0,
-    });
-    setIsBulkDialogOpen(false);
-    alert(`Generated ${newInvoices.length} invoices for ${bulkData.team}`);
-  };
-
-  const deleteInvoice = (id: string) => {
-    if (confirm("Are you sure you want to delete this invoice?")) {
-      const updated = invoices.filter(inv => inv.id !== id);
-      setInvoices(updated);
-      localStorage.setItem("invoices", JSON.stringify(updated));
+    const monthlyCost = getTeamPricing(selectedTeam);
+    if (monthlyCost === 0) {
+      alert("Please set pricing for this team first in Team Pricing Configuration");
+      return;
     }
+
+    const quarterlyAmount = calculateQuarterlyAmount(monthlyCost);
+    
+    const quarterDueDates: { [key: string]: string } = {
+      "2026 Q1": "2026-03-31",
+      "2026 Q2": "2026-06-30",
+      "2026 Q3": "2026-09-30",
+      "2026 Q4": "2026-12-31"
+    };
+
+    const newInvoices = teamMembers.map(member => {
+      const existingInvoice = invoices.find(
+        inv => inv.memberId === member.id && inv.billingPeriod === selectedQuarter
+      );
+
+      if (existingInvoice) {
+        return null;
+      }
+
+      return {
+        id: `${Date.now()}-${member.id}`,
+        memberId: member.id,
+        memberName: `${member.firstName} ${member.lastName}`,
+        teamAssignment: member.teamAssignment,
+        billingPeriod: selectedQuarter,
+        dueDate: quarterDueDates[selectedQuarter],
+        amount: quarterlyAmount,
+        paymentLink: "",
+        status: "Draft" as Invoice["status"],
+        createdAt: new Date().toISOString()
+      };
+    }).filter(Boolean) as Invoice[];
+
+    if (newInvoices.length === 0) {
+      alert("All members already have invoices for this period");
+      return;
+    }
+
+    saveInvoices([...invoices, ...newInvoices]);
+    alert(`Generated ${newInvoices.length} invoices for ${selectedTeam} - ${selectedQuarter}`);
+    setShowBulkGenerate(false);
+    setSelectedTeam("");
+    setSelectedQuarter("");
   };
 
-  const updateInvoiceStatus = (id: string, status: "Draft" | "Sent" | "Paid" | "Overdue") => {
-    const updated = invoices.map(inv => 
-      inv.id === id ? { ...inv, status } : inv
-    );
-    setInvoices(updated);
-    localStorage.setItem("invoices", JSON.stringify(updated));
+  const handlePricingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!pricingTeam || !pricingAmount) return;
+
+    const existingIndex = teamPricing.findIndex(p => p.teamName === pricingTeam);
+    
+    if (existingIndex >= 0) {
+      const updated = [...teamPricing];
+      updated[existingIndex] = {
+        teamName: pricingTeam,
+        monthlyCost: parseFloat(pricingAmount)
+      };
+      saveTeamPricing(updated);
+    } else {
+      saveTeamPricing([...teamPricing, {
+        teamName: pricingTeam,
+        monthlyCost: parseFloat(pricingAmount)
+      }]);
+    }
+
+    setPricingTeam("");
+    setPricingAmount("");
+  };
+
+  const handleEdit = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setFormData({
+      memberId: invoice.memberId,
+      billingPeriod: invoice.billingPeriod,
+      dueDate: invoice.dueDate,
+      amount: invoice.amount.toString(),
+      paymentLink: invoice.paymentLink,
+      status: invoice.status
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this invoice?")) {
+      saveInvoices(invoices.filter(inv => inv.id !== id));
+    }
   };
 
   const resetForm = () => {
     setFormData({
       memberId: "",
-      billingPeriod: "2026 Q1",
+      billingPeriod: "",
       dueDate: "",
-      amount: 0,
+      amount: "",
       paymentLink: "",
-      status: "Draft",
+      status: "Draft"
     });
     setEditingInvoice(null);
-    setIsAddDialogOpen(false);
-  };
-
-  const openEditDialog = (invoice: Invoice) => {
-    setFormData({
-      memberId: invoice.memberId,
-      billingPeriod: invoice.billingPeriod,
-      dueDate: invoice.dueDate,
-      amount: invoice.amount,
-      paymentLink: invoice.paymentLink,
-      status: invoice.status,
-    });
-    setEditingInvoice(invoice);
-    setIsAddDialogOpen(true);
+    setShowForm(false);
   };
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = 
       invoice.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.team.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      invoice.teamAssignment.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || invoice.status === filterStatus;
     const matchesPeriod = filterPeriod === "all" || invoice.billingPeriod === filterPeriod;
-    
     return matchesSearch && matchesStatus && matchesPeriod;
   });
 
-  const totalRevenue = invoices.filter(inv => inv.status === "Paid").reduce((sum, inv) => sum + inv.amount, 0);
-  const outstandingAmount = invoices.filter(inv => inv.status !== "Paid").reduce((sum, inv) => sum + inv.amount, 0);
+  const totalRevenue = invoices
+    .filter(inv => inv.status === "Paid")
+    .reduce((sum, inv) => sum + inv.amount, 0);
+
+  const outstandingAmount = invoices
+    .filter(inv => inv.status !== "Paid")
+    .reduce((sum, inv) => sum + inv.amount, 0);
+
+  const outstandingCount = invoices.filter(inv => inv.status !== "Paid").length;
+
+  const getStatusColor = (status: Invoice["status"]) => {
+    switch (status) {
+      case "Paid": return "bg-green-100 text-green-800 border-green-200";
+      case "Sent": return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Overdue": return "bg-red-100 text-red-800 border-red-200";
+      default: return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusIcon = (status: Invoice["status"]) => {
+    switch (status) {
+      case "Paid": return <CheckCircle className="w-4 h-4" />;
+      case "Sent": return <Clock className="w-4 h-4" />;
+      case "Overdue": return <AlertCircle className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getMemberPaymentStatus = (memberId: string, quarter: string): Invoice | undefined => {
+    return invoices.find(inv => inv.memberId === memberId && inv.billingPeriod === quarter);
+  };
+
+  const exportInvoices = () => {
+    const csvContent = [
+      ["Member Name", "Team", "Billing Period", "Due Date", "Amount", "Status", "Payment Link"],
+      ...filteredInvoices.map(inv => [
+        inv.memberName,
+        inv.teamAssignment,
+        inv.billingPeriod,
+        inv.dueDate,
+        inv.amount,
+        inv.status,
+        inv.paymentLink
+      ])
+    ].map(row => row.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoices-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
 
   return (
     <>
       <SEO 
-        title="Invoicing - Bali Bulldogs Club Manager"
-        description="Generate and track quarterly membership invoices"
+        title="Invoicing - Bali Bulldogs"
+        description="Manage member invoices and quarterly payments"
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-blue-100">
-        <header className="bg-bulldogs-blue text-white shadow-lg">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/">
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <div>
-                  <h1 className="text-3xl font-black tracking-tight">INVOICING</h1>
-                  <p className="text-yellow-300 text-sm font-semibold">Bali Bulldogs Club Manager</p>
-                </div>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-yellow-600 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <Button
+                variant="ghost"
+                onClick={() => window.location.href = "/"}
+                className="text-white hover:text-yellow-400 mb-4"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
+              <h1 className="text-4xl font-bold text-white mb-2">Invoicing & Payments</h1>
+              <p className="text-blue-200">Manage quarterly member payments and track revenue</p>
             </div>
           </div>
-        </header>
 
-        <main className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="border-l-4 border-green-500 shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Total Revenue (Paid)
+            <Card className="border-2 border-blue-300 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-green-100">
+                <CardTitle className="text-green-800 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Total Revenue
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-green-600">
-                  IDR {totalRevenue.toLocaleString('id-ID')}
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-green-600">
+                  {formatCurrency(totalRevenue)}
                 </div>
+                <p className="text-sm text-gray-600 mt-1">From paid invoices</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-yellow-500 shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <Receipt className="h-4 w-4" />
-                  Outstanding Amount
+            <Card className="border-2 border-blue-300 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100">
+                <CardTitle className="text-orange-800 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Outstanding
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-yellow-600">
-                  IDR {outstandingAmount.toLocaleString('id-ID')}
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-orange-600">
+                  {formatCurrency(outstandingAmount)}
                 </div>
+                <p className="text-sm text-gray-600 mt-1">{outstandingCount} unpaid invoices</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-bulldogs-blue shadow-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                  <Receipt className="h-4 w-4" />
+            <Card className="border-2 border-blue-300 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
+                <CardTitle className="text-blue-800 flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
                   Total Invoices
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black text-bulldogs-blue">
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-blue-600">
                   {invoices.length}
                 </div>
+                <p className="text-sm text-gray-600 mt-1">All periods</p>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-2xl font-black text-bulldogs-blue">All Invoices</CardTitle>
-                  <CardDescription>Total: {filteredInvoices.length} invoices</CardDescription>
-                </div>
+          <Card className="border-2 border-blue-300 shadow-xl">
+            <CardHeader className="bg-gradient-to-r from-blue-700 to-yellow-500">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white text-xl">Invoice Management</CardTitle>
                 <div className="flex gap-2">
-                  <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+                  <Dialog open={showPricingConfig} onOpenChange={setShowPricingConfig}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="gap-2">
-                        <Send className="h-4 w-4" />
+                      <Button className="bg-white text-blue-700 hover:bg-blue-50">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Team Pricing
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Team Pricing Configuration</DialogTitle>
+                        <DialogDescription>
+                          Set monthly cost per team. Quarterly invoices will be calculated as: Monthly × 3 + 10% tax
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <form onSubmit={handlePricingSubmit} className="space-y-4 mb-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Team</Label>
+                            <Select value={pricingTeam} onValueChange={setPricingTeam}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select team" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TEAMS.map(team => (
+                                  <SelectItem key={team} value={team}>{team}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Monthly Cost (IDR)</Label>
+                            <Input
+                              type="number"
+                              value={pricingAmount}
+                              onChange={(e) => setPricingAmount(e.target.value)}
+                              placeholder="e.g., 500000"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <Button type="submit" className="w-full">Add/Update Pricing</Button>
+                      </form>
+
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Team</TableHead>
+                              <TableHead>Monthly</TableHead>
+                              <TableHead>Quarterly (with 10% tax)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {teamPricing.map(pricing => (
+                              <TableRow key={pricing.teamName}>
+                                <TableCell className="font-medium">{pricing.teamName}</TableCell>
+                                <TableCell>{formatCurrency(pricing.monthlyCost)}</TableCell>
+                                <TableCell className="font-bold text-blue-600">
+                                  {formatCurrency(calculateQuarterlyAmount(pricing.monthlyCost))}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {teamPricing.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center text-gray-500">
+                                  No team pricing configured yet
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={showBulkGenerate} onOpenChange={setShowBulkGenerate}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-white text-blue-700 hover:bg-blue-50">
+                        <Users className="w-4 h-4 mr-2" />
                         Bulk Generate
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle className="text-2xl font-black text-bulldogs-blue">
-                          Generate Team Invoices
-                        </DialogTitle>
+                        <DialogTitle>Generate Team Invoices</DialogTitle>
                         <DialogDescription>
-                          Create invoices for all members in a team
+                          Create quarterly invoices for all members of a team
                         </DialogDescription>
                       </DialogHeader>
                       
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="bulk-team">Target Team</Label>
-                          <select
-                            id="bulk-team"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={bulkData.team}
-                            onChange={e => setBulkData({...bulkData, team: e.target.value})}
-                          >
-                            {teams.map(team => (
-                              <option key={team} value={team}>{team}</option>
-                            ))}
-                          </select>
-                          <p className="text-sm text-gray-500">
-                            Will generate {members.filter(m => m.team === bulkData.team).length} invoices
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="bulk-period">Billing Period *</Label>
-                          <Select
-                            value={bulkData.billingPeriod}
-                            onValueChange={(value) => setBulkData({...bulkData, billingPeriod: value})}
-                          >
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Team</Label>
+                          <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Select team" />
                             </SelectTrigger>
                             <SelectContent>
-                              {billingPeriods.map(period => (
-                                <SelectItem key={period} value={period}>{period}</SelectItem>
+                              {TEAMS.map(team => (
+                                <SelectItem key={team} value={team}>{team}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="bulk-due">Due Date *</Label>
-                          <Input
-                            id="bulk-due"
-                            type="date"
-                            value={bulkData.dueDate}
-                            onChange={e => setBulkData({...bulkData, dueDate: e.target.value})}
-                          />
+                        <div>
+                          <Label>Quarter</Label>
+                          <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select quarter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {QUARTERS.map(quarter => (
+                                <SelectItem key={quarter} value={quarter}>{quarter}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="bulk-amount">Amount (IDR) *</Label>
-                          <Input
-                            id="bulk-amount"
-                            type="number"
-                            value={bulkData.amount}
-                            onChange={e => setBulkData({...bulkData, amount: parseInt(e.target.value) || 0})}
-                            placeholder="e.g., 1500000"
-                          />
-                        </div>
-                      </div>
+                        {selectedTeam && (
+                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm font-medium text-blue-900">
+                              Team members: {members.filter(m => m.teamAssignment === selectedTeam).length}
+                            </p>
+                            {getTeamPricing(selectedTeam) > 0 ? (
+                              <>
+                                <p className="text-sm text-blue-700 mt-1">
+                                  Monthly cost: {formatCurrency(getTeamPricing(selectedTeam))}
+                                </p>
+                                <p className="text-sm font-bold text-blue-900 mt-1">
+                                  Quarterly amount (with 10% tax): {formatCurrency(calculateQuarterlyAmount(getTeamPricing(selectedTeam)))}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-red-600 mt-1">
+                                ⚠️ No pricing set for this team. Please configure in Team Pricing.
+                              </p>
+                            )}
+                          </div>
+                        )}
 
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={generateBulkInvoices} className="bg-bulldogs-blue hover:bg-bulldogs-blue/90">
+                        <Button 
+                          onClick={handleBulkGenerate}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
                           Generate Invoices
                         </Button>
                       </div>
                     </DialogContent>
                   </Dialog>
 
-                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <Dialog open={showForm} onOpenChange={setShowForm}>
                     <DialogTrigger asChild>
-                      <Button className="gap-2 bg-bulldogs-blue hover:bg-bulldogs-blue/90">
-                        <Plus className="h-4 w-4" />
-                        Add Invoice
+                      <Button className="bg-yellow-400 text-blue-900 hover:bg-yellow-500">
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Invoice
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle className="text-2xl font-black text-bulldogs-blue">
+                        <DialogTitle>
                           {editingInvoice ? "Edit Invoice" : "Create New Invoice"}
                         </DialogTitle>
-                        <DialogDescription>
-                          Invoice details for a member
-                        </DialogDescription>
                       </DialogHeader>
                       
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="member">Member *</Label>
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                          <Label>Member</Label>
                           <Select
                             value={formData.memberId}
                             onValueChange={(value) => setFormData({...formData, memberId: value})}
+                            required
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select member" />
@@ -409,67 +611,67 @@ export default function Invoices() {
                             <SelectContent>
                               {members.map(member => (
                                 <SelectItem key={member.id} value={member.id}>
-                                  {member.firstName} {member.lastName} ({member.team})
+                                  {member.firstName} {member.lastName} - {member.teamAssignment}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="period">Billing Period *</Label>
+                        <div>
+                          <Label>Billing Period</Label>
                           <Select
                             value={formData.billingPeriod}
                             onValueChange={(value) => setFormData({...formData, billingPeriod: value})}
+                            required
                           >
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Select period" />
                             </SelectTrigger>
                             <SelectContent>
-                              {billingPeriods.map(period => (
-                                <SelectItem key={period} value={period}>{period}</SelectItem>
+                              {QUARTERS.map(quarter => (
+                                <SelectItem key={quarter} value={quarter}>{quarter}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="dueDate">Due Date *</Label>
+                        <div>
+                          <Label>Due Date</Label>
                           <Input
-                            id="dueDate"
                             type="date"
                             value={formData.dueDate}
-                            onChange={e => setFormData({...formData, dueDate: e.target.value})}
+                            onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                            required
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="amount">Amount (IDR) *</Label>
+                        <div>
+                          <Label>Amount (IDR)</Label>
                           <Input
-                            id="amount"
                             type="number"
                             value={formData.amount}
-                            onChange={e => setFormData({...formData, amount: parseInt(e.target.value) || 0})}
-                            placeholder="e.g., 1500000"
+                            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                            placeholder="e.g., 1650000"
+                            required
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="paymentLink">Payment Link</Label>
+                        <div>
+                          <Label>Payment Link</Label>
                           <Input
-                            id="paymentLink"
+                            type="url"
                             value={formData.paymentLink}
-                            onChange={e => setFormData({...formData, paymentLink: e.target.value})}
-                            placeholder="Xendit/Wise/Stripe link"
+                            onChange={(e) => setFormData({...formData, paymentLink: e.target.value})}
+                            placeholder="https://payment-gateway.com/..."
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="status">Status *</Label>
+                        <div>
+                          <Label>Status</Label>
                           <Select
                             value={formData.status}
-                            onValueChange={(value: "Draft" | "Sent" | "Paid" | "Overdue") => 
-                              setFormData({...formData, status: value})}
+                            onValueChange={(value) => setFormData({...formData, status: value as Invoice["status"]})}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -482,34 +684,45 @@ export default function Invoices() {
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
 
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={resetForm}>Cancel</Button>
-                        <Button onClick={saveInvoice} className="bg-bulldogs-blue hover:bg-bulldogs-blue/90">
-                          {editingInvoice ? "Update Invoice" : "Create Invoice"}
-                        </Button>
-                      </div>
+                        <div className="flex gap-2 pt-4">
+                          <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                            {editingInvoice ? "Update" : "Create"} Invoice
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetForm}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
                     </DialogContent>
                   </Dialog>
                 </div>
               </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search by member or team..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="Search by member or team..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
+                
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="All Status" />
+                    <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
@@ -519,23 +732,33 @@ export default function Invoices() {
                     <SelectItem value="Overdue">Overdue</SelectItem>
                   </SelectContent>
                 </Select>
+
                 <Select value={filterPeriod} onValueChange={setFilterPeriod}>
                   <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="All Periods" />
+                    <SelectValue placeholder="Filter by period" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Periods</SelectItem>
-                    {billingPeriods.map(period => (
-                      <SelectItem key={period} value={period}>{period}</SelectItem>
+                    {QUARTERS.map(quarter => (
+                      <SelectItem key={quarter} value={quarter}>{quarter}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
+                <Button
+                  variant="outline"
+                  onClick={exportInvoices}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
               </div>
 
-              <div className="rounded-md border">
+              <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-blue-50">
                       <TableHead>Member</TableHead>
                       <TableHead>Team</TableHead>
                       <TableHead>Period</TableHead>
@@ -549,64 +772,44 @@ export default function Invoices() {
                     {filteredInvoices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          No invoices found. Create your first invoice to get started.
+                          No invoices found. Create your first invoice or use bulk generation.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredInvoices.map(invoice => (
-                        <TableRow key={invoice.id}>
+                      filteredInvoices.map((invoice) => (
+                        <TableRow key={invoice.id} className="hover:bg-blue-50">
                           <TableCell className="font-medium">{invoice.memberName}</TableCell>
-                          <TableCell>{invoice.team}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="border-blue-300 text-blue-700">
+                              {invoice.teamAssignment}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{invoice.billingPeriod}</TableCell>
                           <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-semibold">IDR {invoice.amount.toLocaleString('id-ID')}</TableCell>
+                          <TableCell className="font-semibold">{formatCurrency(invoice.amount)}</TableCell>
                           <TableCell>
-                            <Select
-                              value={invoice.status}
-                              onValueChange={(value: "Draft" | "Sent" | "Paid" | "Overdue") => 
-                                updateInvoiceStatus(invoice.id, value)}
-                            >
-                              <SelectTrigger className={`w-32 ${
-                                invoice.status === "Paid" ? "bg-green-100 text-green-800 border-green-300" :
-                                invoice.status === "Overdue" ? "bg-red-100 text-red-800 border-red-300" :
-                                invoice.status === "Sent" ? "bg-blue-100 text-blue-800 border-blue-300" :
-                                "bg-gray-100 text-gray-800 border-gray-300"
-                              }`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Draft">Draft</SelectItem>
-                                <SelectItem value="Sent">Sent</SelectItem>
-                                <SelectItem value="Paid">Paid</SelectItem>
-                                <SelectItem value="Overdue">Overdue</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <Badge className={`flex items-center gap-1 w-fit ${getStatusColor(invoice.status)}`}>
+                              {getStatusIcon(invoice.status)}
+                              {invoice.status}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              {invoice.paymentLink && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => window.open(invoice.paymentLink, "_blank")}
-                                >
-                                  Pay Link
-                                </Button>
-                              )}
                               <Button
+                                size="sm"
                                 variant="ghost"
-                                size="icon"
-                                onClick={() => openEditDialog(invoice)}
+                                onClick={() => handleEdit(invoice)}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="w-4 h-4" />
                               </Button>
                               <Button
+                                size="sm"
                                 variant="ghost"
-                                size="icon"
-                                onClick={() => deleteInvoice(invoice.id)}
-                                className="text-red-600 hover:text-red-700"
+                                onClick={() => handleDelete(invoice.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -618,7 +821,7 @@ export default function Invoices() {
               </div>
             </CardContent>
           </Card>
-        </main>
+        </div>
       </div>
     </>
   );
