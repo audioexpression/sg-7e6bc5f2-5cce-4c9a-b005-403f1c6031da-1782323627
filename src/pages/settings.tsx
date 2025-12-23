@@ -775,16 +775,6 @@ export default function Settings() {
                   </TableBody>
                 </Table>
               </div>
-              <Button
-                onClick={() => {
-                  localStorage.setItem("coaches", JSON.stringify(coaches));
-                  alert("Coaches saved successfully!");
-                }}
-                className="w-full bg-green-600 hover:bg-green-700 text-white mt-4"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Coaches
-              </Button>
             </CardContent>
           </Card>
 
@@ -981,16 +971,6 @@ export default function Settings() {
                   </TableBody>
                 </Table>
               </div>
-              <Button
-                onClick={() => {
-                  localStorage.setItem("adminStaff", JSON.stringify(adminStaff));
-                  alert("Admin staff saved successfully!");
-                }}
-                className="w-full bg-green-600 hover:bg-green-700 text-white mt-4"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Admin Staff
-              </Button>
             </CardContent>
           </Card>
         </div>
