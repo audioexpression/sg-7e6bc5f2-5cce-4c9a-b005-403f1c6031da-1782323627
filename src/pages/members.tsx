@@ -4,14 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Search, Upload, Download, Plus, ArrowLeft, User } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Upload, Download, Search, Pencil, Trash2, User, ArrowLeft } from "lucide-react";
 
-// Define teams by category
 const TEAMS_BY_CATEGORY = {
   Junior: [
     "Toddler",
@@ -23,27 +22,30 @@ const TEAMS_BY_CATEGORY = {
     "U10 Adv",
     "U12 Girls",
     "U12 Dev",
-    "U12 Adv"
+    "U12 Adv",
   ],
   Youth: [
     "U14",
     "U14 Girls",
     "U16",
     "U18 Girls",
-    "U18"
+    "U18",
   ],
   Adult: [
     "1st Team",
     "Social Team",
     "Legends 35+",
-    "Masters 45+"
-  ]
+    "Masters 45+",
+  ],
 };
 
-const ROLES = ["Player", "Player-Coach", "Coach", "Admin"];
+const ROLES = ["Admin", "Coach", "Player-Coach", "Player"];
 
-// Create a flat list of all teams for the filter dropdown
-const ALL_TEAMS = Object.values(TEAMS_BY_CATEGORY).flat();
+const teamOptions = [
+  ...TEAMS_BY_CATEGORY.Junior,
+  ...TEAMS_BY_CATEGORY.Youth,
+  ...TEAMS_BY_CATEGORY.Adult,
+];
 
 interface Member {
   id: string;
@@ -60,6 +62,7 @@ interface Member {
   teamAssignment: string;
   joiningDate: string;
   contactNumber: string;
+  whatsappLink: string;
   primaryContact: string;
   primaryContactNumber: string;
   secondaryContact: string;
@@ -71,36 +74,19 @@ interface Member {
 
 export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = useState(false);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState("");
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterTeam, setFilterTeam] = useState<string>("all");
-
-  const teamOptions = ALL_TEAMS;
-
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [formData, setFormData] = useState<Partial<Member>>({
-    firstName: "",
-    lastName: "",
-    dateOfBirth: "",
-    nationality: "",
-    address: "",
-    email: "",
-    shirtNumber: "",
     category: "Junior",
     type: "Member",
     role: "Player",
-    teamAssignment: "",
-    joiningDate: new Date().toISOString().split("T")[0],
-    contactNumber: "",
-    primaryContact: "",
-    primaryContactNumber: "",
-    secondaryContact: "",
-    secondaryContactNumber: "",
-    medicalNotes: "",
     coachingCredits: 0,
-    photoUrl: "",
   });
 
   useEffect(() => {
@@ -129,7 +115,7 @@ export default function Members() {
       localStorage.setItem("members", JSON.stringify(updated));
     }
 
-    setIsFormOpen(false);
+    setIsDialogOpen(false);
     setEditingMember(null);
     resetForm();
   };
@@ -137,7 +123,7 @@ export default function Members() {
   const handleEdit = (member: Member) => {
     setEditingMember(member);
     setFormData(member);
-    setIsFormOpen(true);
+    setIsDialogOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -275,11 +261,6 @@ export default function Members() {
     return matchesSearch && matchesCategory && matchesTeam;
   });
 
-  const getWhatsAppLink = (number: string) => {
-    const cleaned = number.replace(/\D/g, "");
-    return `https://wa.me/${cleaned}`;
-  };
-
   return (
     <>
       <SEO 
@@ -356,7 +337,7 @@ export default function Members() {
                 onClick={() => {
                   resetForm();
                   setEditingMember(null);
-                  setIsFormOpen(true);
+                  setIsDialogOpen(true);
                 }}
                 className="bg-blue-700 hover:bg-blue-800 h-12 px-6 font-bold"
               >
@@ -399,83 +380,63 @@ export default function Members() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMembers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 text-gray-500">
-                        No members found. Add your first member to get started!
+                  {filteredMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>
+                        {member.photoUrl ? (
+                          <img
+                            src={member.photoUrl}
+                            alt={`${member.firstName} ${member.lastName}`}
+                            className="w-10 h-10 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+                            onClick={() => {
+                              setPreviewPhotoUrl(member.photoUrl || "");
+                              setIsPhotoPreviewOpen(true);
+                            }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <User className="w-6 h-6 text-gray-400" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {member.firstName} {member.lastName}
+                      </TableCell>
+                      <TableCell>{member.shirtNumber || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={member.category === "Junior" ? "default" : member.category === "Youth" ? "secondary" : "outline"}>
+                          {member.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{member.teamAssignment}</TableCell>
+                      <TableCell>
+                        <Badge variant={member.type === "Member" ? "default" : "secondary"}>
+                          {member.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{member.role}</TableCell>
+                      <TableCell>
+                        <a
+                          href={member.whatsappLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          {member.contactNumber}
+                        </a>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleEdit(member)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => handleDelete(member.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    filteredMembers.map((member) => (
-                      <TableRow key={member.id} className="hover:bg-blue-50">
-                        <TableCell>
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-                            {member.photoUrl ? (
-                              <img src={member.photoUrl} alt={member.firstName} className="w-full h-full object-cover" />
-                            ) : (
-                              <User className="w-6 h-6 text-white" />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {member.firstName} {member.lastName}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-bold">
-                            #{member.shirtNumber || "N/A"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{member.teamAssignment}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            member.category === "Junior" ? "bg-green-600" :
-                            member.category === "Youth" ? "bg-blue-600" :
-                            "bg-purple-600"
-                          }>
-                            {member.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={member.type === "Member" ? "default" : "outline"} className={member.type !== "Member" ? "border-green-600 text-green-600" : ""}>
-                            {member.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{member.role}</TableCell>
-                        <TableCell>
-                          {member.contactNumber && (
-                            <a 
-                              href={getWhatsAppLink(member.contactNumber)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
-                            >
-                              WhatsApp
-                            </a>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEdit(member)}
-                              className="hover:bg-blue-100"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(member.id)}
-                              className="hover:bg-red-100 text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </div>
@@ -483,7 +444,7 @@ export default function Members() {
         </div>
       </div>
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-blue-700">
@@ -494,219 +455,170 @@ export default function Members() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName" className="font-semibold">First Name *</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
                   id="firstName"
+                  value={formData.firstName || ""}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                   required
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
               <div>
-                <Label htmlFor="lastName" className="font-semibold">Last Name *</Label>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
                   id="lastName"
+                  value={formData.lastName || ""}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   required
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Photo Upload
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="w-full p-2 border-2 border-blue-200 rounded-md text-sm"
-                  />
-                  {formData.photoUrl && (
-                    <div className="mt-2 relative w-20 h-20">
-                      <img src={formData.photoUrl} alt="Preview" className="w-20 h-20 object-cover rounded-md border-2 border-blue-200" />
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({...formData, photoUrl: ""})}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 w-5 h-5 flex items-center justify-center text-xs"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  )}
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2 font-semibold">
-                    Category (Age Group) *
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                    className="w-full p-2 border-2 border-blue-200 rounded-md bg-background"
-                    required
-                  >
-                    <option value="">Select category</option>
-                    <option value="Junior">Junior</option>
-                    <option value="Youth">Youth</option>
-                    <option value="Adult">Adult</option>
-                  </select>
-                </div>
+              <div>
+                <Label htmlFor="photo">Photo Upload</Label>
+                <Input
+                  id="photo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="cursor-pointer"
+                />
               </div>
 
               <div>
-                <Label htmlFor="dateOfBirth" className="font-semibold">Date of Birth *</Label>
+                <Label htmlFor="category">Category (Age Group) *</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, category: value as "Junior" | "Youth" | "Adult", teamAssignment: "" });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Junior">Junior</SelectItem>
+                    <SelectItem value="Youth">Youth</SelectItem>
+                    <SelectItem value="Adult">Adult</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
                 <Input
                   id="dateOfBirth"
                   type="date"
+                  value={formData.dateOfBirth || ""}
+                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                   required
-                  value={formData.dateOfBirth}
-                  onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
               <div>
-                <Label htmlFor="nationality" className="font-semibold">Nationality *</Label>
+                <Label htmlFor="nationality">Nationality *</Label>
                 <Input
                   id="nationality"
+                  value={formData.nationality || ""}
+                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
                   required
-                  value={formData.nationality}
-                  onChange={(e) => setFormData({...formData, nationality: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
               <div>
-                <Label htmlFor="address" className="font-semibold">Address (Area of Bali) *</Label>
+                <Label htmlFor="address">Address (Area of Bali) *</Label>
                 <Input
                   id="address"
+                  value={formData.address || ""}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   required
-                  value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
               <div>
-                <Label htmlFor="email" className="font-semibold">Email *</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
+                  value={formData.email || ""}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
               <div>
-                <Label htmlFor="shirtNumber" className="font-semibold">Shirt Number</Label>
+                <Label htmlFor="shirtNumber">Shirt Number</Label>
                 <Input
                   id="shirtNumber"
-                  value={formData.shirtNumber}
-                  onChange={(e) => setFormData({...formData, shirtNumber: e.target.value})}
-                  className="border-2 border-blue-200"
+                  type="number"
+                  value={formData.shirtNumber || ""}
+                  onChange={(e) => setFormData({ ...formData, shirtNumber: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 font-semibold">
-                    Type (Payment Status) *
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                    className="w-full p-2 border-2 border-blue-200 rounded-md bg-background"
-                    required
-                  >
-                    <option value="">Select type</option>
-                    <option value="Member">Member (Paying)</option>
-                    <option value="Sponsored">Sponsored (Free)</option>
-                    <option value="Scholarship">Scholarship (Free)</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="role" className="font-semibold">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData({...formData, role: value as any})}
-                  >
-                    <SelectTrigger className="border-2 border-blue-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Player">Player</SelectItem>
-                      <SelectItem value="Coach">Coach</SelectItem>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label htmlFor="type">Type (Payment Status) *</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => setFormData({ ...formData, type: value as "Member" | "Sponsored" | "Scholarship" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Member">Member (Pays Fees)</SelectItem>
+                    <SelectItem value="Sponsored">Sponsored (Free)</SelectItem>
+                    <SelectItem value="Scholarship">Scholarship (Free)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-            <div>
-              <Label htmlFor="category">Category *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value: "Junior" | "Youth" | "Adult") => {
-                  setFormData({ 
-                    ...formData, 
-                    category: value,
-                    teamAssignment: "" // Reset team when category changes
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Junior">Junior</SelectItem>
-                  <SelectItem value="Youth">Youth</SelectItem>
-                  <SelectItem value="Adult">Adult</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="teamAssignment">Team Assignment *</Label>
-              <Select
-                value={formData.teamAssignment}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, teamAssignment: value })
-                }
-                disabled={!formData.category}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={formData.category ? "Select team" : "Select category first"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {formData.category && TEAMS_BY_CATEGORY[formData.category].map((team) => (
-                    <SelectItem key={team} value={team}>
-                      {team}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {!formData.category && (
-                <p className="text-sm text-gray-500 mt-1">Please select a category first to see available teams</p>
-              )}
-            </div>
+              <div>
+                <Label htmlFor="role">Role *</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div>
-                <Label htmlFor="joiningDate" className="font-semibold">Joining Date *</Label>
+                <Label htmlFor="teamAssignment">Team Assignment *</Label>
+                <Select
+                  value={formData.teamAssignment}
+                  onValueChange={(value) => setFormData({ ...formData, teamAssignment: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.category && TEAMS_BY_CATEGORY[formData.category].map((team) => (
+                      <SelectItem key={team} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="joiningDate">Joining Date *</Label>
                 <Input
                   id="joiningDate"
                   type="date"
+                  value={formData.joiningDate || ""}
+                  onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
                   required
-                  value={formData.joiningDate}
-                  onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-                  className="border-2 border-blue-200"
                 />
               </div>
 
@@ -789,7 +701,7 @@ export default function Members() {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setIsFormOpen(false)}
+                onClick={() => setIsDialogOpen(false)}
                 className="border-2"
               >
                 Cancel
@@ -827,6 +739,19 @@ export default function Members() {
               accept=".csv"
               onChange={handleImportCSV}
               className="border-2 border-blue-200"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
+        <DialogContent className="max-w-2xl bg-black/95 p-0 border-0 overflow-hidden" closeButton={true}>
+          <div className="relative flex items-center justify-center p-4">
+            <img
+              src={previewPhotoUrl}
+              alt="Member preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-sm"
+              onClick={() => setIsPhotoPreviewOpen(false)}
             />
           </div>
         </DialogContent>

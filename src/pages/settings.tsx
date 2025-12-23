@@ -4,34 +4,64 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Trash2, Plus, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-interface Settings {
-  teams: string[];
-  membershipPrices: {
-    junior: number;
-    youth: number;
-    adult: number;
-  };
+const DEFAULT_TEAMS_BY_CATEGORY = {
+  Junior: [
+    "Toddler",
+    "Kindy/U6 1",
+    "Kindy/U6 2",
+    "U8 Dev",
+    "U8 Adv",
+    "U10 Dev",
+    "U10 Adv",
+    "U12 Girls",
+    "U12 Dev",
+    "U12 Adv"
+  ],
+  Youth: [
+    "U14",
+    "U14 Girls",
+    "U16",
+    "U18 Girls",
+    "U18"
+  ],
+  Adult: [
+    "1st Team",
+    "Social Team",
+    "Legends 35+",
+    "Masters 45+"
+  ]
+};
+
+interface MembershipPricing {
+  junior: number;
+  youth: number;
+  adult: number;
 }
 
-const defaultTeams = [
-  "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv",
-  "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
-  "U14", "U14 Girls", "U16", "U18 Girls", "U18",
-  "Women", "Masters", "Legends", "Social", "1st Team"
-];
+interface Settings {
+  teamsByCategory: {
+    Junior: string[];
+    Youth: string[];
+    Adult: string[];
+  };
+  membershipPricing: MembershipPricing;
+}
 
 export default function Settings() {
   const [settings, setSettings] = useState<Settings>({
-    teams: defaultTeams,
-    membershipPrices: {
+    teamsByCategory: DEFAULT_TEAMS_BY_CATEGORY,
+    membershipPricing: {
       junior: 1500000,
       youth: 1800000,
       adult: 2000000
     }
   });
-  const [newTeam, setNewTeam] = useState("");
+
+  const [newTeamName, setNewTeamName] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<"Junior" | "Youth" | "Adult">("Junior");
 
   useEffect(() => {
     const stored = localStorage.getItem("settings");
@@ -46,31 +76,38 @@ export default function Settings() {
   };
 
   const addTeam = () => {
-    if (newTeam.trim() && !settings.teams.includes(newTeam.trim())) {
-      const updated = {
-        ...settings,
-        teams: [...settings.teams, newTeam.trim()]
-      };
-      saveSettings(updated);
-      setNewTeam("");
-    }
-  };
+    if (!newTeamName.trim()) return;
 
-  const deleteTeam = (team: string) => {
-    if (confirm(`Are you sure you want to delete team "${team}"?`)) {
-      const updated = {
-        ...settings,
-        teams: settings.teams.filter(t => t !== team)
-      };
-      saveSettings(updated);
-    }
-  };
-
-  const updatePrice = (category: keyof typeof settings.membershipPrices, value: number) => {
     const updated = {
       ...settings,
-      membershipPrices: {
-        ...settings.membershipPrices,
+      teamsByCategory: {
+        ...settings.teamsByCategory,
+        [selectedCategory]: [...settings.teamsByCategory[selectedCategory], newTeamName.trim()]
+      }
+    };
+
+    saveSettings(updated);
+    setNewTeamName("");
+  };
+
+  const removeTeam = (category: "Junior" | "Youth" | "Adult", team: string) => {
+    if (confirm(`Remove ${team} from ${category} teams?`)) {
+      const updated = {
+        ...settings,
+        teamsByCategory: {
+          ...settings.teamsByCategory,
+          [category]: settings.teamsByCategory[category].filter(t => t !== team)
+        }
+      };
+      saveSettings(updated);
+    }
+  };
+
+  const updatePricing = (category: "junior" | "youth" | "adult", value: number) => {
+    const updated = {
+      ...settings,
+      membershipPricing: {
+        ...settings.membershipPricing,
         [category]: value
       }
     };
@@ -78,9 +115,9 @@ export default function Settings() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0
     }).format(amount);
   };
@@ -89,7 +126,7 @@ export default function Settings() {
     <>
       <SEO 
         title="Settings - Bali Bulldogs Club Manager"
-        description="Configure teams and membership pricing"
+        description="Configure club settings, teams, and pricing"
       />
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -105,128 +142,140 @@ export default function Settings() {
                 Back to Dashboard
               </Button>
             </div>
-            <h1 className="text-4xl font-black tracking-tight">SETTINGS</h1>
-            <p className="text-blue-100 text-lg">Bali Bulldogs Club Manager</p>
+            <div>
+              <h1 className="text-4xl font-black mb-2 tracking-tight">SETTINGS</h1>
+              <p className="text-blue-100 text-lg">Configure Club Settings</p>
+            </div>
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-8 space-y-8">
-          {/* Membership Pricing Section */}
           <Card className="p-6 shadow-lg border-2 border-blue-100">
-            <h2 className="text-2xl font-bold text-blue-700 mb-6">Membership Pricing</h2>
-            <p className="text-gray-600 mb-6">Set quarterly membership fees by age category. Only "Member" type members will be charged these amounts.</p>
-            
+            <h2 className="text-2xl font-bold mb-6 text-blue-700">Membership Pricing</h2>
+            <p className="text-sm text-gray-600 mb-6 bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong>Note:</strong> Members with type "Sponsored" or "Scholarship" are exempt from membership fees.
+            </p>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-3">
-                <Label htmlFor="juniorPrice" className="text-lg font-semibold text-blue-700">
+              <div>
+                <Label htmlFor="juniorPrice" className="font-semibold text-lg mb-2 block">
                   Junior Membership
                 </Label>
-                <p className="text-sm text-gray-500">Per quarter (3 months)</p>
                 <Input
                   id="juniorPrice"
                   type="number"
-                  min="0"
-                  step="50000"
-                  value={settings.membershipPrices.junior}
-                  onChange={(e) => updatePrice("junior", parseInt(e.target.value) || 0)}
-                  className="text-lg font-semibold border-2 border-blue-200"
+                  value={settings.membershipPricing.junior}
+                  onChange={(e) => updatePricing("junior", parseInt(e.target.value) || 0)}
+                  className="border-2 border-blue-200 text-lg h-12 mb-2"
                 />
-                <div className="text-sm text-gray-600">
-                  = {formatCurrency(settings.membershipPrices.junior)}
-                </div>
+                <p className="text-sm text-gray-600">
+                  {formatCurrency(settings.membershipPricing.junior)} <span className="text-blue-600 font-semibold">per quarter (3 months)</span>
+                </p>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="youthPrice" className="text-lg font-semibold text-blue-700">
+              <div>
+                <Label htmlFor="youthPrice" className="font-semibold text-lg mb-2 block">
                   Youth Membership
                 </Label>
-                <p className="text-sm text-gray-500">Per quarter (3 months)</p>
                 <Input
                   id="youthPrice"
                   type="number"
-                  min="0"
-                  step="50000"
-                  value={settings.membershipPrices.youth}
-                  onChange={(e) => updatePrice("youth", parseInt(e.target.value) || 0)}
-                  className="text-lg font-semibold border-2 border-blue-200"
+                  value={settings.membershipPricing.youth}
+                  onChange={(e) => updatePricing("youth", parseInt(e.target.value) || 0)}
+                  className="border-2 border-blue-200 text-lg h-12 mb-2"
                 />
-                <div className="text-sm text-gray-600">
-                  = {formatCurrency(settings.membershipPrices.youth)}
-                </div>
+                <p className="text-sm text-gray-600">
+                  {formatCurrency(settings.membershipPricing.youth)} <span className="text-blue-600 font-semibold">per quarter (3 months)</span>
+                </p>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="adultPrice" className="text-lg font-semibold text-blue-700">
+              <div>
+                <Label htmlFor="adultPrice" className="font-semibold text-lg mb-2 block">
                   Adult Membership
                 </Label>
-                <p className="text-sm text-gray-500">Per quarter (3 months)</p>
                 <Input
                   id="adultPrice"
                   type="number"
-                  min="0"
-                  step="50000"
-                  value={settings.membershipPrices.adult}
-                  onChange={(e) => updatePrice("adult", parseInt(e.target.value) || 0)}
-                  className="text-lg font-semibold border-2 border-blue-200"
+                  value={settings.membershipPricing.adult}
+                  onChange={(e) => updatePricing("adult", parseInt(e.target.value) || 0)}
+                  className="border-2 border-blue-200 text-lg h-12 mb-2"
                 />
-                <div className="text-sm text-gray-600">
-                  = {formatCurrency(settings.membershipPrices.adult)}
-                </div>
+                <p className="text-sm text-gray-600">
+                  {formatCurrency(settings.membershipPricing.adult)} <span className="text-blue-600 font-semibold">per quarter (3 months)</span>
+                </p>
               </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-900">
-                <strong>Note:</strong> Members with type "Sponsored" or "Scholarship" are exempt from membership fees.
-              </p>
             </div>
           </Card>
 
-          {/* Team Management Section */}
           <Card className="p-6 shadow-lg border-2 border-blue-100">
-            <h2 className="text-2xl font-bold text-blue-700 mb-6">Team Management</h2>
+            <h2 className="text-2xl font-bold mb-6 text-blue-700">Team Management</h2>
             
-            <div className="flex gap-3 mb-6">
-              <Input
-                placeholder="Enter new team name..."
-                value={newTeam}
-                onChange={(e) => setNewTeam(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && addTeam()}
-                className="border-2 border-blue-200"
-              />
-              <Button 
-                onClick={addTeam}
-                className="bg-blue-700 hover:bg-blue-800 font-bold whitespace-nowrap"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Team
-              </Button>
+            <div className="mb-6">
+              <Label className="font-semibold text-lg mb-3 block">Add New Team</Label>
+              <div className="flex gap-3">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value as "Junior" | "Youth" | "Adult")}
+                  className="px-4 py-2 border-2 border-blue-200 rounded-md bg-white"
+                >
+                  <option value="Junior">Junior</option>
+                  <option value="Youth">Youth</option>
+                  <option value="Adult">Adult</option>
+                </select>
+                
+                <Input
+                  placeholder="Team name..."
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && addTeam()}
+                  className="flex-1 border-2 border-blue-200"
+                />
+                
+                <Button 
+                  onClick={addTeam}
+                  className="bg-blue-700 hover:bg-blue-800"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Team
+                </Button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {settings.teams.map((team) => (
-                <div 
-                  key={team}
-                  className="flex items-center justify-between p-3 bg-white border-2 border-blue-100 rounded-lg hover:border-blue-300 transition-colors"
-                >
-                  <span className="font-semibold text-gray-800">{team}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => deleteTeam(team)}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+            <div className="space-y-6">
+              {(Object.keys(settings.teamsByCategory) as Array<"Junior" | "Youth" | "Adult">).map((category) => (
+                <div key={category} className="border-2 border-blue-100 rounded-lg p-4">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <Badge className={
+                      category === "Junior" ? "bg-green-600" :
+                      category === "Youth" ? "bg-blue-600" :
+                      "bg-purple-600"
+                    }>
+                      {category}
+                    </Badge>
+                    <span className="text-gray-600 text-sm font-normal">
+                      ({settings.teamsByCategory[category].length} teams)
+                    </span>
+                  </h3>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {settings.teamsByCategory[category].map((team) => (
+                      <div
+                        key={team}
+                        className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200"
+                      >
+                        <span className="font-medium">{team}</span>
+                        <button
+                          onClick={() => removeTeam(category, team)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
-
-            {settings.teams.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                No teams configured. Add your first team above!
-              </div>
-            )}
           </Card>
         </div>
       </div>
