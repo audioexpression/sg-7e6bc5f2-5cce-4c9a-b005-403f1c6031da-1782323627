@@ -36,13 +36,6 @@ const billingPeriods = [
   "2027 Q1", "2027 Q2", "2027 Q3", "2027 Q4", "2027 Annual"
 ];
 
-const teams = [
-  "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", 
-  "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
-  "U14", "U14 Girls", "U16", "U18 Girls", "U18",
-  "Women", "Masters", "Legends", "Social", "1st Team"
-];
-
 export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -52,6 +45,9 @@ export default function Invoices() {
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPeriod, setFilterPeriod] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("all");
+  const [isSingleDialogOpen, setIsSingleDialogOpen] = useState(false);
+  const [teams, setTeams] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<Omit<Invoice, "id" | "memberName" | "team">>({
     memberId: "",
@@ -63,7 +59,7 @@ export default function Invoices() {
   });
 
   const [bulkData, setBulkData] = useState({
-    team: "U6",
+    team: "",
     billingPeriod: "2026 Q1",
     dueDate: "",
     amount: 0,
@@ -78,6 +74,25 @@ export default function Invoices() {
     }
     if (storedMembers) {
       setMembers(JSON.parse(storedMembers));
+    }
+
+    // Load teams from settings or use defaults
+    const storedTeams = localStorage.getItem("teams");
+    const defaultTeams = [
+      "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", 
+      "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
+      "U14", "U14 Girls", "U16", "U18 Girls", "U18",
+      "Women", "Masters", "Legends", "Social", "1st Team"
+    ];
+    
+    if (storedTeams) {
+      setTeams(JSON.parse(storedTeams));
+      if (JSON.parse(storedTeams).length > 0) {
+        setBulkData(prev => ({ ...prev, team: JSON.parse(storedTeams)[0] }));
+      }
+    } else {
+      setTeams(defaultTeams);
+      setBulkData(prev => ({ ...prev, team: defaultTeams[0] }));
     }
   }, []);
 
@@ -137,7 +152,7 @@ export default function Invoices() {
     localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
     
     setBulkData({
-      team: "U6",
+      team: "",
       billingPeriod: "2026 Q1",
       dueDate: "",
       amount: 0,
@@ -239,7 +254,7 @@ export default function Invoices() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-black text-green-600">
-                  Rp {totalRevenue.toLocaleString()}
+                  IDR {totalRevenue.toLocaleString('id-ID')}
                 </div>
               </CardContent>
             </Card>
@@ -253,7 +268,7 @@ export default function Invoices() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-black text-yellow-600">
-                  Rp {outstandingAmount.toLocaleString()}
+                  IDR {outstandingAmount.toLocaleString('id-ID')}
                 </div>
               </CardContent>
             </Card>
@@ -300,20 +315,20 @@ export default function Invoices() {
                       
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="bulk-team">Select Team *</Label>
-                          <Select
+                          <Label htmlFor="bulk-team">Target Team</Label>
+                          <select
+                            id="bulk-team"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={bulkData.team}
-                            onValueChange={(value) => setBulkData({...bulkData, team: value})}
+                            onChange={e => setBulkData({...bulkData, team: e.target.value})}
                           >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {teams.map(team => (
-                                <SelectItem key={team} value={team}>{team}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            {teams.map(team => (
+                              <option key={team} value={team}>{team}</option>
+                            ))}
+                          </select>
+                          <p className="text-sm text-gray-500">
+                            Will generate {members.filter(m => m.team === bulkData.team).length} invoices
+                          </p>
                         </div>
 
                         <div className="space-y-2">
@@ -344,7 +359,7 @@ export default function Invoices() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="bulk-amount">Amount (Rp) *</Label>
+                          <Label htmlFor="bulk-amount">Amount (IDR) *</Label>
                           <Input
                             id="bulk-amount"
                             type="number"
@@ -429,7 +444,7 @@ export default function Invoices() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="amount">Amount (Rp) *</Label>
+                          <Label htmlFor="amount">Amount (IDR) *</Label>
                           <Input
                             id="amount"
                             type="number"
@@ -544,7 +559,7 @@ export default function Invoices() {
                           <TableCell>{invoice.team}</TableCell>
                           <TableCell>{invoice.billingPeriod}</TableCell>
                           <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-semibold">Rp {invoice.amount.toLocaleString()}</TableCell>
+                          <TableCell className="font-semibold">IDR {invoice.amount.toLocaleString('id-ID')}</TableCell>
                           <TableCell>
                             <Select
                               value={invoice.status}

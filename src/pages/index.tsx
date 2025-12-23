@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, TrendingUp, AlertCircle, DollarSign, Calendar, UserPlus } from "lucide-react";
+import { Users, Receipt, Calendar, TrendingUp, Award, DollarSign, Settings, AlertCircle, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 interface Member {
@@ -133,6 +133,12 @@ export default function Dashboard() {
                   <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold shadow-lg">
                     <Calendar className="mr-2 h-5 w-5" />
                     Coaching
+                  </Button>
+                </Link>
+                <Link href="/settings">
+                  <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold shadow-lg">
+                    <Settings className="mr-2 h-5 w-5" />
+                    Settings
                   </Button>
                 </Link>
               </div>

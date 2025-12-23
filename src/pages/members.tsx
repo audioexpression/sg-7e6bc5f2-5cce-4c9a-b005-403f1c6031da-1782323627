@@ -35,21 +35,15 @@ interface Member {
   privateCoachingCredits: number;
 }
 
-const teams = [
-  "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", 
-  "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls",
-  "U14", "U14 Girls", "U16", "U18 Girls", "U18",
-  "Women", "Masters", "Legends", "Social", "1st Team"
-];
-
 export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [teams, setTeams] = useState<string[]>([]);
+  const [filteredMembers, setFilteredMembers] = useState<Member[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterTeam, setFilterTeam] = useState<string>("all");
-  const [filterType, setFilterType] = useState<string>("all");
   const [importStatus, setImportStatus] = useState("");
 
   const [formData, setFormData] = useState<Member>({
@@ -76,11 +70,30 @@ export default function Members() {
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem("members");
-    if (stored) {
-      setMembers(JSON.parse(stored));
-    }
+    const storedMembers = localStorage.getItem("members");
+    const storedTeams = localStorage.getItem("teams");
+    if (storedMembers) setMembers(JSON.parse(storedMembers));
+    if (storedTeams) setTeams(JSON.parse(storedTeams));
   }, []);
+
+  useEffect(() => {
+    let filtered = members;
+    
+    if (selectedTeam !== "all") {
+      filtered = filtered.filter(m => m.team === selectedTeam);
+    }
+    
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (m) =>
+          m.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          m.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          m.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setFilteredMembers(filtered);
+  }, [members, searchTerm, selectedTeam]);
 
   const handleCSVImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -235,18 +248,6 @@ export default function Members() {
     setEditingMember(member);
     setIsDialogOpen(true);
   };
-
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = 
-      member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesTeam = filterTeam === "all" || member.team === filterTeam;
-    const matchesType = filterType === "all" || member.type === filterType;
-    
-    return matchesSearch && matchesTeam && matchesType;
-  });
 
   return (
     <>
@@ -465,19 +466,16 @@ export default function Members() {
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="team">Team Assignment *</Label>
-                            <Select
+                            <select
+                              id="team"
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               value={formData.team}
-                              onValueChange={(value) => setFormData({...formData, team: value})}
+                              onChange={e => setFormData({...formData, team: e.target.value})}
                             >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {teams.map(team => (
-                                  <SelectItem key={team} value={team}>{team}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              {teams.map(team => (
+                                <option key={team} value={team}>{team}</option>
+                              ))}
+                            </select>
                           </div>
 
                           <div className="space-y-2">
@@ -611,28 +609,16 @@ export default function Members() {
                     className="pl-10"
                   />
                 </div>
-                <Select value={filterTeam} onValueChange={setFilterTeam}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="All Teams" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map(team => (
-                      <SelectItem key={team} value={team}>{team}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Junior">Junior</SelectItem>
-                    <SelectItem value="Youth">Youth</SelectItem>
-                    <SelectItem value="Adult">Adult</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={selectedTeam}
+                  onChange={(e) => setSelectedTeam(e.target.value)}
+                >
+                  <option value="all">All Teams</option>
+                  {teams.map(team => (
+                    <option key={team} value={team}>{team}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="rounded-md border">
