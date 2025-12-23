@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Member {
   id: string;
@@ -41,6 +42,9 @@ interface Member {
   secondaryContactNumber: string;
   medicalNotes: string;
   privateCoachingCredits: number;
+  teamAssignment: string;
+  category: "Junior" | "Youth" | "Adult";
+  photoUrl?: string;
 }
 
 interface TeamGroup {
@@ -61,40 +65,59 @@ interface Invoice {
   createdAt: string;
 }
 
-export default function Teams() {
+export default function TeamsPage() {
+  const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [teams, setTeams] = useState<string[]>([]);
-  const [teamGroups, setTeamGroups] = useState<TeamGroup[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
     if (savedMembers) {
-      setMembers(JSON.parse(savedMembers));
+      try {
+        const parsedMembers = JSON.parse(savedMembers);
+        setMembers(parsedMembers);
+      } catch (error) {
+        console.error("Error loading members:", error);
+      }
     }
   }, []);
 
-  const teamStats = teams.map((teamName) => {
-    const teamMembers = members.filter((m) => m.teamAssignment === teamName);
+  const allTeams = [
+    "Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv",
+    "U12 Dev", "U12 Adv", "U12 Girls", "U14", "U14 Girls", "U16", "U18 Girls", "U18",
+    "Women", "Masters", "Legends", "Social", "1st Team"
+  ];
+
+  const teamData = allTeams.map(teamName => {
+    const teamMembers = members.filter(m => m.teamAssignment === teamName);
+    
+    const total = teamMembers.length;
+    const standard = teamMembers.filter(m => m.membershipCategory === "Member").length;
+    const sponsored = teamMembers.filter(m => m.membershipCategory === "Sponsored").length;
+    const scholarship = teamMembers.filter(m => m.membershipCategory === "Scholarship").length;
+
     return {
       name: teamName,
-      totalPlayers: teamMembers.length,
-      memberCount: teamMembers.filter((m) => m.membershipCategory === "Member").length,
-      sponsoredCount: teamMembers.filter((m) => m.membershipCategory === "Sponsored").length,
-      scholarshipCount: teamMembers.filter((m) => m.membershipCategory === "Scholarship").length,
       members: teamMembers,
+      total,
+      standard,
+      sponsored,
+      scholarship
     };
-  });
+  }).filter(team => team.total > 0);
 
-  const filteredTeams = teamStats.filter((team) => {
-    const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === "all" || 
-      (selectedType === "Junior" && ["Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls"].includes(team.name)) ||
-      (selectedType === "Youth" && ["U14", "U14 Girls", "U16", "U18 Girls", "U18"].includes(team.name)) ||
-      (selectedType === "Adult" && ["Women", "Masters", "Legends", "Social", "1st Team"].includes(team.name));
-    return matchesSearch && matchesType && team.totalPlayers > 0;
+  const filteredTeams = teamData.filter(team => {
+    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      team.members.some(m => 
+        `${m.firstName} ${m.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    
+    const matchesType = typeFilter === "all" || 
+      team.members.some(m => m.type === typeFilter);
+    
+    return matchesSearch && matchesType;
   });
 
   const getMemberPaymentStatus = (memberId: string, quarter: string): Invoice | undefined => {
@@ -161,12 +184,12 @@ export default function Teams() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <Input
                     placeholder="Search teams or members..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
-                <Select value={selectedType} onValueChange={setSelectedType}>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
@@ -182,7 +205,7 @@ export default function Teams() {
           </Card>
 
           <div className="space-y-8">
-            {teamGroups.length === 0 ? (
+            {filteredTeams.length === 0 ? (
               <Card className="border-bulldogs-blue/30 shadow-lg">
                 <CardContent className="py-12 text-center">
                   <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -190,21 +213,21 @@ export default function Teams() {
                     No teams found
                   </h3>
                   <p className="text-gray-600">
-                    {searchQuery
+                    {searchTerm
                       ? "Try adjusting your search filters"
                       : "No members have been added to teams yet"}
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              teamGroups.map((group) => (
-                <Card key={group.name} className="border-bulldogs-blue/30 shadow-lg overflow-hidden">
+              filteredTeams.map((team) => (
+                <Card key={team.name} className="border-bulldogs-blue/30 shadow-lg overflow-hidden">
                   <CardHeader className="bg-gradient-to-r from-bulldogs-blue to-bulldogs-blue/90 text-white">
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-2xl font-black">{group.name}</CardTitle>
+                        <CardTitle className="text-2xl font-black">{team.name}</CardTitle>
                         <CardDescription className="text-yellow-300 font-semibold">
-                          {group.members.length} member{group.members.length !== 1 ? "s" : ""}
+                          {team.total} member{team.total !== 1 ? "s" : ""}
                         </CardDescription>
                       </div>
                       <div className="bg-bulldogs-yellow/20 rounded-full p-3">
@@ -214,11 +237,11 @@ export default function Teams() {
                   </CardHeader>
                   <CardContent className="pt-6 bg-white">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-3xl font-black">{group.name}</h2>
+                      <h2 className="text-3xl font-black">{team.name}</h2>
                       <Button 
                         onClick={() => {
                           // Navigate to members page with team pre-selected
-                          localStorage.setItem("preselected_team", group.name);
+                          localStorage.setItem("preselected_team", team.name);
                           window.location.href = "/members";
                         }}
                         className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold"
@@ -228,7 +251,7 @@ export default function Teams() {
                       </Button>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {group.members.map((member) => (
+                      {team.members.map((member) => (
                         <Card
                           key={member.id}
                           className="border-gray-200 hover:border-bulldogs-yellow hover:shadow-md transition-all"

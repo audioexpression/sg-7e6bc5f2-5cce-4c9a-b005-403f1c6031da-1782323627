@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,7 +60,7 @@ export default function Members() {
   const [filterRole, setFilterRole] = useState("");
   const [filterMembershipCategory, setFilterMembershipCategory] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [formData, setFormData] = useState<Partial<Member>>({
     category: "Junior",
     type: "Member",
@@ -68,6 +68,13 @@ export default function Members() {
     coachingCredits: 0,
     teamAssignment: "",
   });
+
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
+  const [bulkTeam, setBulkTeam] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkRole, setBulkRole] = useState("");
+  const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("members");
@@ -171,6 +178,46 @@ export default function Members() {
     reader.readAsText(file);
   };
 
+  const handleSelectAll = () => {
+    if (selectedMembers.length === currentMembers.length) {
+      setSelectedMembers([]);
+    } else {
+      setSelectedMembers(currentMembers.map(m => m.id));
+    }
+  };
+
+  const handleSelectMember = (id: string) => {
+    setSelectedMembers(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkUpdate = () => {
+    if (selectedMembers.length === 0) return;
+
+    const updatedMembers = members.map(member => {
+      if (selectedMembers.includes(member.id)) {
+        return {
+          ...member,
+          ...(bulkTeam && { teamAssignment: bulkTeam }),
+          ...(bulkCategory && { category: bulkCategory as "Junior" | "Youth" | "Adult" }),
+          ...(bulkRole && { role: bulkRole }),
+          ...(bulkMembershipCategory && { type: bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship" })
+        };
+      }
+      return member;
+    });
+
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+    setSelectedMembers([]);
+    setIsBulkActionsOpen(false);
+    setBulkTeam("");
+    setBulkCategory("");
+    setBulkRole("");
+    setBulkMembershipCategory("");
+  };
+
   const filteredAndSortedMembers = members.filter((member) => {
     const matchesSearch = searchTerm === "" || member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.email?.toLowerCase().includes(searchTerm.toLowerCase()) || member.contactNumber?.includes(searchTerm);
     const matchesCategory = filterCategory === "all" || member.category === filterCategory;
@@ -225,6 +272,31 @@ export default function Members() {
             </div>
           </div>
 
+          {selectedMembers.length > 0 && (
+            <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-blue-900">
+                    {selectedMembers.length} member{selectedMembers.length !== 1 ? "s" : ""} selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedMembers([])}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+                <Button
+                  onClick={() => setIsBulkActionsOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Bulk Update
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg border shadow-sm p-4 mb-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
               <div className="lg:col-span-2 relative">
@@ -257,7 +329,15 @@ export default function Members() {
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.length === currentMembers.length && currentMembers.length > 0}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </TableHead>
                     <TableHead className="w-[60px]">Photo</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Team</TableHead>
@@ -276,7 +356,15 @@ export default function Members() {
                     </TableRow>
                   ) : (
                     currentMembers.map((member) => (
-                      <TableRow key={member.id} className="hover:bg-blue-50/50">
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedMembers.includes(member.id)}
+                            onChange={() => handleSelectMember(member.id)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </TableCell>
                         <TableCell>
                           {member.photoUrl ? (
                             <img src={member.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover cursor-pointer" onClick={() => { setPreviewPhotoUrl(member.photoUrl!); setIsPhotoPreviewOpen(true); }} />
@@ -315,6 +403,81 @@ export default function Members() {
             </div>
           </div>
         </main>
+
+        {isBulkActionsOpen && (
+          <Dialog open={isBulkActionsOpen} onOpenChange={setIsBulkActionsOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Bulk Update Members</DialogTitle>
+                <DialogDescription>
+                  Update {selectedMembers.length} selected member{selectedMembers.length !== 1 ? "s" : ""}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Change Team</label>
+                  <select
+                    value={bulkTeam}
+                    onChange={(e) => setBulkTeam(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                  >
+                    <option value="">Keep Current</option>
+                    {teamOptions.map((team) => (
+                      <option key={team} value={team}>{team}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Change Category</label>
+                  <select
+                    value={bulkCategory}
+                    onChange={(e) => setBulkCategory(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                  >
+                    <option value="">Keep Current</option>
+                    <option value="Junior">Junior</option>
+                    <option value="Youth">Youth</option>
+                    <option value="Adult">Adult</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Change Role</label>
+                  <select
+                    value={bulkRole}
+                    onChange={(e) => setBulkRole(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                  >
+                    <option value="">Keep Current</option>
+                    <option value="Player">Player</option>
+                    <option value="Coach">Coach</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Change Membership</label>
+                  <select
+                    value={bulkMembershipCategory}
+                    onChange={(e) => setBulkMembershipCategory(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                  >
+                    <option value="">Keep Current</option>
+                    <option value="Member">Member</option>
+                    <option value="Sponsored">Sponsored</option>
+                    <option value="Scholarship">Scholarship</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => setIsBulkActionsOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleBulkUpdate} className="bg-blue-600 hover:bg-blue-700">
+                  Update {selectedMembers.length} Member{selectedMembers.length !== 1 ? "s" : ""}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
