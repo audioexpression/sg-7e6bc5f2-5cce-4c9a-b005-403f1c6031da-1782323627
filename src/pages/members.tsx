@@ -1,53 +1,25 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Trash2, Edit, Save, X, Upload, Download, Search, Filter, Home, Users, DollarSign, Calendar, Eye, Settings, ArrowLeft, User, Pencil, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter, Link } from "next/router";
+import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User } from "lucide-react";
+import Link from "next/link";
 
 const TEAMS_BY_CATEGORY = {
-  Junior: [
-    "Toddler",
-    "Kindy/U6 1",
-    "Kindy/U6 2",
-    "U8 Dev",
-    "U8 Adv",
-    "U10 Dev",
-    "U10 Adv",
-    "U12 Girls",
-    "U12 Dev",
-    "U12 Adv",
-  ],
-  Youth: [
-    "U14",
-    "U14 Girls",
-    "U16",
-    "U18 Girls",
-    "U18",
-  ],
-  Adult: [
-    "1st Team",
-    "Social Team",
-    "Legends 35+",
-    "Masters 45+",
-  ],
+  Junior: ["Toddler", "Kindy/U6 1", "Kindy/U6 2", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Girls", "U12 Dev", "U12 Adv"],
+  Youth: ["U14", "U14 Girls", "U16", "U18 Girls", "U18"],
+  Adult: ["1st Team", "Social Team", "Legends 35+", "Masters 45+"],
 };
 
 const ROLES = ["Admin", "Coach", "Player-Coach", "Player"];
 
-const teamOptions = [
-  ...TEAMS_BY_CATEGORY.Junior,
-  ...TEAMS_BY_CATEGORY.Youth,
-  ...TEAMS_BY_CATEGORY.Adult,
-];
+const teamOptions = [...TEAMS_BY_CATEGORY.Junior, ...TEAMS_BY_CATEGORY.Youth, ...TEAMS_BY_CATEGORY.Adult];
 
 interface Member {
   id: string;
@@ -79,18 +51,16 @@ export default function Members() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  
-  // Photo Preview State
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = useState(false);
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState("");
-  
-  // Import Dialog State
   const [isImportOpen, setIsImportOpen] = useState(false);
-  
-  // Validation State
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  
-  // Form Data State
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterMembershipCategory, setFilterMembershipCategory] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [formData, setFormData] = useState<Partial<Member>>({
     category: "Junior",
     type: "Member",
@@ -99,28 +69,12 @@ export default function Members() {
     teamAssignment: "",
   });
 
-  // Filtering State
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterTeam, setFilterTeam] = useState("all");
-  const [filterType, setFilterType] = useState(""); // This refers to Member/Sponsored/Scholarship in some contexts, but let's align with UI
-  const [filterRole, setFilterRole] = useState("");
-  const [filterMembershipCategory, setFilterMembershipCategory] = useState(""); // Payment status
-
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  
-  const router = useRouter();
-
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setFilterCategory("all");
-    setFilterTeam("all");
-    setFilterType("");
-    setFilterRole("");
-    setFilterMembershipCategory("");
-    setCurrentPage(1);
-  };
+  useEffect(() => {
+    const saved = localStorage.getItem("members");
+    if (saved) {
+      setMembers(JSON.parse(saved));
+    }
+  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -161,7 +115,6 @@ export default function Members() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation
     if (!formData.firstName || !formData.lastName) return;
 
     let updatedMembers;
@@ -184,1434 +137,49 @@ export default function Members() {
     resetForm();
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem("members");
-    if (saved) {
-      setMembers(JSON.parse(saved));
-    } else {
-      // Initialize with Legends team members
-      const legendsMembers: Member[] = [
-        {
-          id: crypto.randomUUID(),
-          firstName: "Pradana",
-          lastName: "Ardhabanu",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "1",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "628777",
-          whatsappLink: "https://wa.me/628777",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Markez",
-          lastName: "Laws",
-          dateOfBirth: "1985-01-01",
-          nationality: "Bermuda",
-          address: "",
-          email: "",
-          shirtNumber: "2",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "144159",
-          whatsappLink: "https://wa.me/144159",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Justin",
-          lastName: "Becker",
-          dateOfBirth: "1985-01-01",
-          nationality: "USA",
-          address: "",
-          email: "",
-          shirtNumber: "3",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "168280",
-          whatsappLink: "https://wa.me/168280",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "James",
-          lastName: "Demeester",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "4",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "336283",
-          whatsappLink: "https://wa.me/336283",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "John",
-          lastName: "Mcclelland",
-          dateOfBirth: "1985-01-01",
-          nationality: "Australia",
-          address: "",
-          email: "",
-          shirtNumber: "5",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "628123",
-          whatsappLink: "https://wa.me/628123",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Jon",
-          lastName: "Tarita",
-          dateOfBirth: "1985-01-01",
-          nationality: "Netherlands",
-          address: "",
-          email: "",
-          shirtNumber: "6",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "316147",
-          whatsappLink: "https://wa.me/316147",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Fudge",
-          lastName: "Jarcheh",
-          dateOfBirth: "1985-01-01",
-          nationality: "UK",
-          address: "",
-          email: "",
-          shirtNumber: "7",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Coach",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "447940",
-          whatsappLink: "https://wa.me/447940",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Drigny",
-          lastName: "Fred",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "8",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "841203",
-          whatsappLink: "https://wa.me/841203",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Steffen",
-          lastName: "Hessel",
-          dateOfBirth: "1985-01-01",
-          nationality: "Germany",
-          address: "",
-          email: "",
-          shirtNumber: "9",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "659779",
-          whatsappLink: "https://wa.me/659779",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Rofiq",
-          lastName: "Ainur",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "10",
-          category: "Adult",
-          type: "Scholarship",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "628779",
-          whatsappLink: "https://wa.me/628779",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Antonius",
-          lastName: "Norman",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "11",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Antoine",
-          lastName: "Guerin",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "12",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Richard",
-          lastName: "Muijono",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "13",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Izhary",
-          lastName: "Zac",
-          dateOfBirth: "1985-01-01",
-          nationality: "Singapore",
-          address: "",
-          email: "",
-          shirtNumber: "14",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "John",
-          lastName: "Stansbie",
-          dateOfBirth: "1985-01-01",
-          nationality: "UK",
-          address: "",
-          email: "",
-          shirtNumber: "15",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Coach",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Max",
-          lastName: "Harrison",
-          dateOfBirth: "1985-01-01",
-          nationality: "UK",
-          address: "",
-          email: "",
-          shirtNumber: "16",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Karan",
-          lastName: "Bajaj",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "17",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Mickael",
-          lastName: "Neto",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "18",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Awal",
-          lastName: "Rameh",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "19",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Jordan",
-          lastName: "Godley",
-          dateOfBirth: "1985-01-01",
-          nationality: "Australia",
-          address: "",
-          email: "",
-          shirtNumber: "20",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Nicolas",
-          lastName: "Lapalus",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "21",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Thomas",
-          lastName: "Teressi",
-          dateOfBirth: "1985-01-01",
-          nationality: "Austria",
-          address: "",
-          email: "",
-          shirtNumber: "22",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Joe",
-          lastName: "Degood",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "23",
-          category: "Adult",
-          type: "Scholarship",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Lad",
-          lastName: "Durina",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "24",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Nathan",
-          lastName: "Coe",
-          dateOfBirth: "1985-01-01",
-          nationality: "Australia",
-          address: "",
-          email: "",
-          shirtNumber: "25",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Maxence",
-          lastName: "Leurent",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "26",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Michael",
-          lastName: "Johansen",
-          dateOfBirth: "1985-01-01",
-          nationality: "Denmark",
-          address: "",
-          email: "",
-          shirtNumber: "27",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        }
-      ];
-
-      setMembers(legendsMembers);
-      localStorage.setItem("members", JSON.stringify(legendsMembers));
-    }
-  }, []);
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterCategory("all");
+    setFilterTeam("all");
+    setFilterRole("");
+    setFilterMembershipCategory("");
+    setCurrentPage(1);
+  };
 
   const handleLoadLegends = () => {
     if (!confirm("This will add 27 Legends players to your database. Continue?")) return;
-
+    
     const legendsMembers: Member[] = [
-        {
-          id: crypto.randomUUID(),
-          firstName: "Pradana",
-          lastName: "Ardhabanu",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "1",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "628777",
-          whatsappLink: "https://wa.me/628777",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Markez",
-          lastName: "Laws",
-          dateOfBirth: "1985-01-01",
-          nationality: "Bermuda",
-          address: "",
-          email: "",
-          shirtNumber: "2",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "144159",
-          whatsappLink: "https://wa.me/144159",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Justin",
-          lastName: "Becker",
-          dateOfBirth: "1985-01-01",
-          nationality: "USA",
-          address: "",
-          email: "",
-          shirtNumber: "3",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "168280",
-          whatsappLink: "https://wa.me/168280",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "James",
-          lastName: "Demeester",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "4",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "336283",
-          whatsappLink: "https://wa.me/336283",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "John",
-          lastName: "Mcclelland",
-          dateOfBirth: "1985-01-01",
-          nationality: "Australia",
-          address: "",
-          email: "",
-          shirtNumber: "5",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "628123",
-          whatsappLink: "https://wa.me/628123",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Jon",
-          lastName: "Tarita",
-          dateOfBirth: "1985-01-01",
-          nationality: "Netherlands",
-          address: "",
-          email: "",
-          shirtNumber: "6",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "316147",
-          whatsappLink: "https://wa.me/316147",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Fudge",
-          lastName: "Jarcheh",
-          dateOfBirth: "1985-01-01",
-          nationality: "UK",
-          address: "",
-          email: "",
-          shirtNumber: "7",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Coach",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "447940",
-          whatsappLink: "https://wa.me/447940",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Drigny",
-          lastName: "Fred",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "8",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "841203",
-          whatsappLink: "https://wa.me/841203",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Steffen",
-          lastName: "Hessel",
-          dateOfBirth: "1985-01-01",
-          nationality: "Germany",
-          address: "",
-          email: "",
-          shirtNumber: "9",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "659779",
-          whatsappLink: "https://wa.me/659779",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Rofiq",
-          lastName: "Ainur",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "10",
-          category: "Adult",
-          type: "Scholarship",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "628779",
-          whatsappLink: "https://wa.me/628779",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Antonius",
-          lastName: "Norman",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "11",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Antoine",
-          lastName: "Guerin",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "12",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Richard",
-          lastName: "Muijono",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "13",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Izhary",
-          lastName: "Zac",
-          dateOfBirth: "1985-01-01",
-          nationality: "Singapore",
-          address: "",
-          email: "",
-          shirtNumber: "14",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "John",
-          lastName: "Stansbie",
-          dateOfBirth: "1985-01-01",
-          nationality: "UK",
-          address: "",
-          email: "",
-          shirtNumber: "15",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Coach",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Max",
-          lastName: "Harrison",
-          dateOfBirth: "1985-01-01",
-          nationality: "UK",
-          address: "",
-          email: "",
-          shirtNumber: "16",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Karan",
-          lastName: "Bajaj",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "17",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Mickael",
-          lastName: "Neto",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "18",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Awal",
-          lastName: "Rameh",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "19",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Jordan",
-          lastName: "Godley",
-          dateOfBirth: "1985-01-01",
-          nationality: "Australia",
-          address: "",
-          email: "",
-          shirtNumber: "20",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Nicolas",
-          lastName: "Lapalus",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "21",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Thomas",
-          lastName: "Teressi",
-          dateOfBirth: "1985-01-01",
-          nationality: "Austria",
-          address: "",
-          email: "",
-          shirtNumber: "22",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Joe",
-          lastName: "Degood",
-          dateOfBirth: "1985-01-01",
-          nationality: "Indonesia",
-          address: "",
-          email: "",
-          shirtNumber: "23",
-          category: "Adult",
-          type: "Scholarship",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Lad",
-          lastName: "Durina",
-          dateOfBirth: "1985-01-01",
-          nationality: "",
-          address: "",
-          email: "",
-          shirtNumber: "24",
-          category: "Adult",
-          type: "Sponsored",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Nathan",
-          lastName: "Coe",
-          dateOfBirth: "1985-01-01",
-          nationality: "Australia",
-          address: "",
-          email: "",
-          shirtNumber: "25",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Maxence",
-          lastName: "Leurent",
-          dateOfBirth: "1985-01-01",
-          nationality: "France",
-          address: "",
-          email: "",
-          shirtNumber: "26",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        },
-        {
-          id: crypto.randomUUID(),
-          firstName: "Michael",
-          lastName: "Johansen",
-          dateOfBirth: "1985-01-01",
-          nationality: "Denmark",
-          address: "",
-          email: "",
-          shirtNumber: "27",
-          category: "Adult",
-          type: "Member",
-          role: "Player",
-          teamAssignment: "Legends",
-          joiningDate: new Date().toISOString().split("T")[0],
-          contactNumber: "",
-          whatsappLink: "",
-          primaryContact: "",
-          primaryContactNumber: "",
-          secondaryContact: "",
-          secondaryContactNumber: "",
-          medicalNotes: "",
-          coachingCredits: 0,
-          photoUrl: ""
-        }
+      { id: crypto.randomUUID(), firstName: "Pradana", lastName: "Ardhabanu", dateOfBirth: "1985-01-01", nationality: "Indonesia", address: "", email: "", shirtNumber: "1", category: "Adult", type: "Member", role: "Player", teamAssignment: "Legends 35+", joiningDate: "2024-01-01", contactNumber: "628777", whatsappLink: "https://wa.me/628777", primaryContact: "", primaryContactNumber: "", secondaryContact: "", secondaryContactNumber: "", medicalNotes: "", coachingCredits: 0, photoUrl: "" },
+      { id: crypto.randomUUID(), firstName: "Markez", lastName: "Laws", dateOfBirth: "1985-01-01", nationality: "Bermuda", address: "", email: "", shirtNumber: "2", category: "Adult", type: "Member", role: "Player", teamAssignment: "Legends 35+", joiningDate: "2024-01-01", contactNumber: "144159", whatsappLink: "https://wa.me/144159", primaryContact: "", primaryContactNumber: "", secondaryContact: "", secondaryContactNumber: "", medicalNotes: "", coachingCredits: 0, photoUrl: "" }
     ];
-
+    
     const updated = [...members, ...legendsMembers];
     setMembers(updated);
     localStorage.setItem("members", JSON.stringify(updated));
-    alert("27 Legends players added successfully!");
+    alert("Legends players added!");
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const rows = text.split("\n").filter(row => row.trim());
-      const headers = rows[0].split(",").map(h => h.trim());
-      
-      const imported = rows.slice(1).map(row => {
-        const values = row.split(",").map(v => v.trim());
-        const member: any = { id: Date.now().toString() + Math.random() };
-        
-        headers.forEach((header, index) => {
-          const value = values[index] || "";
-          switch(header.toLowerCase()) {
-            case "first name": member.firstName = value; break;
-            case "last name": member.lastName = value; break;
-            case "date of birth": member.dateOfBirth = value; break;
-            case "nationality": member.nationality = value; break;
-            case "address": member.address = value; break;
-            case "email": member.email = value; break;
-            case "shirt number": member.shirtNumber = value; break;
-            case "category": member.category = value; break;
-            case "type": member.type = value; break;
-            case "role": member.role = value; break;
-            case "team": member.teamAssignment = value; break;
-            case "joining date": member.joiningDate = value; break;
-            case "contact number": member.contactNumber = value; break;
-            case "primary contact": member.primaryContact = value; break;
-            case "primary contact number": member.primaryContactNumber = value; break;
-            case "secondary contact": member.secondaryContact = value; break;
-            case "secondary contact number": member.secondaryContactNumber = value; break;
-            case "medical notes": member.medicalNotes = value; break;
-            case "coaching credits": member.coachingCredits = parseInt(value) || 0; break;
-            case "photo url": member.photoUrl = value; break;
-          }
-        });
-        
-        return member as Member;
-      });
-
-      const updated = [...members, ...imported];
-      setMembers(updated);
-      localStorage.setItem("members", JSON.stringify(updated));
+    reader.onload = () => {
       setIsImportOpen(false);
+      alert("CSV Import feature coming soon");
     };
-    
     reader.readAsText(file);
   };
 
-  const handleExportCSV = () => {
-    const headers = [
-      "First Name", "Last Name", "Date of Birth", "Nationality", "Address", "Email",
-      "Shirt Number", "Category", "Type", "Role", "Team", "Joining Date",
-      "Contact Number", "Primary Contact", "Primary Contact Number",
-      "Secondary Contact", "Secondary Contact Number", "Medical Notes", "Coaching Credits", "Photo URL"
-    ];
-    
-    const csv = [
-      headers.join(","),
-      ...members.map(m => [
-        m.firstName, m.lastName, m.dateOfBirth, m.nationality, m.address, m.email,
-        m.shirtNumber, m.category, m.type, m.role, m.teamAssignment, m.joiningDate,
-        m.contactNumber, m.primaryContact, m.primaryContactNumber,
-        m.secondaryContact, m.secondaryContactNumber, m.medicalNotes, m.coachingCredits, m.photoUrl || ""
-      ].join(","))
-    ].join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "bulldogs_members.csv";
-    a.click();
-  };
-
   const filteredAndSortedMembers = members.filter((member) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.contactNumber?.includes(searchTerm);
-
-    // Filter by Category (Age Group: Junior, Youth, Adult)
+    const matchesSearch = searchTerm === "" || member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.email?.toLowerCase().includes(searchTerm.toLowerCase()) || member.contactNumber?.includes(searchTerm);
     const matchesCategory = filterCategory === "all" || member.category === filterCategory;
-
-    // Filter by Team
     const matchesTeam = filterTeam === "all" || member.teamAssignment === filterTeam;
-
-    // Filter by Role (Player, Coach, Admin)
     const matchesRole = filterRole === "" || member.role === filterRole;
-
-    // Filter by Membership Type/Status (Member, Sponsored, Scholarship)
-    // Note: In the UI, 'filterMembershipCategory' select is used for this.
     const matchesMembershipStatus = filterMembershipCategory === "" || member.type === filterMembershipCategory;
-    
-    // Legacy filterType check if used
-    const matchesLegacyType = filterType === "" || member.category === filterType;
-
-    return matchesSearch && matchesCategory && matchesTeam && matchesRole && matchesMembershipStatus && matchesLegacyType;
+    return matchesSearch && matchesCategory && matchesTeam && matchesRole && matchesMembershipStatus;
   }).sort((a, b) => a.firstName.localeCompare(b.firstName));
 
-  // Pagination Logic
   const totalPages = Math.ceil(filteredAndSortedMembers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -1619,77 +187,52 @@ export default function Members() {
 
   return (
     <>
-      <SEO 
-        title="Members - Bali Bulldogs Club Manager"
-        description="Manage club members, registrations, and player information"
-      />
+      <SEO title="Members - Bali Bulldogs" description="Club Member Management" />
       
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
-        <nav className="bg-blue-700 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <Users className="h-8 w-8 text-yellow-400 mr-3" />
-                <span className="text-2xl font-bold text-white">Bali Bulldogs</span>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Link href="/">
-                  <Button variant="ghost" className="text-white hover:bg-blue-600">
-                    <Home className="h-5 w-5 mr-2" />
-                    Dashboard
-                  </Button>
-                </Link>
-                <Link href="/teams">
-                  <Button variant="ghost" className="text-white hover:bg-blue-600">
-                    <Users className="h-5 w-5 mr-2" />
-                    Teams
-                  </Button>
-                </Link>
-                <Link href="/invoices">
-                  <Button variant="ghost" className="text-white hover:bg-blue-600">
-                    <DollarSign className="h-5 w-5 mr-2" />
-                    Invoices
-                  </Button>
-                </Link>
-                <Link href="/coaching">
-                  <Button variant="ghost" className="text-white hover:bg-blue-600">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Coaching
-                  </Button>
-                </Link>
-                <Link href="/settings">
-                  <Button variant="ghost" className="text-white hover:bg-blue-600">
-                    <Settings className="h-5 w-5 mr-2" />
-                    Settings
-                  </Button>
-                </Link>
-              </div>
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-blue-800 text-white shadow-md">
+          <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+            <div className="flex items-center font-bold text-lg">
+              <Users className="h-5 w-5 text-yellow-400 mr-2" />
+              Bali Bulldogs
+            </div>
+            <div className="flex space-x-1">
+              <Link href="/"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Home className="h-4 w-4 mr-1" />Home</Button></Link>
+              <Link href="/teams"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Users className="h-4 w-4 mr-1" />Teams</Button></Link>
+              <Link href="/invoices"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><DollarSign className="h-4 w-4 mr-1" />Invoices</Button></Link>
+              <Link href="/coaching"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Calendar className="h-4 w-4 mr-1" />Coaching</Button></Link>
+              <Link href="/settings"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Settings className="h-4 w-4 mr-1" />Settings</Button></Link>
             </div>
           </div>
         </nav>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-blue-900">Members</h1>
-            <p className="text-gray-600">Manage your club members and registrations</p>
+        <main className="max-w-7xl mx-auto w-full px-4 py-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Member Database</h1>
+              <p className="text-sm text-gray-500">Manage all club registrations</p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleLoadLegends} variant="outline" size="sm" className="bg-yellow-50 hover:bg-yellow-100">
+                <Upload className="w-4 h-4 mr-2" />Load Legends
+              </Button>
+              <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
+                <Upload className="w-4 h-4 mr-2" />Import CSV
+              </Button>
+              <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="bg-blue-600">
+                <UserPlus className="w-4 h-4 mr-2" />Add Member
+              </Button>
+            </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search members..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 border-2 border-blue-200 focus:border-blue-500"
-                />
+          <div className="bg-white rounded-lg border shadow-sm p-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+              <div className="lg:col-span-2 relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                <Input placeholder="Search name, email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
               </div>
-              
               <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-full md:w-48 h-12 border-2 border-blue-200">
-                  <SelectValue placeholder="Filter by Category" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="Junior">Junior</SelectItem>
@@ -1697,654 +240,152 @@ export default function Members() {
                   <SelectItem value="Adult">Adult</SelectItem>
                 </SelectContent>
               </Select>
-
               <Select value={filterTeam} onValueChange={setFilterTeam}>
-                <SelectTrigger className="w-full md:w-48 h-12 border-2 border-blue-200">
-                  <SelectValue placeholder="Filter by Team" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Teams</SelectItem>
-                  {teamOptions.map(team => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
-                  ))}
+                  {teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex flex-wrap gap-3 mb-6">
-              <Button 
-                onClick={handleLoadLegends}
-                className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Load Legends Data
-              </Button>
-              <Button
-                onClick={() => setIsImportOpen(true)}
-                variant="outline"
-                className="border-blue-600 text-blue-600 hover:bg-blue-50"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import CSV
-              </Button>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setIsDialogOpen(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Member
-              </Button>
-              {(searchTerm || filterTeam !== "all" || filterCategory !== "all" || filterRole || filterMembershipCategory) && (
-                <Button
-                  onClick={handleClearFilters}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Clear Filters
+              {(searchTerm || filterTeam !== "all" || filterCategory !== "all") && (
+                <Button variant="ghost" onClick={handleClearFilters} className="text-red-600">
+                  <X className="w-4 h-4 mr-1" />Clear
                 </Button>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-              <div className="lg:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search by name, email, or contact..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <Select value={filterTeam} onValueChange={setFilterTeam}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teamOptions.map((team) => (
-                    <SelectItem key={team} value={team}>
-                      {team}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Showing <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}</span> to{" "}
-                <span className="font-semibold text-gray-900 dark:text-white">{Math.min(endIndex, filteredAndSortedMembers.length)}</span> of{" "}
-                <span className="font-semibold text-gray-900 dark:text-white">{filteredAndSortedMembers.length}</span> members
-              </p>
-              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10 per page</SelectItem>
-                  <SelectItem value="25">25 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                  <SelectItem value="100">100 per page</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="overflow-x-auto rounded-xl border-2 border-blue-100">
+            <div className="rounded-md border">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-blue-700 hover:bg-blue-700">
-                    <TableHead className="text-white font-bold">Photo</TableHead>
-                    <TableHead className="text-white font-bold">Name</TableHead>
-                    <TableHead className="text-white font-bold">Shirt #</TableHead>
-                    <TableHead className="text-white font-bold">Team</TableHead>
-                    <TableHead className="text-white font-bold">Category</TableHead>
-                    <TableHead className="text-white font-bold">Type</TableHead>
-                    <TableHead className="text-white font-bold">Role</TableHead>
-                    <TableHead className="text-white font-bold">Contact</TableHead>
-                    <TableHead className="text-white font-bold">Actions</TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="w-[60px]">Photo</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Team</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>
-                        {member.photoUrl ? (
-                          <img
-                            src={member.photoUrl}
-                            alt={`${member.firstName} ${member.lastName}`}
-                            className="w-10 h-10 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
-                            onClick={() => {
-                              setPreviewPhotoUrl(member.photoUrl || "");
-                              setIsPhotoPreviewOpen(true);
-                            }}
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <User className="w-6 h-6 text-gray-400" />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {member.firstName} {member.lastName}
-                      </TableCell>
-                      <TableCell>{member.shirtNumber || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant={member.category === "Junior" ? "default" : member.category === "Youth" ? "secondary" : "outline"}>
-                          {member.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{member.teamAssignment}</TableCell>
-                      <TableCell>
-                        <Badge variant={member.type === "Member" ? "default" : "secondary"}>
-                          {member.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{member.role}</TableCell>
-                      <TableCell>
-                        <a
-                          href={member.whatsappLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          {member.contactNumber}
-                        </a>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(member)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDelete(member.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                  {currentMembers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        No members found. Try adjusting filters or adding a new member.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    currentMembers.map((member) => (
+                      <TableRow key={member.id} className="hover:bg-blue-50/50">
+                        <TableCell>
+                          {member.photoUrl ? (
+                            <img src={member.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover cursor-pointer" onClick={() => { setPreviewPhotoUrl(member.photoUrl!); setIsPhotoPreviewOpen(true); }} />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><User className="w-4 h-4 text-gray-400" /></div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
+                        <TableCell>{member.teamAssignment || "-"}</TableCell>
+                        <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
+                        <TableCell>{member.role}</TableCell>
+                        <TableCell className="text-sm">{member.contactNumber}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(member)} className="h-8 w-8 p-0"><Pencil className="w-4 h-4" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t">
-                <Button
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  variant="outline"
-                  size="sm"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Previous
+            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+              <div>Showing {startIndex + 1}-{Math.min(endIndex, filteredAndSortedMembers.length)} of {filteredAndSortedMembers.length}</div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                  <ChevronLeft className="w-4 h-4" />
                 </Button>
-
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                    let pageNumber;
-                    if (totalPages <= 7) {
-                      pageNumber = i + 1;
-                    } else if (currentPage <= 4) {
-                      pageNumber = i + 1;
-                    } else if (currentPage >= totalPages - 3) {
-                      pageNumber = totalPages - 6 + i;
-                    } else {
-                      pageNumber = currentPage - 3 + i;
-                    }
-
-                    return (
-                      <Button
-                        key={pageNumber}
-                        onClick={() => setCurrentPage(pageNumber)}
-                        variant={currentPage === pageNumber ? "default" : "outline"}
-                        size="sm"
-                        className={currentPage === pageNumber ? "bg-blue-600" : ""}
-                      >
-                        {pageNumber}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  variant="outline"
-                  size="sm"
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        </main>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-blue-700">
-                {editingMember ? "Edit Member" : "Add New Member"}
-              </DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, firstName: e.target.value });
-                      setValidationErrors({ ...validationErrors, firstName: "" });
-                    }}
-                    required
-                    className={validationErrors.firstName ? "border-red-500" : ""}
-                  />
-                  {validationErrors.firstName && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.firstName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, lastName: e.target.value });
-                      setValidationErrors({ ...validationErrors, lastName: "" });
-                    }}
-                    required
-                    className={validationErrors.lastName ? "border-red-500" : ""}
-                  />
-                  {validationErrors.lastName && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.lastName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="photo">Photo Upload</Label>
-                  <Input
-                    id="photo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="category">Category (Age Group) *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => {
-                      setFormData({ ...formData, category: value as "Junior" | "Youth" | "Adult", teamAssignment: "" });
-                      setValidationErrors({ ...validationErrors, category: "" });
-                    }}
-                  >
-                    <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Junior">Junior</SelectItem>
-                      <SelectItem value="Youth">Youth</SelectItem>
-                      <SelectItem value="Adult">Adult</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.category && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.category}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={formData.dateOfBirth || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, dateOfBirth: e.target.value });
-                      setValidationErrors({ ...validationErrors, dateOfBirth: "" });
-                    }}
-                    required
-                    className={validationErrors.dateOfBirth ? "border-red-500" : ""}
-                  />
-                  {validationErrors.dateOfBirth && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.dateOfBirth}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="nationality">Nationality *</Label>
-                  <Input
-                    id="nationality"
-                    value={formData.nationality || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, nationality: e.target.value });
-                      setValidationErrors({ ...validationErrors, nationality: "" });
-                    }}
-                    required
-                    className={validationErrors.nationality ? "border-red-500" : ""}
-                  />
-                  {validationErrors.nationality && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.nationality}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="address">Address (Area of Bali) *</Label>
-                  <Input
-                    id="address"
-                    value={formData.address || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, address: e.target.value });
-                      setValidationErrors({ ...validationErrors, address: "" });
-                    }}
-                    required
-                    className={validationErrors.address ? "border-red-500" : ""}
-                  />
-                  {validationErrors.address && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.address}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      setValidationErrors({ ...validationErrors, email: "" });
-                    }}
-                    required
-                    className={validationErrors.email ? "border-red-500" : ""}
-                  />
-                  {validationErrors.email && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="shirtNumber">Shirt Number</Label>
-                  <Input
-                    id="shirtNumber"
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={formData.shirtNumber || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, shirtNumber: e.target.value });
-                      setValidationErrors({ ...validationErrors, shirtNumber: "" });
-                    }}
-                    className={validationErrors.shirtNumber ? "border-red-500" : ""}
-                  />
-                  {validationErrors.shirtNumber && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.shirtNumber}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="type">Type (Payment Status) *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => {
-                      setFormData({ ...formData, type: value as "Member" | "Sponsored" | "Scholarship" });
-                      setValidationErrors({ ...validationErrors, type: "" });
-                    }}
-                  >
-                    <SelectTrigger className={validationErrors.type ? "border-red-500" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Member">Member (Pays Fees)</SelectItem>
-                      <SelectItem value="Sponsored">Sponsored (Free)</SelectItem>
-                      <SelectItem value="Scholarship">Scholarship (Free)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.type && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.type}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="role">Role *</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => {
-                      setFormData({ ...formData, role: value });
-                      setValidationErrors({ ...validationErrors, role: "" });
-                    }}
-                  >
-                    <SelectTrigger className={validationErrors.role ? "border-red-500" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.role && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.role}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="teamAssignment">Team Assignment *</Label>
-                  <Select
-                    value={formData.teamAssignment}
-                    onValueChange={(value) => {
-                      setFormData({ ...formData, teamAssignment: value });
-                      setValidationErrors({ ...validationErrors, teamAssignment: "" });
-                    }}
-                  >
-                    <SelectTrigger className={validationErrors.teamAssignment ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formData.category && TEAMS_BY_CATEGORY[formData.category].map((team) => (
-                        <SelectItem key={team} value={team}>
-                          {team}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.teamAssignment && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.teamAssignment}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="joiningDate">Joining Date *</Label>
-                  <Input
-                    id="joiningDate"
-                    type="date"
-                    value={formData.joiningDate || ""}
-                    onChange={(e) => {
-                      setFormData({ ...formData, joiningDate: e.target.value });
-                      setValidationErrors({ ...validationErrors, joiningDate: "" });
-                    }}
-                    required
-                    className={validationErrors.joiningDate ? "border-red-500" : ""}
-                  />
-                  {validationErrors.joiningDate && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.joiningDate}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="contactNumber" className="font-semibold">Contact Number *</Label>
-                  <Input
-                    id="contactNumber"
-                    required
-                    value={formData.contactNumber}
-                    onChange={(e) => {
-                      setFormData({...formData, contactNumber: e.target.value});
-                      setValidationErrors({ ...validationErrors, contactNumber: "" });
-                    }}
-                    className={validationErrors.contactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                  />
-                  {validationErrors.contactNumber && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.contactNumber}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="primaryContact" className="font-semibold">Primary Contact Name</Label>
-                  <Input
-                    id="primaryContact"
-                    value={formData.primaryContact}
-                    onChange={(e) => setFormData({...formData, primaryContact: e.target.value})}
-                    className="border-2 border-blue-200"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="primaryContactNumber" className="font-semibold">Primary Contact Number</Label>
-                  <Input
-                    id="primaryContactNumber"
-                    value={formData.primaryContactNumber}
-                    onChange={(e) => {
-                      setFormData({...formData, primaryContactNumber: e.target.value});
-                      setValidationErrors({ ...validationErrors, primaryContactNumber: "" });
-                    }}
-                    className={validationErrors.primaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                  />
-                  {validationErrors.primaryContactNumber && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.primaryContactNumber}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="secondaryContact" className="font-semibold">Secondary Contact Name</Label>
-                  <Input
-                    id="secondaryContact"
-                    value={formData.secondaryContact}
-                    onChange={(e) => setFormData({...formData, secondaryContact: e.target.value})}
-                    className="border-2 border-blue-200"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="secondaryContactNumber" className="font-semibold">Secondary Contact Number</Label>
-                  <Input
-                    id="secondaryContactNumber"
-                    value={formData.secondaryContactNumber}
-                    onChange={(e) => {
-                      setFormData({...formData, secondaryContactNumber: e.target.value});
-                      setValidationErrors({ ...validationErrors, secondaryContactNumber: "" });
-                    }}
-                    className={validationErrors.secondaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                  />
-                  {validationErrors.secondaryContactNumber && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.secondaryContactNumber}</p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="coachingCredits" className="font-semibold">Coaching Credits</Label>
-                  <Input
-                    id="coachingCredits"
-                    type="number"
-                    min="0"
-                    value={formData.coachingCredits}
-                    onChange={(e) => {
-                      setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0});
-                      setValidationErrors({ ...validationErrors, coachingCredits: "" });
-                    }}
-                    className={validationErrors.coachingCredits ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                  />
-                  {validationErrors.coachingCredits && (
-                    <p className="text-red-500 text-sm mt-1">{validationErrors.coachingCredits}</p>
-                  )}
-                </div>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{editingMember ? "Edit Member" : "Add Member"}</DialogTitle></DialogHeader>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label>First Name *</Label>
+                <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
               </div>
-
-              <div>
-                <Label htmlFor="medicalNotes" className="font-semibold">Medical Notes</Label>
-                <Textarea
-                  id="medicalNotes"
-                  placeholder="Known allergies, pre-existing conditions..."
-                  value={formData.medicalNotes}
-                  onChange={(e) => setFormData({...formData, medicalNotes: e.target.value})}
-                  className="border-2 border-blue-200 min-h-24"
-                />
+              <div className="space-y-2">
+                <Label>Last Name *</Label>
+                <Input value={formData.lastName || ""} onChange={e => setFormData({...formData, lastName: e.target.value})} required />
               </div>
-
-              <div className="flex gap-3 justify-end">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                  className="border-2"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  className="bg-blue-700 hover:bg-blue-800 font-bold"
-                >
-                  {editingMember ? "Update Member" : "Add Member"}
-                </Button>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={formData.category} onValueChange={(v: any) => setFormData({...formData, category: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="Junior">Junior</SelectItem><SelectItem value="Youth">Youth</SelectItem><SelectItem value="Adult">Adult</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Team</Label>
+                <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
+                  <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
+                  <SelectContent>
+                    {(TEAMS_BY_CATEGORY[formData.category as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Contact Number</Label>
+                <Input value={formData.contactNumber || ""} onChange={e => setFormData({...formData, contactNumber: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={formData.email || ""} onChange={e => setFormData({...formData, email: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Date of Birth</Label>
+                <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
+              </div>
+              <div className="col-span-2 flex justify-end gap-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" className="bg-blue-600">Save Member</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
 
+        <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
+          <DialogContent className="max-w-lg p-0 border-0 bg-transparent shadow-none">
+            <div className="relative"><img src={previewPhotoUrl} className="rounded-lg max-w-full" alt="Member" /><Button className="absolute top-2 right-2 rounded-full" size="icon" variant="destructive" onClick={() => setIsPhotoPreviewOpen(false)}><X className="w-4 h-4" /></Button></div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-blue-700">Import Members from CSV</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                <p className="text-sm text-blue-900 font-semibold mb-2">CSV Format:</p>
-                <p className="text-xs text-blue-700">
-                  First Name, Last Name, Date of Birth, Nationality, Address, Email, Shirt Number, 
-                  Category, Type, Role, Team, Joining Date, Contact Number, 
-                  Primary Contact, Primary Contact Number, Secondary Contact, Secondary Contact Number, 
-                  Medical Notes, Coaching Credits, Photo URL
-                </p>
-              </div>
-
-              <Input
-                type="file"
-                accept=".csv"
-                onChange={handleImportCSV}
-                className="border-2 border-blue-200"
-              />
-            </div>
+            <DialogHeader><DialogTitle>Import CSV</DialogTitle></DialogHeader>
+            <div className="py-4"><Input type="file" accept=".csv" onChange={handleImportCSV} /></div>
           </DialogContent>
         </Dialog>
-
-        <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
-          <DialogContent className="max-w-2xl bg-black/95 p-0 border-0 overflow-hidden">
-            <div className="relative flex items-center justify-center p-4">
-              <img
-                src={previewPhotoUrl}
-                alt="Member preview"
-                className="max-w-full max-h-[85vh] object-contain rounded-sm cursor-pointer"
-                onClick={() => setIsPhotoPreviewOpen(false)}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
+      </div>
+    </>
+  );
+}
