@@ -418,7 +418,7 @@ export default function Coaching() {
                         </div>
                         <div className="flex items-center gap-2">
                           <DollarSign className="w-4 h-4" />
-                          Rp {coach.hourlyRate.toLocaleString()}/hour
+                          Rp {coach.hourlyRate.toLocaleString("id-ID")}/hour
                         </div>
                       </div>
                     </CardContent>
@@ -623,6 +623,10 @@ export default function Coaching() {
                                 <MapPin className="w-4 h-4" />
                                 <span>{session.location === "Other" ? session.locationDetails : session.location}</span>
                               </div>
+                              <div className="flex items-center gap-2 text-gray-600 font-semibold">
+                                <DollarSign className="w-4 h-4" />
+                                <span>Rp {((TIER_RATES[coaches.find(c => c.id === session.coachId)?.tier as Coach["tier"]] || 0) * session.hours).toLocaleString("id-ID")}</span>
+                              </div>
                             </div>
                             <Button
                               variant="ghost"
@@ -656,6 +660,7 @@ export default function Coaching() {
                         <TableHead>Member</TableHead>
                         <TableHead>Coach</TableHead>
                         <TableHead>Location</TableHead>
+                        <TableHead>Cost</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -678,6 +683,9 @@ export default function Coaching() {
                             <TableCell>{session.coachName}</TableCell>
                             <TableCell className="max-w-[200px] truncate">
                               {session.location === "Other" ? session.locationDetails : session.location}
+                            </TableCell>
+                            <TableCell>
+                                Rp {((TIER_RATES[coaches.find(c => c.id === session.coachId)?.tier as Coach["tier"]] || 0) * session.hours).toLocaleString("id-ID")}
                             </TableCell>
                             <TableCell>
                               <Button
@@ -738,16 +746,16 @@ export default function Coaching() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Head Coach">
-                      Head Coach (Rp 750,000/hr)
+                      Head Coach (Rp 750.000/hr)
                     </SelectItem>
                     <SelectItem value="Goalkeeper Coach">
-                      Goalkeeper Coach (Rp 600,000/hr)
+                      Goalkeeper Coach (Rp 600.000/hr)
                     </SelectItem>
                     <SelectItem value="Senior Coach">
-                      Senior Coach (Rp 500,000/hr)
+                      Senior Coach (Rp 500.000/hr)
                     </SelectItem>
                     <SelectItem value="Assistant Coach">
-                      Assistant Coach (Rp 400,000/hr)
+                      Assistant Coach (Rp 400.000/hr)
                     </SelectItem>
                   </SelectContent>
                 </Select>

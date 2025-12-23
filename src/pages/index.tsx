@@ -1,25 +1,43 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Receipt, Calendar, TrendingUp, Award, DollarSign, Settings, AlertCircle, UserPlus } from "lucide-react";
-import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Users, TrendingUp, AlertCircle, DollarSign, Calendar, ArrowRight } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useRouter } from "next/router";
 
 interface Member {
   id: string;
   firstName: string;
   lastName: string;
-  team: string;
+  email: string;
+  dateOfBirth: string;
+  nationality: string;
+  address: string;
+  shirtNumber?: number;
+  type: "Member" | "Sponsored" | "Scholarship";
+  role: "Admin" | "Coach" | "Player Coach" | "Player";
+  teamAssignment?: string;
   membershipCategory: string;
   joiningDate: string;
-  type: string;
+  contactNumber: string;
+  primaryContact: string;
+  primaryContactNumber: string;
+  secondaryContact?: string;
+  secondaryContactNumber?: string;
+  medicalNotes?: string;
+  coachingCredits: number;
+  photo?: string;
 }
 
 interface Invoice {
   id: string;
   memberId: string;
-  status: string;
+  billingPeriod: string;
+  dueDate: string;
   amount: number;
+  paymentLink?: string;
+  status: "Draft" | "Sent" | "Paid" | "Overdue";
 }
 
 interface CoachingSession {
@@ -28,359 +46,329 @@ interface CoachingSession {
   coachId: string;
   date: string;
   time: string;
-}
-
-interface Coach {
-  id: string;
-  name: string;
+  hours: number;
+  location: string;
+  locationDetails?: string;
+  cost: number;
+  status: "Scheduled" | "Completed" | "Cancelled";
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [sessions, setSessions] = useState<CoachingSession[]>([]);
-  const [coaches, setCoaches] = useState<Coach[]>([]);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const storedMembers = localStorage.getItem("members");
-    const storedInvoices = localStorage.getItem("invoices");
-    const storedSessions = localStorage.getItem("coachingSessions");
-    const storedCoaches = localStorage.getItem("coaches");
+    if (storedMembers) {
+      setMembers(JSON.parse(storedMembers));
+    }
 
-    if (storedMembers) setMembers(JSON.parse(storedMembers));
-    if (storedInvoices) setInvoices(JSON.parse(storedInvoices));
-    if (storedSessions) setSessions(JSON.parse(storedSessions));
-    if (storedCoaches) setCoaches(JSON.parse(storedCoaches));
+    const storedInvoices = localStorage.getItem("invoices");
+    if (storedInvoices) {
+      setInvoices(JSON.parse(storedInvoices));
+    }
+
+    const storedSessions = localStorage.getItem("coachingSessions");
+    if (storedSessions) {
+      setSessions(JSON.parse(storedSessions));
+    }
   }, []);
 
+  // Calculate KPIs
   const totalMembers = members.length;
   
-  const newMembersThisMonth = members.filter(m => {
-    const joinDate = new Date(m.joiningDate);
+  const newThisMonth = members.filter((member) => {
+    const joiningDate = new Date(member.joiningDate);
     const now = new Date();
-    return joinDate.getMonth() === now.getMonth() && joinDate.getFullYear() === now.getFullYear();
+    return (
+      joiningDate.getMonth() === now.getMonth() &&
+      joiningDate.getFullYear() === now.getFullYear()
+    );
   }).length;
 
-  const outstandingInvoices = invoices.filter(inv => 
-    inv.status === "Sent" || inv.status === "Overdue"
-  ).length;
+  const leftThisMonth = 0; // TODO: Implement when we add leaving/exit date tracking
+
+  // Only count invoices for "Member" type (exclude Sponsored and Scholarship)
+  // Any invoice that is not "Paid" counts as outstanding
+  const payingMembers = members.filter(m => m.type === "Member");
+  const outstandingInvoices = invoices.filter((inv) => {
+    const member = members.find(m => m.id === inv.memberId);
+    return member && member.type === "Member" && inv.status !== "Paid";
+  }).length;
 
   const outstandingAmount = invoices
-    .filter(inv => inv.status === "Sent" || inv.status === "Overdue")
+    .filter((inv) => {
+      const member = members.find(m => m.id === inv.memberId);
+      return member && member.type === "Member" && inv.status !== "Paid";
+    })
     .reduce((sum, inv) => sum + inv.amount, 0);
 
-  const todaysSessions = sessions.filter(s => {
-    const sessionDate = new Date(s.date);
-    const today = new Date();
-    return sessionDate.toDateString() === today.toDateString();
-  });
-
-  const teamCounts = members.reduce((acc, member) => {
-    acc[member.team] = (acc[member.team] || 0) + 1;
+  // Team distribution data
+  const teamDistribution = members.reduce((acc: any, member) => {
+    if (member.teamAssignment) {
+      acc[member.teamAssignment] = (acc[member.teamAssignment] || 0) + 1;
+    }
     return acc;
-  }, {} as Record<string, number>);
+  }, {});
 
-  const topTeams = Object.entries(teamCounts)
-    .sort(([, a], [, b]) => b - a)
+  const teamChartData = Object.entries(teamDistribution)
+    .map(([team, count]) => ({ team, count }))
+    .sort((a: any, b: any) => b.count - a.count)
     .slice(0, 5);
 
-  const membershipBreakdown = members.reduce((acc, member) => {
-    acc[member.membershipCategory] = (acc[member.membershipCategory] || 0) + 1;
+  // Membership category distribution
+  const categoryDistribution = members.reduce((acc: any, member) => {
+    acc[member.type] = (acc[member.type] || 0) + 1;
     return acc;
-  }, {} as Record<string, number>);
+  }, {});
 
-  const getMemberName = (memberId: string) => {
-    const member = members.find(m => m.id === memberId);
-    return member ? `${member.firstName} ${member.lastName}` : "Unknown";
-  };
+  const categoryChartData = Object.entries(categoryDistribution).map(([category, count]) => ({
+    name: category,
+    value: count,
+  }));
 
-  const getCoachName = (coachId: string) => {
-    const coach = coaches.find(c => c.id === coachId);
-    return coach ? coach.name : "Unknown";
-  };
+  const COLORS = ["#1E40AF", "#FBBF24", "#10B981"];
+
+  // Today's coaching sessions
+  const today = new Date().toISOString().split("T")[0];
+  const todaysSessions = sessions.filter(
+    (session) => session.date === today && session.status === "Scheduled"
+  );
 
   return (
     <>
-      <SEO 
+      <SEO
         title="Dashboard - Bali Bulldogs Club Manager"
-        description="Manage members, teams, invoicing, and private coaching for Bali Bulldogs FC"
+        description="Club management dashboard for Bali Bulldogs Football Club"
       />
-      
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-blue-100">
-        <header className="bg-bulldogs-blue text-white shadow-xl">
-          <div className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                  Bali Bulldogs Club Manager
-                </h1>
-                <p className="text-gray-600">
-                  Welcome back! Here's what's happening with your club today.
-                </p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
+        {/* Hero Section with Logo */}
+        <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold mb-2">Bali Bulldogs</h1>
+                <p className="text-xl text-blue-100">Club Manager Dashboard</p>
+                <p className="text-blue-200 mt-2">Centralized member, team & financial management</p>
               </div>
-              <div className="flex gap-3">
-                <Link href="/members">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Members
-                  </Button>
-                </Link>
-                <Link href="/teams">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Teams
-                  </Button>
-                </Link>
-                <Link href="/invoices">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Receipt className="w-4 h-4" />
-                    Invoices
-                  </Button>
-                </Link>
-                <Link href="/coaching">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Coaching
-                  </Button>
-                </Link>
-                <Link href="/settings">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    Settings
-                  </Button>
-                </Link>
+              <div className="hidden md:block">
+                <img 
+                  src="/uploads/image_593fedce-c53e-4167-a6fc-886836fbbf61.png" 
+                  alt="Bali Bulldogs FC" 
+                  className="w-32 h-32 object-contain"
+                />
               </div>
             </div>
           </div>
-        </header>
+        </div>
 
-        <main className="container mx-auto px-4 py-8">
-          <div className="grid md:grid-cols-4 gap-6 mb-8">
-            <Card className="border-2 border-bulldogs-blue/20 hover:border-bulldogs-blue/40 transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <Card className="border-l-4 border-l-blue-600">
               <CardHeader className="pb-3">
-                <CardDescription className="text-xs font-semibold text-gray-600">TOTAL MEMBERS</CardDescription>
-                <CardTitle className="text-4xl font-black text-bulldogs-blue">{totalMembers}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
                   <Users className="h-4 w-4" />
-                  <span>Active players & staff</span>
-                </div>
+                  TOTAL MEMBERS
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-900">{totalMembers}</div>
+                <p className="text-sm text-gray-500 mt-1">Active players & staff</p>
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-green-200 hover:border-green-400 transition-all">
+            <Card className="border-l-4 border-l-green-600">
               <CardHeader className="pb-3">
-                <CardDescription className="text-xs font-semibold text-gray-600">NEW THIS MONTH</CardDescription>
-                <CardTitle className="text-4xl font-black text-green-600">{newMembersThisMonth}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
                   <TrendingUp className="h-4 w-4" />
-                  <span>Recent joiners</span>
-                </div>
+                  NEW THIS MONTH
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-700">{newThisMonth}</div>
+                <p className="text-sm text-gray-500 mt-1">Recent joiners</p>
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-orange-200 hover:border-orange-400 transition-all">
+            <Card className="border-l-4 border-l-red-600">
               <CardHeader className="pb-3">
-                <CardDescription className="text-xs font-semibold text-gray-600">OUTSTANDING INVOICES</CardDescription>
-                <CardTitle className="text-4xl font-black text-orange-600">{outstandingInvoices}</CardTitle>
+                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                  <TrendingUp className="h-4 w-4 rotate-180" />
+                  LEFT THIS MONTH
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="text-3xl font-bold text-red-700">{leftThisMonth}</div>
+                <p className="text-sm text-gray-500 mt-1">Recent departures</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-600">
+              <CardHeader className="pb-3">
+                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Pending payments</span>
-                </div>
+                  OUTSTANDING INVOICES
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-orange-700">{outstandingInvoices}</div>
+                <p className="text-sm text-gray-500 mt-1">Pending payments</p>
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-purple-200 hover:border-purple-400 transition-all">
+            <Card className="border-l-4 border-l-purple-600">
               <CardHeader className="pb-3">
-                <CardDescription className="text-xs font-semibold text-gray-600">OUTSTANDING AMOUNT</CardDescription>
-                <CardTitle className="text-3xl font-black text-purple-600">
-                  {outstandingAmount.toLocaleString("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 })}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
                   <DollarSign className="h-4 w-4" />
-                  <span>Total due</span>
+                  OUTSTANDING AMOUNT
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-purple-700">
+                  Rp {outstandingAmount.toLocaleString("id-ID")}
                 </div>
+                <p className="text-sm text-gray-500 mt-1">Total due</p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl font-black text-bulldogs-blue">Top 5 Teams by Size</CardTitle>
-                <CardDescription>Players per team</CardDescription>
+                <CardTitle>Team Distribution</CardTitle>
+                <CardDescription>Top 5 teams by member count</CardDescription>
               </CardHeader>
               <CardContent>
-                {topTeams.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No team data yet</p>
-                    <Link href="/members">
-                      <Button className="mt-4 bg-bulldogs-blue hover:bg-bulldogs-blue/90">
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Add Members
-                      </Button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {topTeams.map(([team, count], index) => (
-                      <div key={team} className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-bulldogs-blue text-white flex items-center justify-center font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-gray-800">{team}</span>
-                            <span className="text-sm font-semibold text-gray-600">{count} players</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-bulldogs-blue h-2 rounded-full transition-all"
-                              style={{ width: `${(count / Math.max(...topTeams.map(([, c]) => c))) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={teamChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="team" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#1E40AF" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl font-black text-bulldogs-blue">Membership Breakdown</CardTitle>
-                <CardDescription>Category distribution</CardDescription>
+                <CardTitle>Membership Breakdown</CardTitle>
+                <CardDescription>Member, Sponsored & Scholarship distribution</CardDescription>
               </CardHeader>
               <CardContent>
-                {Object.keys(membershipBreakdown).length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>No membership data yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {Object.entries(membershipBreakdown).map(([category, count]) => {
-                      const percentage = ((count / totalMembers) * 100).toFixed(1);
-                      const colorMap = {
-                        "Standard": "bg-blue-500",
-                        "Sponsored": "bg-yellow-500",
-                        "Scholarship": "bg-green-500"
-                      };
-                      return (
-                        <div key={category} className="flex items-center gap-4">
-                          <div className={`w-4 h-4 rounded-full ${colorMap[category as keyof typeof colorMap] || "bg-gray-500"}`} />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-bold text-gray-800">{category}</span>
-                              <span className="text-sm font-semibold text-gray-600">{count} ({percentage}%)</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full transition-all ${colorMap[category as keyof typeof colorMap] || "bg-gray-500"}`}
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={categoryChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {categoryChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
 
+          {/* Today's Sessions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-black text-bulldogs-blue">Today's Private Coaching Sessions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Today&apos;s Private Coaching Sessions
+              </CardTitle>
               <CardDescription>
-                {mounted ? new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : "Loading..."}
+                {todaysSessions.length === 0
+                  ? "No sessions scheduled for today"
+                  : `${todaysSessions.length} session${todaysSessions.length > 1 ? "s" : ""} scheduled`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {todaysSessions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p className="mb-4">No sessions scheduled for today</p>
-                  <Link href="/coaching">
-                    <Button className="bg-bulldogs-blue hover:bg-bulldogs-blue/90">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      View All Sessions
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {todaysSessions.map(session => (
-                    <div key={session.id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-bulldogs-blue text-white px-3 py-2 rounded-lg font-bold text-sm">
-                          {session.time}
+              {todaysSessions.length > 0 ? (
+                <div className="space-y-4">
+                  {todaysSessions.map((session) => {
+                    const member = members.find((m) => m.id === session.memberId);
+                    return (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200"
+                      >
+                        <div className="flex-1">
+                          <p className="font-semibold text-blue-900">
+                            {member ? `${member.firstName} ${member.lastName}` : "Unknown Member"}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {session.time} • {session.hours}h • {session.location}
+                          </p>
                         </div>
-                        <div>
-                          <div className="font-bold text-gray-800">{getMemberName(session.memberId)}</div>
-                          <div className="text-sm text-gray-600">with {getCoachName(session.coachId)}</div>
+                        <div className="text-right">
+                          <p className="font-semibold text-blue-900">
+                            Rp {session.cost.toLocaleString("id-ID")}
+                          </p>
                         </div>
                       </div>
-                      <Link href="/coaching">
-                        <Button variant="outline" size="sm">View Details</Button>
-                      </Link>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No coaching sessions scheduled for today</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className="mt-8 text-center">
-            <Card className="bg-gradient-to-r from-bulldogs-blue to-blue-700 text-white border-none">
-              <CardHeader>
-                <CardTitle className="text-2xl font-black">Quick Actions</CardTitle>
-                <CardDescription className="text-blue-100">Jump to key management tasks</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <Link href="/members">
-                    <Button className="bg-yellow-400 text-bulldogs-blue hover:bg-yellow-500 font-bold">
-                      <UserPlus className="mr-2 h-5 w-5" />
-                      Add New Member
-                    </Button>
-                  </Link>
-                  <Link href="/invoices">
-                    <Button className="bg-white text-bulldogs-blue hover:bg-gray-100 font-bold">
-                      <DollarSign className="mr-2 h-5 w-5" />
-                      Generate Invoices
-                    </Button>
-                  </Link>
-                  <Link href="/coaching">
-                    <Button className="bg-white text-bulldogs-blue hover:bg-gray-100 font-bold">
-                      <Calendar className="mr-2 h-5 w-5" />
-                      Schedule Session
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+            <Button
+              onClick={() => router.push("/members")}
+              className="h-20 text-lg bg-blue-600 hover:bg-blue-700"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              Manage Members
+              <ArrowRight className="ml-auto h-5 w-5" />
+            </Button>
+            <Button
+              onClick={() => router.push("/teams")}
+              className="h-20 text-lg bg-yellow-600 hover:bg-yellow-700"
+            >
+              <Users className="mr-2 h-5 w-5" />
+              View Teams
+              <ArrowRight className="ml-auto h-5 w-5" />
+            </Button>
+            <Button
+              onClick={() => router.push("/invoices")}
+              className="h-20 text-lg bg-green-600 hover:bg-green-700"
+            >
+              <DollarSign className="mr-2 h-5 w-5" />
+              Manage Invoices
+              <ArrowRight className="ml-auto h-5 w-5" />
+            </Button>
+            <Button
+              onClick={() => router.push("/coaching")}
+              className="h-20 text-lg bg-purple-600 hover:bg-purple-700"
+            >
+              <Calendar className="mr-2 h-5 w-5" />
+              Coaching Sessions
+              <ArrowRight className="ml-auto h-5 w-5" />
+            </Button>
           </div>
-        </main>
-
-        <footer className="bg-bulldogs-blue text-white py-6 mt-12">
-          <div className="container mx-auto px-4 text-center">
-            <p className="text-yellow-300 font-bold">Bali Bulldogs Football Club</p>
-            <p className="text-sm mt-1 opacity-80">Internal Club Management System</p>
-          </div>
-        </footer>
+        </div>
       </div>
     </>
   );
