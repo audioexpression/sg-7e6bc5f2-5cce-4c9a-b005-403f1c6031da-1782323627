@@ -73,13 +73,50 @@ export default function Settings() {
 
   // Load data from localStorage
   useEffect(() => {
-    const storedTeams = localStorage.getItem("teams");
-    const storedCoaches = localStorage.getItem("coaches");
-    const storedAdminStaff = localStorage.getItem("adminStaff");
+    const savedTeams = localStorage.getItem("teams");
+    const savedCoaches = localStorage.getItem("coaches");
+    const savedAdmins = localStorage.getItem("admins");
 
-    if (storedTeams) setTeams(JSON.parse(storedTeams));
-    if (storedCoaches) setCoaches(JSON.parse(storedCoaches));
-    if (storedAdminStaff) setAdminStaff(JSON.parse(storedAdminStaff));
+    if (savedTeams) {
+      setTeams(JSON.parse(savedTeams));
+    } else {
+      // Initialize with default teams from spreadsheet
+      const defaultTeams: Team[] = [
+        // Junior Teams
+        { id: "toddler", name: "Toddler", category: "Junior", monthlyFee: 0 },
+        { id: "kindy1", name: "Kindy 1", category: "Junior", monthlyFee: 0 },
+        { id: "kindy2", name: "Kindy 2", category: "Junior", monthlyFee: 0 },
+        { id: "u6", name: "U6", category: "Junior", monthlyFee: 0 },
+        { id: "u8dev", name: "U8 Dev", category: "Junior", monthlyFee: 0 },
+        { id: "u8adv", name: "U8 Adv", category: "Junior", monthlyFee: 0 },
+        { id: "u10dev", name: "U10 Dev", category: "Junior", monthlyFee: 0 },
+        { id: "u10adv", name: "U10 Adv", category: "Junior", monthlyFee: 0 },
+        { id: "u12dev", name: "U12 Dev", category: "Junior", monthlyFee: 0 },
+        { id: "u12adv", name: "U12 Adv", category: "Junior", monthlyFee: 0 },
+        { id: "u12girls", name: "U12 Girls", category: "Junior", monthlyFee: 0 },
+        // Youth Teams
+        { id: "u14", name: "U14", category: "Youth", monthlyFee: 0 },
+        { id: "u14girls", name: "U14 Girls", category: "Youth", monthlyFee: 0 },
+        { id: "u16", name: "U16", category: "Youth", monthlyFee: 0 },
+        { id: "u18girls", name: "U18 Girls", category: "Youth", monthlyFee: 0 },
+        { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
+        // Adult Teams
+        { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
+        { id: "masters", name: "Masters", category: "Adult", monthlyFee: 0 },
+        { id: "legends", name: "Legends", category: "Adult", monthlyFee: 0 },
+        { id: "social", name: "Social", category: "Adult", monthlyFee: 0 },
+        { id: "1stteam", name: "1st Team", category: "Adult", monthlyFee: 0 },
+      ];
+      setTeams(defaultTeams);
+      localStorage.setItem("teams", JSON.stringify(defaultTeams));
+    }
+
+    if (savedCoaches) {
+      setCoaches(JSON.parse(savedCoaches));
+    }
+    if (savedAdmins) {
+      setAdminStaff(JSON.parse(savedAdmins));
+    }
   }, []);
 
   // Save to localStorage whenever data changes
