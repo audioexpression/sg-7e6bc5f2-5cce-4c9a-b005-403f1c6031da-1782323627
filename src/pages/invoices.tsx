@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
+import { useRouter } from "next/router";
 import {
   Search,
   Edit,
@@ -15,7 +16,8 @@ import {
   Users,
   Settings,
   TrendingUp,
-  Download
+  Download,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +64,8 @@ const TEAMS = [
 
 const QUARTERS = ["2026 Q1", "2026 Q2", "2026 Q3", "2026 Q4"];
 
-export default function InvoicesPage() {
+export default function Invoices() {
+  const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [teamPricing, setTeamPricing] = useState<TeamPricing[]>([]);
@@ -166,65 +169,81 @@ export default function InvoicesPage() {
 
   const handleBulkGenerate = () => {
     if (!selectedTeam || !selectedQuarter) {
-      alert("Please select both team and quarter");
-      return;
-    }
-
-    const teamMembers = members.filter(m => m.teamAssignment === selectedTeam);
-    
-    if (teamMembers.length === 0) {
-      alert("No members found in this team");
+      alert("Please select a team and quarter");
       return;
     }
 
     const monthlyCost = getTeamPricing(selectedTeam);
-    if (monthlyCost === 0) {
-      alert("Please set pricing for this team first in Team Pricing Configuration");
+    const amount = calculateQuarterlyAmount(monthlyCost);
+
+    if (amount <= 0) {
+      alert("Please configure pricing for this team first");
       return;
     }
 
-    const quarterlyAmount = calculateQuarterlyAmount(monthlyCost);
+    // Filter members by team
+    const teamMembers = members.filter((m) => m.teamAssignment === selectedTeam);
+
+    if (teamMembers.length === 0) {
+      alert(`No members found in team: ${selectedTeam}`);
+      return;
+    }
+
+    // Calculate due date based on quarter
+    const year = 2026;
+    let dueDate = "";
+    switch (selectedQuarter) {
+      case "2026 Q1":
+        dueDate = `${year}-03-31`;
+        break;
+      case "2026 Q2":
+        dueDate = `${year}-06-30`;
+        break;
+      case "2026 Q3":
+        dueDate = `${year}-09-30`;
+        break;
+      case "2026 Q4":
+        dueDate = `${year}-12-31`;
+        break;
+      default:
+        dueDate = `${year}-12-31`;
+    }
+
+    // Generate invoices for all team members
+    const newInvoices: Invoice[] = teamMembers.map((member) => ({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      memberId: member.id,
+      memberName: `${member.firstName} ${member.lastName}`,
+      teamAssignment: member.teamAssignment,
+      billingPeriod: selectedQuarter,
+      dueDate,
+      amount: amount,
+      paymentLink: "",
+      status: "Draft",
+      createdAt: new Date().toISOString()
+    }));
+
+    // Filter out existing invoices for same member and period to avoid duplicates
+    const finalNewInvoices = newInvoices.filter(newInv => 
+      !invoices.some(existing => 
+        existing.memberId === newInv.memberId && 
+        existing.billingPeriod === newInv.billingPeriod
+      )
+    );
+
+    if (finalNewInvoices.length === 0) {
+      alert("All members in this team already have invoices for this period.");
+      return;
+    }
+
+    const updatedInvoices = [...invoices, ...finalNewInvoices];
+    saveInvoices(updatedInvoices);
     
-    const quarterDueDates: { [key: string]: string } = {
-      "2026 Q1": "2026-03-31",
-      "2026 Q2": "2026-06-30",
-      "2026 Q3": "2026-09-30",
-      "2026 Q4": "2026-12-31"
-    };
-
-    const newInvoices = teamMembers.map(member => {
-      const existingInvoice = invoices.find(
-        inv => inv.memberId === member.id && inv.billingPeriod === selectedQuarter
-      );
-
-      if (existingInvoice) {
-        return null;
-      }
-
-      return {
-        id: `${Date.now()}-${member.id}`,
-        memberId: member.id,
-        memberName: `${member.firstName} ${member.lastName}`,
-        teamAssignment: member.teamAssignment,
-        billingPeriod: selectedQuarter,
-        dueDate: quarterDueDates[selectedQuarter],
-        amount: quarterlyAmount,
-        paymentLink: "",
-        status: "Draft" as Invoice["status"],
-        createdAt: new Date().toISOString()
-      };
-    }).filter(Boolean) as Invoice[];
-
-    if (newInvoices.length === 0) {
-      alert("All members already have invoices for this period");
-      return;
-    }
-
-    saveInvoices([...invoices, ...newInvoices]);
-    alert(`Generated ${newInvoices.length} invoices for ${selectedTeam} - ${selectedQuarter}`);
     setShowBulkGenerate(false);
     setSelectedTeam("");
     setSelectedQuarter("");
+    
+    alert(`Generated ${finalNewInvoices.length} invoices.`);
   };
 
   const handlePricingSubmit = (e: React.FormEvent) => {
@@ -368,7 +387,7 @@ export default function InvoicesPage() {
             <div>
               <Button
                 variant="ghost"
-                onClick={() => window.location.href = "/"}
+                onClick={() => router.push("/")}
                 className="text-white hover:text-yellow-400 mb-4"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

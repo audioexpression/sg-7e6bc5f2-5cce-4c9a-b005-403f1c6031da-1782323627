@@ -22,8 +22,10 @@ export const TEAMS = [
   "1st Team",
 ];
 
-export const ROLES = ["Player", "Coach", "Admin"];
-export const TYPES = ["Junior", "Youth", "Adult"];
+export const TYPES = ["Member", "Sponsored", "Scholarship"];
+
+export const ROLES = ["Admin", "Coach", "Player Coach", "Player"];
+
 export const MEMBERSHIP_CATEGORIES = ["Standard", "Sponsored", "Scholarship"];
 
 export interface Member {

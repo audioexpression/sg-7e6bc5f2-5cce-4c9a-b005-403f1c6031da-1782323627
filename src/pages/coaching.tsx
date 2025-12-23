@@ -1,975 +1,892 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
+import { useRouter } from "next/router";
 import {
-  Calendar,
+  ArrowLeft,
+  Plus,
+  Calendar as CalendarIcon,
   Clock,
   User,
-  Plus,
-  Edit,
   Trash2,
-  Search,
-  UserPlus,
-  Users,
   DollarSign,
-  AlertCircle,
-  CheckCircle,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
-interface Member {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  contactNumber: string;
-  team: string;
-  coachingCredits: number;
-}
-
+// Types
 interface Coach {
   id: string;
   name: string;
   phone: string;
   tier: "Head Coach" | "Goalkeeper Coach" | "Senior Coach" | "Assistant Coach";
+  hourlyRate: number;
+}
+
+interface Member {
+  id: string;
+  firstName: string;
+  lastName: string;
+  coachingCredits: number;
 }
 
 interface Session {
   id: string;
-  memberId?: string;
-  memberName?: string;
-  nonMemberName?: string;
-  nonMemberPhone?: string;
-  nonMemberEmail?: string;
+  memberId: string;
+  memberName: string;
   coachId: string;
   coachName: string;
   date: string;
   time: string;
-  price: number;
-  status: "scheduled" | "completed" | "cancelled";
-  isNonMember: boolean;
+  hours: number;
+  location: string;
+  locationDetails?: string;
 }
 
-const COACH_PRICING = {
+type ViewMode = "month" | "week" | "day" | "list";
+
+const TIER_RATES: Record<Coach["tier"], number> = {
   "Head Coach": 750000,
   "Goalkeeper Coach": 600000,
   "Senior Coach": 500000,
   "Assistant Coach": 400000,
 };
 
-export default function CoachingPage() {
-  const [members, setMembers] = useState<Member[]>([]);
+const LOCATIONS = [
+  "Bulldogs Arena",
+  "Seminyak Field",
+  "Other",
+];
+
+export default function Coaching() {
+  const router = useRouter();
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [showBookingModal, setShowBookingModal] = useState(false);
-  const [showCoachModal, setShowCoachModal] = useState(false);
-  const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [memberSearchQuery, setMemberSearchQuery] = useState("");
-  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
-  const [bookingType, setBookingType] = useState<"member" | "non-member">("member");
+  const [showCoachDialog, setShowCoachDialog] = useState(false);
+  const [showSessionDialog, setShowSessionDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  const [bookingForm, setBookingForm] = useState({
-    memberId: "",
-    memberName: "",
-    nonMemberName: "",
-    nonMemberPhone: "",
-    nonMemberEmail: "",
-    coachId: "",
-    date: "",
-    time: "",
-    repeatWeeks: 1,
-  });
+  // Coach form
+  const [coachName, setCoachName] = useState("");
+  const [coachPhone, setCoachPhone] = useState("");
+  const [coachTier, setCoachTier] = useState<Coach["tier"]>("Assistant Coach");
 
-  const [coachForm, setCoachForm] = useState({
-    name: "",
-    phone: "",
-    tier: "Assistant Coach" as Coach["tier"],
-  });
+  // Session form
+  const [sessionMemberId, setSessionMemberId] = useState("");
+  const [sessionCoachId, setSessionCoachId] = useState("");
+  const [sessionDate, setSessionDate] = useState("");
+  const [sessionTime, setSessionTime] = useState("");
+  const [sessionHours, setSessionHours] = useState("1");
+  const [sessionLocation, setSessionLocation] = useState("");
+  const [sessionLocationDetails, setSessionLocationDetails] = useState("");
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
 
+  // Load data
   useEffect(() => {
-    const storedMembers = localStorage.getItem("members");
-    const storedCoaches = localStorage.getItem("coaches");
-    const storedSessions = localStorage.getItem("coachingSessions");
+    const savedCoaches = localStorage.getItem("coaches");
+    const savedMembers = localStorage.getItem("members");
+    const savedSessions = localStorage.getItem("sessions");
 
-    if (storedMembers) setMembers(JSON.parse(storedMembers));
-    if (storedCoaches) setCoaches(JSON.parse(storedCoaches));
-    if (storedSessions) setSessions(JSON.parse(storedSessions));
+    if (savedCoaches) setCoaches(JSON.parse(savedCoaches));
+    if (savedMembers) {
+      const allMembers = JSON.parse(savedMembers);
+      setMembers(allMembers);
+    }
+    if (savedSessions) setSessions(JSON.parse(savedSessions));
   }, []);
 
-  const saveCoaches = (data: Coach[]) => {
-    localStorage.setItem("coaches", JSON.stringify(data));
-    setCoaches(data);
-  };
+  // Save data
+  useEffect(() => {
+    localStorage.setItem("coaches", JSON.stringify(coaches));
+  }, [coaches]);
 
-  const saveSessions = (data: Session[]) => {
-    localStorage.setItem("coachingSessions", JSON.stringify(data));
-    setSessions(data);
-  };
+  useEffect(() => {
+    localStorage.setItem("sessions", JSON.stringify(sessions));
+  }, [sessions]);
 
+  // Add coach
   const handleAddCoach = () => {
-    if (!coachForm.name || !coachForm.phone) {
-      alert("Please fill in all coach fields");
+    if (!coachName || !coachPhone) {
+      alert("Please fill in all fields");
       return;
     }
 
-    if (editingCoach) {
-      const updated = coaches.map((c) =>
-        c.id === editingCoach.id ? { ...editingCoach, ...coachForm } : c
+    const newCoach: Coach = {
+      id: Date.now().toString(),
+      name: coachName,
+      phone: coachPhone,
+      tier: coachTier,
+      hourlyRate: TIER_RATES[coachTier],
+    };
+
+    setCoaches([...coaches, newCoach]);
+    setShowCoachDialog(false);
+    setCoachName("");
+    setCoachPhone("");
+    setCoachTier("Assistant Coach");
+  };
+
+  // Check for double booking
+  const isCoachAvailable = (coachId: string, date: string, time: string, hours: number): boolean => {
+    const [startHour, startMinute] = time.split(":").map(Number);
+    const sessionStart = startHour * 60 + startMinute;
+    const sessionEnd = sessionStart + hours * 60;
+
+    return !sessions.some((s) => {
+      if (s.coachId !== coachId || s.date !== date) return false;
+
+      const [existingHour, existingMinute] = s.time.split(":").map(Number);
+      const existingStart = existingHour * 60 + existingMinute;
+      const existingEnd = existingStart + s.hours * 60;
+
+      return (
+        (sessionStart >= existingStart && sessionStart < existingEnd) ||
+        (sessionEnd > existingStart && sessionEnd <= existingEnd) ||
+        (sessionStart <= existingStart && sessionEnd >= existingEnd)
       );
-      saveCoaches(updated);
-    } else {
-      const newCoach: Coach = {
-        id: Date.now().toString(),
-        ...coachForm,
-      };
-      saveCoaches([...coaches, newCoach]);
-    }
-
-    setShowCoachModal(false);
-    setEditingCoach(null);
-    setCoachForm({ name: "", phone: "", tier: "Assistant Coach" });
+    });
   };
 
-  const handleDeleteCoach = (id: string) => {
-    if (confirm("Delete this coach?")) {
-      saveCoaches(coaches.filter((c) => c.id !== id));
-    }
-  };
-
-  const isCoachAvailable = (coachId: string, date: string, time: string): boolean => {
-    return !sessions.some(
-      (s) =>
-        s.coachId === coachId &&
-        s.date === date &&
-        s.time === time &&
-        s.status !== "cancelled"
-    );
-  };
-
+  // Book session
   const handleBookSession = () => {
-    if (bookingType === "member") {
-      if (!bookingForm.memberId || !bookingForm.coachId || !bookingForm.date || !bookingForm.time) {
-        alert("Please fill in all required fields");
-        return;
-      }
-    } else {
-      if (!bookingForm.nonMemberName || !bookingForm.nonMemberPhone || !bookingForm.coachId || !bookingForm.date || !bookingForm.time) {
-        alert("Please fill in all required fields for non-member booking");
+    if (!sessionMemberId || !sessionCoachId || !sessionDate || !sessionTime || !sessionHours || !sessionLocation) {
+      alert("Please fill in all fields");
+      return;
+    }
+
+    if (sessionLocation === "Other" && !sessionLocationDetails) {
+      alert("Please provide location details");
+      return;
+    }
+
+    const hours = parseFloat(sessionHours);
+    if (hours <= 0 || hours > 8) {
+      alert("Please enter valid hours (0.5 - 8)");
+      return;
+    }
+
+    const member = members.find((m) => m.id === sessionMemberId);
+    const coach = coaches.find((c) => c.id === sessionCoachId);
+
+    if (!member || !coach) return;
+
+    // Check coach availability for all repeat sessions
+    for (let week = 0; week < repeatWeeks; week++) {
+      const targetDate = new Date(sessionDate);
+      targetDate.setDate(targetDate.getDate() + week * 7);
+      const dateStr = targetDate.toISOString().split("T")[0];
+
+      if (!isCoachAvailable(sessionCoachId, dateStr, sessionTime, hours)) {
+        alert(
+          `${coach.name} is not available on ${dateStr} at ${sessionTime}. Please choose a different time.`
+        );
         return;
       }
     }
 
-    const coach = coaches.find((c) => c.id === bookingForm.coachId);
-    if (!coach) return;
-
-    const baseDate = new Date(bookingForm.date);
+    // Create sessions
     const newSessions: Session[] = [];
+    for (let week = 0; week < repeatWeeks; week++) {
+      const targetDate = new Date(sessionDate);
+      targetDate.setDate(targetDate.getDate() + week * 7);
 
-    for (let i = 0; i < bookingForm.repeatWeeks; i++) {
-      const sessionDate = new Date(baseDate);
-      sessionDate.setDate(baseDate.getDate() + i * 7);
-      const dateString = sessionDate.toISOString().split("T")[0];
-
-      if (!isCoachAvailable(bookingForm.coachId, dateString, bookingForm.time)) {
-        alert(`Coach is not available on ${dateString} at ${bookingForm.time}`);
-        return;
-      }
-
-      const session: Session = {
-        id: `${Date.now()}-${i}`,
-        coachId: bookingForm.coachId,
+      newSessions.push({
+        id: Date.now().toString() + week,
+        memberId: sessionMemberId,
+        memberName: `${member.firstName} ${member.lastName}`,
+        coachId: sessionCoachId,
         coachName: coach.name,
-        date: dateString,
-        time: bookingForm.time,
-        price: COACH_PRICING[coach.tier],
-        status: "scheduled",
-        isNonMember: bookingType === "non-member",
-        ...(bookingType === "member"
-          ? {
-              memberId: bookingForm.memberId,
-              memberName: bookingForm.memberName,
-            }
-          : {
-              nonMemberName: bookingForm.nonMemberName,
-              nonMemberPhone: bookingForm.nonMemberPhone,
-              nonMemberEmail: bookingForm.nonMemberEmail,
-            }),
-      };
-
-      newSessions.push(session);
+        date: targetDate.toISOString().split("T")[0],
+        time: sessionTime,
+        hours,
+        location: sessionLocation,
+        locationDetails: sessionLocation === "Other" ? sessionLocationDetails : undefined,
+      });
     }
 
-    saveSessions([...sessions, ...newSessions]);
+    setSessions([...sessions, ...newSessions]);
 
-    if (bookingType === "member" && bookingForm.memberId) {
-      const member = members.find((m) => m.id === bookingForm.memberId);
-      if (member && member.coachingCredits >= bookingForm.repeatWeeks) {
+    // Deduct credits
+    const updatedMembers = members.map((m) =>
+      m.id === sessionMemberId
+        ? { ...m, coachingCredits: Math.max(0, m.coachingCredits - repeatWeeks * hours) }
+        : m
+    );
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+
+    setShowSessionDialog(false);
+    setSessionMemberId("");
+    setSessionCoachId("");
+    setSessionDate("");
+    setSessionTime("");
+    setSessionHours("1");
+    setSessionLocation("");
+    setSessionLocationDetails("");
+    setRepeatWeeks(1);
+  };
+
+  // Delete session
+  const handleDeleteSession = (id: string) => {
+    if (confirm("Are you sure you want to delete this session?")) {
+      const session = sessions.find((s) => s.id === id);
+      if (session) {
+        // Refund credits
         const updatedMembers = members.map((m) =>
-          m.id === bookingForm.memberId
-            ? { ...m, coachingCredits: m.coachingCredits - bookingForm.repeatWeeks }
+          m.id === session.memberId
+            ? { ...m, coachingCredits: m.coachingCredits + session.hours }
             : m
         );
-        localStorage.setItem("members", JSON.stringify(updatedMembers));
         setMembers(updatedMembers);
+        localStorage.setItem("members", JSON.stringify(updatedMembers));
       }
-    }
 
-    setShowBookingModal(false);
-    setBookingForm({
-      memberId: "",
-      memberName: "",
-      nonMemberName: "",
-      nonMemberPhone: "",
-      nonMemberEmail: "",
-      coachId: "",
-      date: "",
-      time: "",
-      repeatWeeks: 1,
-    });
-    setMemberSearchQuery("");
-    setBookingType("member");
-  };
-
-  const handleDeleteSession = (id: string) => {
-    if (confirm("Delete this session?")) {
-      saveSessions(sessions.filter((s) => s.id !== id));
+      setSessions(sessions.filter((s) => s.id !== id));
     }
   };
 
-  const handleUpdateSessionStatus = (id: string, status: Session["status"]) => {
-    const updated = sessions.map((s) => (s.id === id ? { ...s, status } : s));
-    saveSessions(updated);
+  // Delete coach
+  const handleDeleteCoach = (id: string) => {
+    const hasBookings = sessions.some((s) => s.coachId === id);
+    if (hasBookings) {
+      alert("Cannot delete coach with existing bookings");
+      return;
+    }
+    if (confirm("Are you sure you want to delete this coach?")) {
+      setCoaches(coaches.filter((c) => c.id !== id));
+    }
   };
 
-  const filteredSessions = sessions.filter((s) => {
-    const searchLower = searchQuery.toLowerCase();
-    const memberMatch = s.memberName?.toLowerCase().includes(searchLower);
-    const nonMemberMatch = s.nonMemberName?.toLowerCase().includes(searchLower);
-    const coachMatch = s.coachName.toLowerCase().includes(searchLower);
-    return memberMatch || nonMemberMatch || coachMatch;
-  });
+  // Calendar helpers
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
 
-  const todaySessions = sessions.filter((s) => {
-    const today = new Date().toISOString().split("T")[0];
-    return s.date === today && s.status === "scheduled";
-  });
-
-  const filteredMembers = members.filter((m) => {
-    const search = memberSearchQuery.toLowerCase();
-    return (
-      m.firstName.toLowerCase().includes(search) ||
-      m.lastName.toLowerCase().includes(search) ||
-      m.email.toLowerCase().includes(search) ||
-      m.team.toLowerCase().includes(search)
-    );
-  });
-
-  const handleSelectMember = (member: Member) => {
-    setBookingForm({
-      ...bookingForm,
-      memberId: member.id,
-      memberName: `${member.firstName} ${member.lastName}`,
-    });
-    setMemberSearchQuery(`${member.firstName} ${member.lastName}`);
-    setShowMemberDropdown(false);
+    const days: (Date | null)[] = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const getWeekDays = (date: Date) => {
+    const day = date.getDay();
+    const diff = date.getDate() - day;
+    const weekStart = new Date(date);
+    weekStart.setDate(diff);
+
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      days.push(d);
+    }
+    return days;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-GB", {
-      day: "2-digit",
+  const getSessionsForDate = (date: Date | null) => {
+    if (!date) return [];
+    const dateStr = date.toISOString().split("T")[0];
+    return sessions.filter((s) => s.date === dateStr);
+  };
+
+  const formatDateStr = (dateStr: string) => {
+    return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
       month: "short",
+      day: "numeric",
       year: "numeric",
     });
   };
 
+  const navigateMonth = (direction: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + direction);
+    setCurrentDate(newDate);
+  };
+
+  const navigateWeek = (direction: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + direction * 7);
+    setCurrentDate(newDate);
+  };
+
+  const navigateDay = (direction: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + direction);
+    setCurrentDate(newDate);
+  };
+
+  // Get today's sessions
+  const todaySessions = sessions.filter(
+    (s) => s.date === new Date().toISOString().split("T")[0]
+  );
+
   return (
     <>
-      <SEO
-        title="Private Coaching - Bali Bulldogs"
-        description="Manage private coaching sessions and bookings"
-      />
-
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-yellow-600 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">
-              Private Coaching
-            </h1>
-            <p className="text-blue-100">
-              Manage 1-on-1 coaching sessions and schedules
-            </p>
+      <SEO title="Private Coaching - Bali Bulldogs" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-lg">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={() => router.push("/")}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                aria-label="Back to dashboard"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <h1 className="text-4xl font-bold">Private Coaching</h1>
+            </div>
+            <p className="text-blue-100">Manage coaches, book sessions, and track schedules</p>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="border-2 border-yellow-400/20">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Total Coaches
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-900">
-                  {coaches.length}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-yellow-400/20">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Today's Sessions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-900">
-                  {todaySessions.length}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-2 border-yellow-400/20">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  Total Sessions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-900">
-                  {sessions.length}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Coaches</CardTitle>
-                    <CardDescription>Manage coaching staff and rates</CardDescription>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      setEditingCoach(null);
-                      setCoachForm({ name: "", phone: "", tier: "Assistant Coach" });
-                      setShowCoachModal(true);
-                    }}
-                    className="bg-blue-900 hover:bg-blue-800"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Coach
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {coaches.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>No coaches added yet</p>
-                    </div>
-                  ) : (
-                    coaches.map((coach) => (
-                      <div
-                        key={coach.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border"
-                      >
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900">
-                            {coach.name}
-                          </div>
-                          <div className="text-sm text-gray-600">{coach.phone}</div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              {coach.tier}
-                            </Badge>
-                            <Badge className="text-xs bg-yellow-400 text-gray-900 hover:bg-yellow-500">
-                              {formatCurrency(COACH_PRICING[coach.tier])}
-                            </Badge>
-                          </div>
+        <div className="container mx-auto px-4 py-8 space-y-6">
+          {/* Coaches Section */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Coaches</CardTitle>
+              <Button onClick={() => setShowCoachDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Coach
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {coaches.map((coach) => (
+                  <Card key={coach.id} className="border-2">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-bold text-lg">{coach.name}</h3>
+                          <Badge variant="secondary" className="mt-1">
+                            {coach.tier}
+                          </Badge>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteCoach(coach.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          {coach.phone}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingCoach(coach);
-                              setCoachForm({
-                                name: coach.name,
-                                phone: coach.phone,
-                                tier: coach.tier,
-                              });
-                              setShowCoachModal(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCoach(coach.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
+                          <DollarSign className="w-4 h-4" />
+                          Rp {coach.hourlyRate.toLocaleString()}/hour
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Book Session</CardTitle>
-                    <CardDescription>Schedule coaching sessions</CardDescription>
-                  </div>
-                  <Button
-                    onClick={() => setShowBookingModal(true)}
-                    className="bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Book Now
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {todaySessions.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No sessions scheduled for today</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {todaySessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="p-4 bg-blue-50 rounded-lg border border-blue-200"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="font-semibold text-blue-900">
-                              {session.isNonMember ? session.nonMemberName : session.memberName}
-                              {session.isNonMember && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Non-Member
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-600 mt-1">
-                              Coach: {session.coachName}
-                            </div>
-                            <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
-                                {session.time}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <DollarSign className="w-4 h-4" />
-                                {formatCurrency(session.price)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {coaches.length === 0 && (
+                  <p className="text-gray-500 col-span-full text-center py-8">
+                    No coaches yet. Add your first coach to start booking sessions.
+                  </p>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <Card className="mt-8">
+          {/* Calendar View Controls */}
+          <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>All Sessions</CardTitle>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Search sessions..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-64"
-                    />
-                  </div>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <CardTitle>Schedule Calendar</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === "month" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("month")}
+                  >
+                    Month
+                  </Button>
+                  <Button
+                    variant={viewMode === "week" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("week")}
+                  >
+                    Week
+                  </Button>
+                  <Button
+                    variant={viewMode === "day" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("day")}
+                  >
+                    Day
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                  >
+                    List
+                  </Button>
+                  <Button onClick={() => setShowSessionDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Book Session
+                  </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {filteredSessions.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p>No sessions found</p>
-                  </div>
-                ) : (
-                  filteredSessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="font-semibold text-gray-900">
-                            {session.isNonMember ? session.nonMemberName : session.memberName}
-                          </div>
-                          {session.isNonMember && (
-                            <Badge variant="outline" className="text-xs">
-                              Non-Member
-                            </Badge>
-                          )}
-                          <Badge
-                            variant={
-                              session.status === "completed"
-                                ? "default"
-                                : session.status === "cancelled"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                            className="text-xs"
-                          >
-                            {session.status}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          Coach: {session.coachName} • {formatDate(session.date)} at{" "}
-                          {session.time}
-                        </div>
-                        {session.isNonMember && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Phone: {session.nonMemberPhone}
-                            {session.nonMemberEmail && ` • Email: ${session.nonMemberEmail}`}
-                          </div>
-                        )}
-                        <div className="text-sm font-semibold text-blue-900 mt-1">
-                          {formatCurrency(session.price)}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {session.status === "scheduled" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleUpdateSessionStatus(session.id, "completed")
-                              }
-                              title="Mark as completed"
-                            >
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleUpdateSessionStatus(session.id, "cancelled")
-                              }
-                              title="Cancel session"
-                            >
-                              <X className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSession(session.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {showCoachModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>
-                {editingCoach ? "Edit Coach" : "Add New Coach"}
-              </CardTitle>
-              <CardDescription>
-                Configure coach details and pricing tier
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="coachName">Name *</Label>
-                <Input
-                  id="coachName"
-                  value={coachForm.name}
-                  onChange={(e) =>
-                    setCoachForm({ ...coachForm, name: e.target.value })
-                  }
-                  placeholder="Jon Tarifa"
-                />
-              </div>
-              <div>
-                <Label htmlFor="coachPhone">Phone *</Label>
-                <Input
-                  id="coachPhone"
-                  value={coachForm.phone}
-                  onChange={(e) =>
-                    setCoachForm({ ...coachForm, phone: e.target.value })
-                  }
-                  placeholder="+62 812 3456 7890"
-                />
-              </div>
-              <div>
-                <Label htmlFor="coachTier">Tier *</Label>
-                <select
-                  id="coachTier"
-                  value={coachForm.tier}
-                  onChange={(e) =>
-                    setCoachForm({
-                      ...coachForm,
-                      tier: e.target.value as Coach["tier"],
-                    })
-                  }
-                  className="w-full border rounded-md px-3 py-2"
-                >
-                  <option value="Head Coach">
-                    Head Coach - {formatCurrency(COACH_PRICING["Head Coach"])}
-                  </option>
-                  <option value="Goalkeeper Coach">
-                    Goalkeeper Coach -{" "}
-                    {formatCurrency(COACH_PRICING["Goalkeeper Coach"])}
-                  </option>
-                  <option value="Senior Coach">
-                    Senior Coach - {formatCurrency(COACH_PRICING["Senior Coach"])}
-                  </option>
-                  <option value="Assistant Coach">
-                    Assistant Coach -{" "}
-                    {formatCurrency(COACH_PRICING["Assistant Coach"])}
-                  </option>
-                </select>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowCoachModal(false);
-                    setEditingCoach(null);
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleAddCoach}
-                  className="flex-1 bg-blue-900 hover:bg-blue-800"
-                >
-                  {editingCoach ? "Update" : "Add"} Coach
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {showBookingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <Card className="w-full max-w-md my-8">
-            <CardHeader>
-              <CardTitle>Book Coaching Session</CardTitle>
-              <CardDescription>
-                Schedule a 1-on-1 session with a coach
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2 mb-4">
-                <Button
-                  variant={bookingType === "member" ? "default" : "outline"}
-                  onClick={() => setBookingType("member")}
-                  className={bookingType === "member" ? "bg-blue-900" : ""}
-                  size="sm"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Member
-                </Button>
-                <Button
-                  variant={bookingType === "non-member" ? "default" : "outline"}
-                  onClick={() => setBookingType("non-member")}
-                  className={bookingType === "non-member" ? "bg-blue-900" : ""}
-                  size="sm"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Non-Member
-                </Button>
-              </div>
-
-              {bookingType === "member" ? (
+              {/* Month View */}
+              {viewMode === "month" && (
                 <div>
-                  <Label htmlFor="member">Member *</Label>
-                  <div className="relative">
-                    <Input
-                      id="member"
-                      value={memberSearchQuery}
-                      onChange={(e) => {
-                        setMemberSearchQuery(e.target.value);
-                        setShowMemberDropdown(true);
-                      }}
-                      onFocus={() => setShowMemberDropdown(true)}
-                      placeholder="Search member by name, email or team..."
-                      className="pr-10"
-                    />
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    
-                    {showMemberDropdown && filteredMembers.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {filteredMembers.map((member) => (
-                          <button
-                            key={member.id}
-                            type="button"
-                            onClick={() => handleSelectMember(member)}
-                            className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b last:border-b-0"
-                          >
-                            <div className="font-medium text-gray-900">
-                              {member.firstName} {member.lastName}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {member.team} • Credits: {member.coachingCredits}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {member.email}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between mb-4">
+                    <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h3 className="text-xl font-bold">
+                      {currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                    </h3>
+                    <Button variant="outline" size="icon" onClick={() => navigateMonth(1)}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
                   </div>
-                  {bookingForm.memberId && (
-                    <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-blue-900">
-                            {bookingForm.memberName}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Credits: {members.find(m => m.id === bookingForm.memberId)?.coachingCredits || 0}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setBookingForm({
-                              ...bookingForm,
-                              memberId: "",
-                              memberName: "",
-                            });
-                            setMemberSearchQuery("");
-                          }}
+                  <div className="grid grid-cols-7 gap-2">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                      <div key={day} className="text-center font-semibold text-sm text-gray-600 py-2">
+                        {day}
+                      </div>
+                    ))}
+                    {getDaysInMonth(currentDate).map((date, index) => {
+                      const daySessions = getSessionsForDate(date);
+                      const isToday =
+                        date?.toDateString() === new Date().toDateString();
+                      return (
+                        <div
+                          key={index}
+                          className={`min-h-24 p-2 border rounded-lg ${
+                            date ? "bg-white" : "bg-gray-50"
+                          } ${isToday ? "ring-2 ring-blue-500" : ""}`}
                         >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                          {date && (
+                            <>
+                              <div className="text-sm font-semibold mb-1">{date.getDate()}</div>
+                              <div className="space-y-1">
+                                {daySessions.slice(0, 2).map((session) => (
+                                  <div
+                                    key={session.id}
+                                    className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded truncate"
+                                    title={`${session.time} - ${session.memberName} with ${session.coachName}`}
+                                  >
+                                    {session.time} {session.memberName}
+                                  </div>
+                                ))}
+                                {daySessions.length > 2 && (
+                                  <div className="text-xs text-gray-500">
+                                    +{daySessions.length - 2} more
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <Label htmlFor="nonMemberName">Name *</Label>
-                    <Input
-                      id="nonMemberName"
-                      value={bookingForm.nonMemberName}
-                      onChange={(e) =>
-                        setBookingForm({
-                          ...bookingForm,
-                          nonMemberName: e.target.value,
-                        })
-                      }
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="nonMemberPhone">Phone *</Label>
-                    <Input
-                      id="nonMemberPhone"
-                      value={bookingForm.nonMemberPhone}
-                      onChange={(e) =>
-                        setBookingForm({
-                          ...bookingForm,
-                          nonMemberPhone: e.target.value,
-                        })
-                      }
-                      placeholder="+62 812 3456 7890"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="nonMemberEmail">Email (Optional)</Label>
-                    <Input
-                      id="nonMemberEmail"
-                      type="email"
-                      value={bookingForm.nonMemberEmail}
-                      onChange={(e) =>
-                        setBookingForm({
-                          ...bookingForm,
-                          nonMemberEmail: e.target.value,
-                        })
-                      }
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                </>
               )}
 
-              <div>
-                <Label htmlFor="coach">Coach *</Label>
-                <select
-                  id="coach"
-                  value={bookingForm.coachId}
-                  onChange={(e) =>
-                    setBookingForm({ ...bookingForm, coachId: e.target.value })
-                  }
-                  className="w-full border rounded-md px-3 py-2"
-                >
-                  <option value="">Select coach</option>
-                  {coaches.map((coach) => (
-                    <option key={coach.id} value={coach.id}>
-                      {coach.name} ({coach.tier}) -{" "}
-                      {formatCurrency(COACH_PRICING[coach.tier])}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Week View */}
+              {viewMode === "week" && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <Button variant="outline" size="icon" onClick={() => navigateWeek(-1)}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h3 className="text-xl font-bold">
+                      Week of {getWeekDays(currentDate)[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </h3>
+                    <Button variant="outline" size="icon" onClick={() => navigateWeek(1)}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {getWeekDays(currentDate).map((date) => {
+                      const daySessions = getSessionsForDate(date);
+                      const isToday = date.toDateString() === new Date().toDateString();
+                      return (
+                        <div key={date.toISOString()}>
+                          <div className={`text-center font-semibold text-sm mb-2 ${isToday ? "text-blue-600" : "text-gray-600"}`}>
+                            <div>{date.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                            <div className={`text-lg ${isToday ? "bg-blue-600 text-white rounded-full w-8 h-8 mx-auto flex items-center justify-center" : ""}`}>
+                              {date.getDate()}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {daySessions.map((session) => (
+                              <div
+                                key={session.id}
+                                className="text-xs bg-white border rounded p-2"
+                              >
+                                <div className="font-semibold">{session.time}</div>
+                                <div className="text-gray-600">{session.memberName}</div>
+                                <div className="text-gray-500">{session.coachName}</div>
+                                <div className="text-gray-500 flex items-center gap-1 mt-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {session.location === "Other" ? session.locationDetails : session.location}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
+              {/* Day View */}
+              {viewMode === "day" && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <Button variant="outline" size="icon" onClick={() => navigateDay(-1)}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <h3 className="text-xl font-bold">
+                      {currentDate.toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </h3>
+                    <Button variant="outline" size="icon" onClick={() => navigateDay(1)}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {getSessionsForDate(currentDate).sort((a, b) => a.time.localeCompare(b.time)).map((session) => (
+                      <Card key={session.id} className="border-l-4 border-l-blue-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-3">
+                                <Clock className="w-5 h-5 text-blue-600" />
+                                <span className="font-bold text-lg">{session.time}</span>
+                                <Badge>{session.hours}h</Badge>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <User className="w-4 h-4" />
+                                <span className="font-semibold">{session.memberName}</span>
+                                <span className="text-gray-400">with</span>
+                                <span className="font-semibold">{session.coachName}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <MapPin className="w-4 h-4" />
+                                <span>{session.location === "Other" ? session.locationDetails : session.location}</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteSession(session.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {getSessionsForDate(currentDate).length === 0 && (
+                      <p className="text-center text-gray-500 py-8">No sessions scheduled for this day</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* List View */}
+              {viewMode === "list" && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">All Upcoming Sessions</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Hours</TableHead>
+                        <TableHead>Member</TableHead>
+                        <TableHead>Coach</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessions
+                        .filter((s) => new Date(s.date + "T00:00:00") >= new Date(new Date().setHours(0, 0, 0, 0)))
+                        .sort((a, b) => {
+                          const dateCompare = a.date.localeCompare(b.date);
+                          if (dateCompare !== 0) return dateCompare;
+                          return a.time.localeCompare(b.time);
+                        })
+                        .map((session) => (
+                          <TableRow key={session.id}>
+                            <TableCell>{formatDateStr(session.date)}</TableCell>
+                            <TableCell className="font-semibold">{session.time}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{session.hours}h</Badge>
+                            </TableCell>
+                            <TableCell>{session.memberName}</TableCell>
+                            <TableCell>{session.coachName}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {session.location === "Other" ? session.locationDetails : session.location}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteSession(session.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                  {sessions.filter((s) => new Date(s.date + "T00:00:00") >= new Date(new Date().setHours(0, 0, 0, 0))).length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No upcoming sessions scheduled</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Add Coach Dialog */}
+        <Dialog open={showCoachDialog} onOpenChange={setShowCoachDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Coach</DialogTitle>
+              <DialogDescription>
+                Add a coach to your team. Pricing is automatically set based on tier.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="coachName">Name</Label>
+                <Input
+                  id="coachName"
+                  value={coachName}
+                  onChange={(e) => setCoachName(e.target.value)}
+                  placeholder="Coach name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="coachPhone">Phone Number</Label>
+                <Input
+                  id="coachPhone"
+                  value={coachPhone}
+                  onChange={(e) => setCoachPhone(e.target.value)}
+                  placeholder="+62..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="coachTier">Tier</Label>
+                <Select value={coachTier} onValueChange={(value: Coach["tier"]) => setCoachTier(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Head Coach">
+                      Head Coach (Rp 750,000/hr)
+                    </SelectItem>
+                    <SelectItem value="Goalkeeper Coach">
+                      Goalkeeper Coach (Rp 600,000/hr)
+                    </SelectItem>
+                    <SelectItem value="Senior Coach">
+                      Senior Coach (Rp 500,000/hr)
+                    </SelectItem>
+                    <SelectItem value="Assistant Coach">
+                      Assistant Coach (Rp 400,000/hr)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCoachDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddCoach}>Add Coach</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Book Session Dialog */}
+        <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Book Coaching Session</DialogTitle>
+              <DialogDescription>
+                Schedule a private coaching session. Session times cannot overlap for the same coach.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="date">Date *</Label>
+                  <Label htmlFor="sessionMember">Member</Label>
+                  <Select value={sessionMemberId} onValueChange={setSessionMemberId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.firstName} {m.lastName} ({m.coachingCredits} credits)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sessionCoach">Coach</Label>
+                  <Select value={sessionCoachId} onValueChange={setSessionCoachId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coach" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coaches.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} ({c.tier})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="sessionDate">Date</Label>
                   <Input
-                    id="date"
+                    id="sessionDate"
                     type="date"
-                    value={bookingForm.date}
-                    onChange={(e) =>
-                      setBookingForm({ ...bookingForm, date: e.target.value })
-                    }
+                    value={sessionDate}
+                    onChange={(e) => setSessionDate(e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="time">Time *</Label>
+                  <Label htmlFor="sessionTime">Time</Label>
                   <Input
-                    id="time"
+                    id="sessionTime"
                     type="time"
-                    value={bookingForm.time}
-                    onChange={(e) =>
-                      setBookingForm({ ...bookingForm, time: e.target.value })
-                    }
+                    value={sessionTime}
+                    onChange={(e) => setSessionTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sessionHours">Hours</Label>
+                  <Input
+                    id="sessionHours"
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    max="8"
+                    value={sessionHours}
+                    onChange={(e) => setSessionHours(e.target.value)}
+                    placeholder="1.5"
                   />
                 </div>
               </div>
-
               <div>
-                <Label htmlFor="repeatWeeks">Repeat for weeks</Label>
+                <Label htmlFor="sessionLocation">Location</Label>
+                <Select value={sessionLocation} onValueChange={setSessionLocation}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOCATIONS.map((loc) => (
+                      <SelectItem key={loc} value={loc}>
+                        {loc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {sessionLocation === "Other" && (
+                <div>
+                  <Label htmlFor="locationDetails">Location Details</Label>
+                  <Input
+                    id="locationDetails"
+                    value={sessionLocationDetails}
+                    onChange={(e) => setSessionLocationDetails(e.target.value)}
+                    placeholder="Enter specific location details"
+                  />
+                </div>
+              )}
+              <div>
+                <Label htmlFor="repeatWeeks">Repeat for # weeks</Label>
                 <Input
                   id="repeatWeeks"
                   type="number"
                   min="1"
                   max="12"
-                  value={bookingForm.repeatWeeks}
-                  onChange={(e) =>
-                    setBookingForm({
-                      ...bookingForm,
-                      repeatWeeks: parseInt(e.target.value) || 1,
-                    })
-                  }
+                  value={repeatWeeks}
+                  onChange={(e) => setRepeatWeeks(parseInt(e.target.value) || 1)}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Creates {bookingForm.repeatWeeks} session(s) starting from selected
-                  date
+                <p className="text-sm text-gray-500 mt-1">
+                  This will create {repeatWeeks} session{repeatWeeks > 1 ? "s" : ""} on consecutive weeks
                 </p>
               </div>
-
-              {bookingForm.coachId && bookingForm.date && bookingForm.time && (
-                <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div className="text-sm text-blue-900">
-                      {isCoachAvailable(
-                        bookingForm.coachId,
-                        bookingForm.date,
-                        bookingForm.time
-                      ) ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-green-700 font-medium">
-                            Coach is available
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-red-600 font-medium">
-                          Coach is not available at this time
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowBookingModal(false);
-                    setBookingForm({
-                      memberId: "",
-                      memberName: "",
-                      nonMemberName: "",
-                      nonMemberPhone: "",
-                      nonMemberEmail: "",
-                      coachId: "",
-                      date: "",
-                      time: "",
-                      repeatWeeks: 1,
-                    });
-                    setMemberSearchQuery("");
-                    setBookingType("member");
-                  }}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleBookSession}
-                  className="flex-1 bg-yellow-400 text-gray-900 hover:bg-yellow-500"
-                >
-                  Book Session
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSessionDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleBookSession}>Book Session</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </>
   );
 }
