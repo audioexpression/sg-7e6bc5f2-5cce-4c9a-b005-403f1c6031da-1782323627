@@ -70,46 +70,32 @@ export default function Teams() {
   const [selectedType, setSelectedType] = useState<string>("all");
 
   useEffect(() => {
-    const storedMembers = localStorage.getItem("members");
-    const storedTeams = localStorage.getItem("teams");
-    const storedInvoices = localStorage.getItem("invoices");
-    
-    if (storedMembers) {
-      setMembers(JSON.parse(storedMembers));
-    }
-    
-    if (storedTeams) {
-      setTeams(JSON.parse(storedTeams));
-    }
-
-    if (storedInvoices) {
-      setInvoices(JSON.parse(storedInvoices));
+    const savedMembers = localStorage.getItem("members");
+    if (savedMembers) {
+      setMembers(JSON.parse(savedMembers));
     }
   }, []);
 
-  useEffect(() => {
-    let filtered = members;
+  const teamStats = teams.map((teamName) => {
+    const teamMembers = members.filter((m) => m.teamAssignment === teamName);
+    return {
+      name: teamName,
+      totalPlayers: teamMembers.length,
+      memberCount: teamMembers.filter((m) => m.membershipCategory === "Member").length,
+      sponsoredCount: teamMembers.filter((m) => m.membershipCategory === "Sponsored").length,
+      scholarshipCount: teamMembers.filter((m) => m.membershipCategory === "Scholarship").length,
+      members: teamMembers,
+    };
+  });
 
-    if (selectedType !== "all") {
-      filtered = filtered.filter((m) => m.type === selectedType);
-    }
-
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (m) =>
-          m.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          m.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          m.team.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    const grouped = teams.map((team) => ({
-      name: team,
-      members: filtered.filter((m) => m.team === team),
-    })).filter((group) => group.members.length > 0);
-
-    setTeamGroups(grouped);
-  }, [members, teams, searchQuery, selectedType]);
+  const filteredTeams = teamStats.filter((team) => {
+    const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = selectedType === "all" || 
+      (selectedType === "Junior" && ["Toddler", "Kindy 1", "Kindy 2", "U6", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Dev", "U12 Adv", "U12 Girls"].includes(team.name)) ||
+      (selectedType === "Youth" && ["U14", "U14 Girls", "U16", "U18 Girls", "U18"].includes(team.name)) ||
+      (selectedType === "Adult" && ["Women", "Masters", "Legends", "Social", "1st Team"].includes(team.name));
+    return matchesSearch && matchesType && team.totalPlayers > 0;
+  });
 
   const getMemberPaymentStatus = (memberId: string, quarter: string): Invoice | undefined => {
     return invoices.find(inv => inv.memberId === memberId && inv.billingPeriod === quarter);

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Trash2, Edit, Save, X, Upload, Download, Search, Filter, Home, Users, DollarSign, Calendar, Eye, Settings, ArrowLeft, User, Pencil, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter } from "next/router";
+import { useRouter, Link } from "next/router";
 
 const TEAMS_BY_CATEGORY = {
   Junior: [
@@ -1624,67 +1624,57 @@ export default function Members() {
         description="Manage club members, registrations, and player information"
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-blue-900 mb-2">Members</h1>
-              <p className="text-gray-600">Manage your club members and registrations</p>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={() => router.push("/")} variant="outline">
-                <Home className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-              <Button onClick={() => router.push("/teams")} variant="outline">
-                <Users className="h-4 w-4 mr-2" />
-                Teams
-              </Button>
-              <Button onClick={() => router.push("/invoices")} variant="outline">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Invoices
-              </Button>
-              <Button onClick={() => router.push("/coaching")} variant="outline">
-                <Calendar className="h-4 w-4 mr-2" />
-                Coaching
-              </Button>
-              <Button onClick={() => router.push("/settings")} variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
-          <div className="container mx-auto px-4 py-8">
-            <div className="flex items-center gap-4 mb-4">
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-blue-800"
-                onClick={() => window.location.href = "/"}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-black mb-2 tracking-tight">MEMBER DATABASE</h1>
-                <p className="text-blue-100 text-lg">Bali Bulldogs Club Manager</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
+        <nav className="bg-blue-700 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-16">
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-yellow-400 mr-3" />
+                <span className="text-2xl font-bold text-white">Bali Bulldogs</span>
               </div>
-              <div className="text-right">
-                <div className="text-5xl font-black text-yellow-400">{members.length}</div>
-                <div className="text-sm text-blue-200 uppercase tracking-wide">Total Members</div>
+              <div className="flex items-center space-x-4">
+                <Link href="/">
+                  <Button variant="ghost" className="text-white hover:bg-blue-600">
+                    <Home className="h-5 w-5 mr-2" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Link href="/teams">
+                  <Button variant="ghost" className="text-white hover:bg-blue-600">
+                    <Users className="h-5 w-5 mr-2" />
+                    Teams
+                  </Button>
+                </Link>
+                <Link href="/invoices">
+                  <Button variant="ghost" className="text-white hover:bg-blue-600">
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    Invoices
+                  </Button>
+                </Link>
+                <Link href="/coaching">
+                  <Button variant="ghost" className="text-white hover:bg-blue-600">
+                    <Calendar className="h-5 w-5 mr-2" />
+                    Coaching
+                  </Button>
+                </Link>
+                <Link href="/settings">
+                  <Button variant="ghost" className="text-white hover:bg-blue-600">
+                    <Settings className="h-5 w-5 mr-2" />
+                    Settings
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
-        </div>
+        </nav>
 
-        <div className="container mx-auto px-4 py-8">
-          <Card className="p-6 shadow-lg border-2 border-blue-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-blue-900">Members</h1>
+            <p className="text-gray-600">Manage your club members and registrations</p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -1936,426 +1926,425 @@ export default function Members() {
                 </Button>
               </div>
             )}
-          </Card>
+          </div>
         </div>
-      </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-blue-700">
-              {editingMember ? "Edit Member" : "Add New Member"}
-            </DialogTitle>
-          </DialogHeader>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-blue-700">
+                {editingMember ? "Edit Member" : "Add New Member"}
+              </DialogTitle>
+            </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  value={formData.firstName || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, firstName: e.target.value });
-                    setValidationErrors({ ...validationErrors, firstName: "" });
-                  }}
-                  required
-                  className={validationErrors.firstName ? "border-red-500" : ""}
-                />
-                {validationErrors.firstName && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.firstName}</p>
-                )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, firstName: e.target.value });
+                      setValidationErrors({ ...validationErrors, firstName: "" });
+                    }}
+                    required
+                    className={validationErrors.firstName ? "border-red-500" : ""}
+                  />
+                  {validationErrors.firstName && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.firstName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, lastName: e.target.value });
+                      setValidationErrors({ ...validationErrors, lastName: "" });
+                    }}
+                    required
+                    className={validationErrors.lastName ? "border-red-500" : ""}
+                  />
+                  {validationErrors.lastName && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.lastName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="photo">Photo Upload</Label>
+                  <Input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="category">Category (Age Group) *</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, category: value as "Junior" | "Youth" | "Adult", teamAssignment: "" });
+                      setValidationErrors({ ...validationErrors, category: "" });
+                    }}
+                  >
+                    <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Junior">Junior</SelectItem>
+                      <SelectItem value="Youth">Youth</SelectItem>
+                      <SelectItem value="Adult">Adult</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.category && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.category}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, dateOfBirth: e.target.value });
+                      setValidationErrors({ ...validationErrors, dateOfBirth: "" });
+                    }}
+                    required
+                    className={validationErrors.dateOfBirth ? "border-red-500" : ""}
+                  />
+                  {validationErrors.dateOfBirth && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.dateOfBirth}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="nationality">Nationality *</Label>
+                  <Input
+                    id="nationality"
+                    value={formData.nationality || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, nationality: e.target.value });
+                      setValidationErrors({ ...validationErrors, nationality: "" });
+                    }}
+                    required
+                    className={validationErrors.nationality ? "border-red-500" : ""}
+                  />
+                  {validationErrors.nationality && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.nationality}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="address">Address (Area of Bali) *</Label>
+                  <Input
+                    id="address"
+                    value={formData.address || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, address: e.target.value });
+                      setValidationErrors({ ...validationErrors, address: "" });
+                    }}
+                    required
+                    className={validationErrors.address ? "border-red-500" : ""}
+                  />
+                  {validationErrors.address && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.address}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      setValidationErrors({ ...validationErrors, email: "" });
+                    }}
+                    required
+                    className={validationErrors.email ? "border-red-500" : ""}
+                  />
+                  {validationErrors.email && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="shirtNumber">Shirt Number</Label>
+                  <Input
+                    id="shirtNumber"
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={formData.shirtNumber || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, shirtNumber: e.target.value });
+                      setValidationErrors({ ...validationErrors, shirtNumber: "" });
+                    }}
+                    className={validationErrors.shirtNumber ? "border-red-500" : ""}
+                  />
+                  {validationErrors.shirtNumber && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.shirtNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="type">Type (Payment Status) *</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, type: value as "Member" | "Sponsored" | "Scholarship" });
+                      setValidationErrors({ ...validationErrors, type: "" });
+                    }}
+                  >
+                    <SelectTrigger className={validationErrors.type ? "border-red-500" : ""}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Member">Member (Pays Fees)</SelectItem>
+                      <SelectItem value="Sponsored">Sponsored (Free)</SelectItem>
+                      <SelectItem value="Scholarship">Scholarship (Free)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.type && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.type}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, role: value });
+                      setValidationErrors({ ...validationErrors, role: "" });
+                    }}
+                  >
+                    <SelectTrigger className={validationErrors.role ? "border-red-500" : ""}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.role && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.role}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="teamAssignment">Team Assignment *</Label>
+                  <Select
+                    value={formData.teamAssignment}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, teamAssignment: value });
+                      setValidationErrors({ ...validationErrors, teamAssignment: "" });
+                    }}
+                  >
+                    <SelectTrigger className={validationErrors.teamAssignment ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.category && TEAMS_BY_CATEGORY[formData.category].map((team) => (
+                        <SelectItem key={team} value={team}>
+                          {team}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.teamAssignment && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.teamAssignment}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="joiningDate">Joining Date *</Label>
+                  <Input
+                    id="joiningDate"
+                    type="date"
+                    value={formData.joiningDate || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, joiningDate: e.target.value });
+                      setValidationErrors({ ...validationErrors, joiningDate: "" });
+                    }}
+                    required
+                    className={validationErrors.joiningDate ? "border-red-500" : ""}
+                  />
+                  {validationErrors.joiningDate && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.joiningDate}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="contactNumber" className="font-semibold">Contact Number *</Label>
+                  <Input
+                    id="contactNumber"
+                    required
+                    value={formData.contactNumber}
+                    onChange={(e) => {
+                      setFormData({...formData, contactNumber: e.target.value});
+                      setValidationErrors({ ...validationErrors, contactNumber: "" });
+                    }}
+                    className={validationErrors.contactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
+                  />
+                  {validationErrors.contactNumber && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.contactNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="primaryContact" className="font-semibold">Primary Contact Name</Label>
+                  <Input
+                    id="primaryContact"
+                    value={formData.primaryContact}
+                    onChange={(e) => setFormData({...formData, primaryContact: e.target.value})}
+                    className="border-2 border-blue-200"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="primaryContactNumber" className="font-semibold">Primary Contact Number</Label>
+                  <Input
+                    id="primaryContactNumber"
+                    value={formData.primaryContactNumber}
+                    onChange={(e) => {
+                      setFormData({...formData, primaryContactNumber: e.target.value});
+                      setValidationErrors({ ...validationErrors, primaryContactNumber: "" });
+                    }}
+                    className={validationErrors.primaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
+                  />
+                  {validationErrors.primaryContactNumber && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.primaryContactNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="secondaryContact" className="font-semibold">Secondary Contact Name</Label>
+                  <Input
+                    id="secondaryContact"
+                    value={formData.secondaryContact}
+                    onChange={(e) => setFormData({...formData, secondaryContact: e.target.value})}
+                    className="border-2 border-blue-200"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="secondaryContactNumber" className="font-semibold">Secondary Contact Number</Label>
+                  <Input
+                    id="secondaryContactNumber"
+                    value={formData.secondaryContactNumber}
+                    onChange={(e) => {
+                      setFormData({...formData, secondaryContactNumber: e.target.value});
+                      setValidationErrors({ ...validationErrors, secondaryContactNumber: "" });
+                    }}
+                    className={validationErrors.secondaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
+                  />
+                  {validationErrors.secondaryContactNumber && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.secondaryContactNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="coachingCredits" className="font-semibold">Coaching Credits</Label>
+                  <Input
+                    id="coachingCredits"
+                    type="number"
+                    min="0"
+                    value={formData.coachingCredits}
+                    onChange={(e) => {
+                      setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0});
+                      setValidationErrors({ ...validationErrors, coachingCredits: "" });
+                    }}
+                    className={validationErrors.coachingCredits ? "border-2 border-red-500" : "border-2 border-blue-200"}
+                  />
+                  {validationErrors.coachingCredits && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.coachingCredits}</p>
+                  )}
+                </div>
               </div>
 
               <div>
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={formData.lastName || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, lastName: e.target.value });
-                    setValidationErrors({ ...validationErrors, lastName: "" });
-                  }}
-                  required
-                  className={validationErrors.lastName ? "border-red-500" : ""}
-                />
-                {validationErrors.lastName && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.lastName}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="photo">Photo Upload</Label>
-                <Input
-                  id="photo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="cursor-pointer"
+                <Label htmlFor="medicalNotes" className="font-semibold">Medical Notes</Label>
+                <Textarea
+                  id="medicalNotes"
+                  placeholder="Known allergies, pre-existing conditions..."
+                  value={formData.medicalNotes}
+                  onChange={(e) => setFormData({...formData, medicalNotes: e.target.value})}
+                  className="border-2 border-blue-200 min-h-24"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="category">Category (Age Group) *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, category: value as "Junior" | "Youth" | "Adult", teamAssignment: "" });
-                    setValidationErrors({ ...validationErrors, category: "" });
-                  }}
+              <div className="flex gap-3 justify-end">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  className="border-2"
                 >
-                  <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Junior">Junior</SelectItem>
-                    <SelectItem value="Youth">Youth</SelectItem>
-                    <SelectItem value="Adult">Adult</SelectItem>
-                  </SelectContent>
-                </Select>
-                {validationErrors.category && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.category}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  value={formData.dateOfBirth || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, dateOfBirth: e.target.value });
-                    setValidationErrors({ ...validationErrors, dateOfBirth: "" });
-                  }}
-                  required
-                  className={validationErrors.dateOfBirth ? "border-red-500" : ""}
-                />
-                {validationErrors.dateOfBirth && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.dateOfBirth}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="nationality">Nationality *</Label>
-                <Input
-                  id="nationality"
-                  value={formData.nationality || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, nationality: e.target.value });
-                    setValidationErrors({ ...validationErrors, nationality: "" });
-                  }}
-                  required
-                  className={validationErrors.nationality ? "border-red-500" : ""}
-                />
-                {validationErrors.nationality && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.nationality}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="address">Address (Area of Bali) *</Label>
-                <Input
-                  id="address"
-                  value={formData.address || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, address: e.target.value });
-                    setValidationErrors({ ...validationErrors, address: "" });
-                  }}
-                  required
-                  className={validationErrors.address ? "border-red-500" : ""}
-                />
-                {validationErrors.address && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.address}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, email: e.target.value });
-                    setValidationErrors({ ...validationErrors, email: "" });
-                  }}
-                  required
-                  className={validationErrors.email ? "border-red-500" : ""}
-                />
-                {validationErrors.email && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.email}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="shirtNumber">Shirt Number</Label>
-                <Input
-                  id="shirtNumber"
-                  type="number"
-                  min="1"
-                  max="99"
-                  value={formData.shirtNumber || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, shirtNumber: e.target.value });
-                    setValidationErrors({ ...validationErrors, shirtNumber: "" });
-                  }}
-                  className={validationErrors.shirtNumber ? "border-red-500" : ""}
-                />
-                {validationErrors.shirtNumber && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.shirtNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="type">Type (Payment Status) *</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, type: value as "Member" | "Sponsored" | "Scholarship" });
-                    setValidationErrors({ ...validationErrors, type: "" });
-                  }}
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  className="bg-blue-700 hover:bg-blue-800 font-bold"
                 >
-                  <SelectTrigger className={validationErrors.type ? "border-red-500" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Member">Member (Pays Fees)</SelectItem>
-                    <SelectItem value="Sponsored">Sponsored (Free)</SelectItem>
-                    <SelectItem value="Scholarship">Scholarship (Free)</SelectItem>
-                  </SelectContent>
-                </Select>
-                {validationErrors.type && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.type}</p>
-                )}
+                  {editingMember ? "Update Member" : "Add Member"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-blue-700">Import Members from CSV</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                <p className="text-sm text-blue-900 font-semibold mb-2">CSV Format:</p>
+                <p className="text-xs text-blue-700">
+                  First Name, Last Name, Date of Birth, Nationality, Address, Email, Shirt Number, 
+                  Category, Type, Role, Team, Joining Date, Contact Number, 
+                  Primary Contact, Primary Contact Number, Secondary Contact, Secondary Contact Number, 
+                  Medical Notes, Coaching Credits, Photo URL
+                </p>
               </div>
 
-              <div>
-                <Label htmlFor="role">Role *</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, role: value });
-                    setValidationErrors({ ...validationErrors, role: "" });
-                  }}
-                >
-                  <SelectTrigger className={validationErrors.role ? "border-red-500" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {validationErrors.role && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.role}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="teamAssignment">Team Assignment *</Label>
-                <Select
-                  value={formData.teamAssignment}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, teamAssignment: value });
-                    setValidationErrors({ ...validationErrors, teamAssignment: "" });
-                  }}
-                >
-                  <SelectTrigger className={validationErrors.teamAssignment ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.category && TEAMS_BY_CATEGORY[formData.category].map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {validationErrors.teamAssignment && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.teamAssignment}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="joiningDate">Joining Date *</Label>
-                <Input
-                  id="joiningDate"
-                  type="date"
-                  value={formData.joiningDate || ""}
-                  onChange={(e) => {
-                    setFormData({ ...formData, joiningDate: e.target.value });
-                    setValidationErrors({ ...validationErrors, joiningDate: "" });
-                  }}
-                  required
-                  className={validationErrors.joiningDate ? "border-red-500" : ""}
-                />
-                {validationErrors.joiningDate && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.joiningDate}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="contactNumber" className="font-semibold">Contact Number *</Label>
-                <Input
-                  id="contactNumber"
-                  required
-                  value={formData.contactNumber}
-                  onChange={(e) => {
-                    setFormData({...formData, contactNumber: e.target.value});
-                    setValidationErrors({ ...validationErrors, contactNumber: "" });
-                  }}
-                  className={validationErrors.contactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                />
-                {validationErrors.contactNumber && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.contactNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="primaryContact" className="font-semibold">Primary Contact Name</Label>
-                <Input
-                  id="primaryContact"
-                  value={formData.primaryContact}
-                  onChange={(e) => setFormData({...formData, primaryContact: e.target.value})}
-                  className="border-2 border-blue-200"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="primaryContactNumber" className="font-semibold">Primary Contact Number</Label>
-                <Input
-                  id="primaryContactNumber"
-                  value={formData.primaryContactNumber}
-                  onChange={(e) => {
-                    setFormData({...formData, primaryContactNumber: e.target.value});
-                    setValidationErrors({ ...validationErrors, primaryContactNumber: "" });
-                  }}
-                  className={validationErrors.primaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                />
-                {validationErrors.primaryContactNumber && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.primaryContactNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="secondaryContact" className="font-semibold">Secondary Contact Name</Label>
-                <Input
-                  id="secondaryContact"
-                  value={formData.secondaryContact}
-                  onChange={(e) => setFormData({...formData, secondaryContact: e.target.value})}
-                  className="border-2 border-blue-200"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="secondaryContactNumber" className="font-semibold">Secondary Contact Number</Label>
-                <Input
-                  id="secondaryContactNumber"
-                  value={formData.secondaryContactNumber}
-                  onChange={(e) => {
-                    setFormData({...formData, secondaryContactNumber: e.target.value});
-                    setValidationErrors({ ...validationErrors, secondaryContactNumber: "" });
-                  }}
-                  className={validationErrors.secondaryContactNumber ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                />
-                {validationErrors.secondaryContactNumber && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.secondaryContactNumber}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="coachingCredits" className="font-semibold">Coaching Credits</Label>
-                <Input
-                  id="coachingCredits"
-                  type="number"
-                  min="0"
-                  value={formData.coachingCredits}
-                  onChange={(e) => {
-                    setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0});
-                    setValidationErrors({ ...validationErrors, coachingCredits: "" });
-                  }}
-                  className={validationErrors.coachingCredits ? "border-2 border-red-500" : "border-2 border-blue-200"}
-                />
-                {validationErrors.coachingCredits && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.coachingCredits}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="medicalNotes" className="font-semibold">Medical Notes</Label>
-              <Textarea
-                id="medicalNotes"
-                placeholder="Known allergies, pre-existing conditions..."
-                value={formData.medicalNotes}
-                onChange={(e) => setFormData({...formData, medicalNotes: e.target.value})}
-                className="border-2 border-blue-200 min-h-24"
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="border-2 border-blue-200"
               />
             </div>
+          </DialogContent>
+        </Dialog>
 
-            <div className="flex gap-3 justify-end">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsDialogOpen(false)}
-                className="border-2"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                className="bg-blue-700 hover:bg-blue-800 font-bold"
-              >
-                {editingMember ? "Update Member" : "Add Member"}
-              </Button>
+        <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
+          <DialogContent className="max-w-2xl bg-black/95 p-0 border-0 overflow-hidden">
+            <div className="relative flex items-center justify-center p-4">
+              <img
+                src={previewPhotoUrl}
+                alt="Member preview"
+                className="max-w-full max-h-[85vh] object-contain rounded-sm cursor-pointer"
+                onClick={() => setIsPhotoPreviewOpen(false)}
+              />
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-blue-700">Import Members from CSV</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-              <p className="text-sm text-blue-900 font-semibold mb-2">CSV Format:</p>
-              <p className="text-xs text-blue-700">
-                First Name, Last Name, Date of Birth, Nationality, Address, Email, Shirt Number, 
-                Category, Type, Role, Team, Joining Date, Contact Number, 
-                Primary Contact, Primary Contact Number, Secondary Contact, Secondary Contact Number, 
-                Medical Notes, Coaching Credits, Photo URL
-              </p>
-            </div>
-
-            <Input
-              type="file"
-              accept=".csv"
-              onChange={handleImportCSV}
-              className="border-2 border-blue-200"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
-        <DialogContent className="max-w-2xl bg-black/95 p-0 border-0 overflow-hidden">
-          <div className="relative flex items-center justify-center p-4">
-            <img
-              src={previewPhotoUrl}
-              alt="Member preview"
-              className="max-w-full max-h-[85vh] object-contain rounded-sm cursor-pointer"
-              onClick={() => setIsPhotoPreviewOpen(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
