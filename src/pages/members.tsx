@@ -93,6 +93,68 @@ export default function Members() {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const router = useRouter();
 
+  const resetForm = () => {
+    setFormData({
+      category: "Junior",
+      type: "Member",
+      role: "Player",
+      coachingCredits: 0,
+      teamAssignment: "",
+    });
+    setValidationErrors({});
+    setEditingMember(null);
+  };
+
+  const handleEdit = (member: Member) => {
+    setEditingMember(member);
+    setFormData({ ...member });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this member?")) {
+      const updated = members.filter((m) => m.id !== id);
+      setMembers(updated);
+      localStorage.setItem("members", JSON.stringify(updated));
+    }
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, photoUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Basic validation
+    if (!formData.firstName || !formData.lastName) return;
+
+    let updatedMembers;
+    if (editingMember) {
+      updatedMembers = members.map((m) =>
+        m.id === editingMember.id ? { ...m, ...formData } as Member : m
+      );
+    } else {
+      const newMember = {
+        ...formData,
+        id: crypto.randomUUID(),
+        joiningDate: formData.joiningDate || new Date().toISOString().split("T")[0],
+      } as Member;
+      updatedMembers = [...members, newMember];
+    }
+
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem("members");
     if (saved) {
@@ -1614,7 +1676,6 @@ export default function Members() {
               <Button 
                 onClick={() => {
                   resetForm();
-                  setEditingMember(null);
                   setIsDialogOpen(true);
                 }}
                 className="bg-blue-700 hover:bg-blue-800 h-12 px-6 font-bold"
@@ -1622,8 +1683,11 @@ export default function Members() {
                 <Plus className="w-5 h-5 mr-2" />
                 Add Member
               </Button>
-              <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="mr-2 h-4 w-4" /> Add Member
+              <Button 
+                onClick={handleLoadLegends}
+                className="bg-yellow-500 hover:bg-yellow-600 font-bold"
+              >
+                <Download className="mr-2 h-4 w-4" /> Load Legends Data
               </Button>
               <Button variant="outline" onClick={() => document.getElementById("csv-upload")?.click()}>
                 <Upload className="mr-2 h-4 w-4" /> Import CSV
@@ -1642,12 +1706,6 @@ export default function Members() {
               >
                 <Download className="w-5 h-5 mr-2" />
                 Export CSV
-              </Button>
-              <Button 
-                onClick={handleLoadLegends}
-                className="bg-yellow-500 hover:bg-yellow-600 font-bold"
-              >
-                <Download className="mr-2 h-4 w-4" /> Load Legends Data
               </Button>
             </div>
 
