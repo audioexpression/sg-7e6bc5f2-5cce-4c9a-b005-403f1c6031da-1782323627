@@ -131,6 +131,8 @@ export default function Coaching() {
       setMembers(allMembers);
     }
     if (savedSessions) setSessions(JSON.parse(savedSessions));
+    
+    console.log("📊 Initial data loaded");
   }, []);
 
   // Save data
