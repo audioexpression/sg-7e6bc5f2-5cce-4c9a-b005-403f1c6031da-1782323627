@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign } from "lucide-react";
 import { useRouter } from "next/router";
 
@@ -40,19 +41,45 @@ interface Member {
   teamAssignment?: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  category: "Junior" | "Youth" | "Adult";
+  monthlyFee: number;
+}
+
+interface MonthExemption {
+  month: string;
+  exempt: boolean;
+  reason?: "Injury" | "Not in Bali" | "Other";
+}
+
 interface Invoice {
   id: string;
   memberId: string;
   billingPeriod: string;
   dueDate: string;
+  baseAmount: number;
+  taxAmount: number;
   amount: number;
+  monthExemptions?: MonthExemption[];
   paymentLink?: string;
   status: "Draft" | "Sent" | "Paid" | "Overdue";
 }
 
+const QUARTER_MONTHS: Record<string, string[]> = {
+  "2026 Q1": ["January", "February", "March"],
+  "2026 Q2": ["April", "May", "June"],
+  "2026 Q3": ["July", "August", "September"],
+  "2026 Q4": ["October", "November", "December"],
+};
+
+const TAX_RATE = 0.10; // 10% government tax
+
 export default function Invoices() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
@@ -68,7 +95,10 @@ export default function Invoices() {
     memberId: "",
     billingPeriod: "",
     dueDate: "",
+    baseAmount: 0,
+    taxAmount: 0,
     amount: 0,
+    monthExemptions: [],
     paymentLink: "",
     status: "Draft",
   });
@@ -78,18 +108,45 @@ export default function Invoices() {
     teamName: "",
     billingPeriod: "",
     dueDate: "",
-    amount: 0,
   });
 
+  // Load invoices from localStorage
   useEffect(() => {
-    const storedMembers = localStorage.getItem("members");
-    if (storedMembers) {
-      setMembers(JSON.parse(storedMembers));
-    }
+    const saved = localStorage.getItem("invoices");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        
+        // Migrate old invoices to new format
+        const migrated = parsed.map((invoice: any) => {
+          if (!invoice.monthExemptions) {
+            // Old format - reverse calculate base from total (total = base × 1.1)
+            const totalAmount = invoice.amount || 0;
+            const baseAmount = totalAmount / 1.1; // Remove the 10% to get base
+            const taxAmount = totalAmount - baseAmount;
 
-    const storedInvoices = localStorage.getItem("invoices");
-    if (storedInvoices) {
-      setInvoices(JSON.parse(storedInvoices));
+            const months = QUARTER_MONTHS[invoice.billingPeriod] || [];
+
+            return {
+              ...invoice,
+              baseAmount: Math.round(baseAmount),
+              taxAmount: Math.round(taxAmount),
+              monthExemptions: months.map((month: string) => ({
+                  month,
+                  exempt: false,
+                  reason: undefined,
+                })
+              ),
+            };
+          }
+          return invoice;
+        });
+
+        setInvoices(migrated);
+        localStorage.setItem("invoices", JSON.stringify(migrated));
+      } catch (error) {
+        console.error("Failed to load invoices:", error);
+      }
     }
   }, []);
 
@@ -98,17 +155,121 @@ export default function Invoices() {
     localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
   };
 
+  const calculateInvoiceAmount = (monthlyFee: number, exemptions: MonthExemption[] = []) => {
+    const activeMonths = exemptions.filter(e => !e.exempt).length;
+    const baseAmount = monthlyFee * activeMonths;
+    const taxAmount = baseAmount * TAX_RATE;
+    const totalAmount = baseAmount + taxAmount;
+    
+    return {
+      baseAmount,
+      taxAmount,
+      amount: totalAmount,
+    };
+  };
+
+  const initializeMonthExemptions = (billingPeriod: string): MonthExemption[] => {
+    const months = QUARTER_MONTHS[billingPeriod] || [];
+    return months.map(month => ({
+      month,
+      exempt: false,
+      reason: undefined,
+    }));
+  };
+
   const resetForm = () => {
     setEditingId(null);
     setFormData({
       memberId: "",
       billingPeriod: "",
       dueDate: "",
+      baseAmount: 0,
+      taxAmount: 0,
       amount: 0,
+      monthExemptions: [],
       paymentLink: "",
       status: "Draft",
     });
     setFormErrors({});
+  };
+
+  const handleMemberChange = (memberId: string) => {
+    const member = members.find(m => m.id === memberId);
+    if (member && member.teamAssignment) {
+      const team = teams.find(t => t.name === member.teamAssignment);
+      if (team && formData.billingPeriod) {
+        const exemptions = initializeMonthExemptions(formData.billingPeriod);
+        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions);
+        setFormData({
+          ...formData,
+          memberId,
+          monthExemptions: exemptions,
+          ...amounts,
+        });
+      } else {
+        setFormData({ ...formData, memberId });
+      }
+    } else {
+      setFormData({ ...formData, memberId });
+    }
+  };
+
+  const handleBillingPeriodChange = (billingPeriod: string) => {
+    const member = members.find(m => m.id === formData.memberId);
+    if (member && member.teamAssignment) {
+      const team = teams.find(t => t.name === member.teamAssignment);
+      if (team) {
+        const exemptions = initializeMonthExemptions(billingPeriod);
+        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions);
+        setFormData({
+          ...formData,
+          billingPeriod,
+          monthExemptions: exemptions,
+          ...amounts,
+        });
+      } else {
+        setFormData({ ...formData, billingPeriod });
+      }
+    } else {
+      setFormData({ ...formData, billingPeriod });
+    }
+  };
+
+  const handleExemptionChange = (index: number, exempt: boolean) => {
+    const member = members.find(m => m.id === formData.memberId);
+    if (!member || !member.teamAssignment || !formData.monthExemptions) return;
+
+    const team = teams.find(t => t.name === member.teamAssignment);
+    if (!team) return;
+
+    const updatedExemptions = [...formData.monthExemptions];
+    updatedExemptions[index] = {
+      ...updatedExemptions[index],
+      exempt,
+      reason: exempt ? updatedExemptions[index].reason || "Injury" : undefined,
+    };
+
+    const amounts = calculateInvoiceAmount(team.monthlyFee, updatedExemptions);
+    setFormData({
+      ...formData,
+      monthExemptions: updatedExemptions,
+      ...amounts,
+    });
+  };
+
+  const handleReasonChange = (index: number, reason: "Injury" | "Not in Bali" | "Other") => {
+    if (!formData.monthExemptions) return;
+
+    const updatedExemptions = [...formData.monthExemptions];
+    updatedExemptions[index] = {
+      ...updatedExemptions[index],
+      reason,
+    };
+
+    setFormData({
+      ...formData,
+      monthExemptions: updatedExemptions,
+    });
   };
 
   const handleEdit = (invoice: Invoice) => {
@@ -117,7 +278,10 @@ export default function Invoices() {
       memberId: invoice.memberId,
       billingPeriod: invoice.billingPeriod,
       dueDate: invoice.dueDate,
+      baseAmount: invoice.baseAmount,
+      taxAmount: invoice.taxAmount,
       amount: invoice.amount,
+      monthExemptions: invoice.monthExemptions || initializeMonthExemptions(invoice.billingPeriod),
       paymentLink: invoice.paymentLink || "",
       status: invoice.status,
     });
@@ -135,36 +299,29 @@ export default function Invoices() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Reset errors
     setFormErrors({});
     const errors: Record<string, string> = {};
 
-    // Validate member selection
     if (!formData.memberId) {
       errors.memberId = "Please select a member";
     }
 
-    // Validate billing period
     if (!formData.billingPeriod) {
       errors.billingPeriod = "Please select a billing period";
     }
 
-    // Validate due date
     if (!formData.dueDate) {
       errors.dueDate = "Due date is required";
     }
 
-    // Validate amount
     if (!formData.amount || formData.amount <= 0) {
       errors.amount = "Amount must be greater than 0";
     }
 
-    // Validate payment link format if provided
     if (formData.paymentLink && !formData.paymentLink.match(/^https?:\/\/.+/)) {
       errors.paymentLink = "Payment link must be a valid URL (starting with http:// or https://)";
     }
 
-    // If there are errors, show them and stop submission
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -183,7 +340,10 @@ export default function Invoices() {
         memberId: formData.memberId!,
         billingPeriod: formData.billingPeriod!,
         dueDate: formData.dueDate!,
+        baseAmount: formData.baseAmount!,
+        taxAmount: formData.taxAmount!,
         amount: formData.amount!,
+        monthExemptions: formData.monthExemptions || [],
         paymentLink: formData.paymentLink || "",
         status: formData.status || "Draft",
       };
@@ -195,7 +355,6 @@ export default function Invoices() {
   };
 
   const handleBulkGenerate = () => {
-    // Reset errors
     setFormErrors({});
     const errors: Record<string, string> = {};
 
@@ -208,12 +367,15 @@ export default function Invoices() {
     if (!bulkFormData.dueDate) {
       errors.dueDate = "Due date is required";
     }
-    if (!bulkFormData.amount || bulkFormData.amount <= 0) {
-      errors.amount = "Amount must be greater than 0";
-    }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      return;
+    }
+
+    const team = teams.find(t => t.name === bulkFormData.teamName);
+    if (!team) {
+      setFormErrors({ teamName: "Team not found in settings" });
       return;
     }
 
@@ -224,12 +386,18 @@ export default function Invoices() {
       return;
     }
 
+    const exemptions = initializeMonthExemptions(bulkFormData.billingPeriod);
+    const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions);
+
     const newInvoices = teamMembers.map((member) => ({
       id: Date.now().toString() + Math.random(),
       memberId: member.id,
       billingPeriod: bulkFormData.billingPeriod,
       dueDate: bulkFormData.dueDate,
-      amount: bulkFormData.amount,
+      baseAmount: amounts.baseAmount,
+      taxAmount: amounts.taxAmount,
+      amount: amounts.amount,
+      monthExemptions: exemptions,
       paymentLink: "",
       status: "Draft" as const,
     }));
@@ -240,11 +408,9 @@ export default function Invoices() {
       teamName: "",
       billingPeriod: "",
       dueDate: "",
-      amount: 0,
     });
   };
 
-  // Filter invoices
   const filteredInvoices = invoices.filter((invoice) => {
     const member = members.find((m) => m.id === invoice.memberId);
     const memberName = member ? `${member.firstName} ${member.lastName}`.toLowerCase() : "";
@@ -255,7 +421,6 @@ export default function Invoices() {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate summary stats - only for "Member" type
   const totalRevenue = invoices
     .filter((inv) => {
       const member = members.find((m) => m.id === inv.memberId);
@@ -284,6 +449,19 @@ export default function Invoices() {
     };
     const config = variants[status] || variants.Draft;
     return <Badge variant={config.variant} className={config.className}>{status}</Badge>;
+  };
+
+  // Calculate invoice amounts based on team monthly fee and active months
+  const calculateInvoiceAmounts = (
+    monthlyFee: number,
+    monthExemptions: MonthExemption[]
+  ) => {
+    const activeMonths = monthExemptions.filter((m) => !m.exempt).length;
+    const baseAmount = monthlyFee * activeMonths;
+    const taxAmount = baseAmount * 0.1; // 10% government tax ADDED ON TOP
+    const totalAmount = baseAmount + taxAmount;
+
+    return { baseAmount, taxAmount, totalAmount };
   };
 
   return (
@@ -434,7 +612,9 @@ export default function Invoices() {
                         <TableHead>Team</TableHead>
                         <TableHead>Period</TableHead>
                         <TableHead>Due Date</TableHead>
-                        <TableHead>Amount</TableHead>
+                        <TableHead>Base</TableHead>
+                        <TableHead>Tax (10%)</TableHead>
+                        <TableHead>Total</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -442,16 +622,34 @@ export default function Invoices() {
                     <TableBody>
                       {filteredInvoices.map((invoice) => {
                         const member = members.find((m) => m.id === invoice.memberId);
+                        const activeMonths = invoice.monthExemptions?.filter(e => !e.exempt).length || 3;
                         return (
                           <TableRow key={invoice.id}>
                             <TableCell className="font-medium">
                               {member ? `${member.firstName} ${member.lastName}` : "Unknown"}
                             </TableCell>
                             <TableCell>{member?.teamAssignment || "—"}</TableCell>
-                            <TableCell>{invoice.billingPeriod}</TableCell>
+                            <TableCell>
+                              {invoice.billingPeriod}
+                              {activeMonths < 3 && (
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  {activeMonths} month{activeMonths !== 1 ? "s" : ""}
+                                </Badge>
+                              )}
+                            </TableCell>
                             <TableCell>{new Date(invoice.dueDate).toLocaleDateString("id-ID")}</TableCell>
+                            <TableCell className="text-sm">
+                              Rp {invoice.baseAmount.toLocaleString("id-ID")}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              Rp {invoice.taxAmount.toLocaleString("id-ID")}
+                            </TableCell>
                             <TableCell className="font-semibold">
-                              Rp {invoice.amount.toLocaleString("id-ID")}
+                              {new Intl.NumberFormat("id-ID", {
+                                style: "currency",
+                                currency: "IDR",
+                                minimumFractionDigits: 0
+                              }).format(invoice.amount || (invoice.baseAmount || 0) + (invoice.taxAmount || 0))}
                             </TableCell>
                             <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                             <TableCell className="text-right">
@@ -488,95 +686,154 @@ export default function Invoices() {
 
       {/* Add/Edit Invoice Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Invoice" : "Add New Invoice"}</DialogTitle>
             <DialogDescription>
-              {editingId ? "Update invoice details" : "Create a new invoice for a member"}
+              {editingId ? "Update invoice details" : "Create a quarterly invoice for a member"}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Member *</Label>
-              <Select
-                value={formData.memberId}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, memberId: value });
-                  if (formErrors.memberId) {
-                    setFormErrors({ ...formErrors, memberId: "" });
-                  }
-                }}
-              >
-                <SelectTrigger className={formErrors.memberId ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.firstName} {member.lastName}
-                    </SelectItem>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Member *</Label>
+                <Select
+                  value={formData.memberId}
+                  onValueChange={handleMemberChange}
+                >
+                  <SelectTrigger className={formErrors.memberId ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.firstName} {member.lastName} {member.teamAssignment && `(${member.teamAssignment})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formErrors.memberId && <p className="text-red-500 text-sm mt-1">{formErrors.memberId}</p>}
+              </div>
+
+              <div>
+                <Label>Billing Period *</Label>
+                <Select
+                  value={formData.billingPeriod}
+                  onValueChange={handleBillingPeriodChange}
+                >
+                  <SelectTrigger className={formErrors.billingPeriod ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2026 Q1">2026 Q1 (Jan-Mar)</SelectItem>
+                    <SelectItem value="2026 Q2">2026 Q2 (Apr-Jun)</SelectItem>
+                    <SelectItem value="2026 Q3">2026 Q3 (Jul-Sep)</SelectItem>
+                    <SelectItem value="2026 Q4">2026 Q4 (Oct-Dec)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
+              </div>
+            </div>
+
+            {/* Month Exemptions */}
+            {formData.monthExemptions && formData.monthExemptions.length > 0 && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <Label className="text-base font-semibold mb-3 block">Monthly Billing</Label>
+                <p className="text-sm text-gray-600 mb-3">Uncheck months that should not be charged (e.g., injury, away from Bali)</p>
+                <div className="space-y-3">
+                  {formData.monthExemptions.map((exemption, index) => (
+                    <div key={exemption.month} className="flex items-center gap-4 bg-white p-3 rounded">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Checkbox
+                          id={`month-${index}`}
+                          checked={!exemption.exempt}
+                          onCheckedChange={(checked) => handleExemptionChange(index, !checked)}
+                        />
+                        <Label htmlFor={`month-${index}`} className="font-medium cursor-pointer">
+                          {exemption.month}
+                        </Label>
+                      </div>
+                      {exemption.exempt && (
+                        <Select
+                          value={exemption.reason}
+                          onValueChange={(value) => handleReasonChange(index, value as "Injury" | "Not in Bali" | "Other")}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select reason" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Injury">Injury</SelectItem>
+                            <SelectItem value="Not in Bali">Not in Bali</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-              {formErrors.memberId && <p className="text-red-500 text-sm mt-1">{formErrors.memberId}</p>}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Due Date *</Label>
+                <Input
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => {
+                    setFormData({ ...formData, dueDate: e.target.value });
+                    if (formErrors.dueDate) {
+                      setFormErrors({ ...formErrors, dueDate: "" });
+                    }
+                  }}
+                  className={formErrors.dueDate ? "border-red-500" : ""}
+                />
+                {formErrors.dueDate && <p className="text-red-500 text-sm mt-1">{formErrors.dueDate}</p>}
+              </div>
+
+              <div>
+                <Label>Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value as Invoice["status"] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                    <SelectItem value="Sent">Sent</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Overdue">Overdue</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div>
-              <Label>Billing Period *</Label>
-              <Select
-                value={formData.billingPeriod}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, billingPeriod: value });
-                  if (formErrors.billingPeriod) {
-                    setFormErrors({ ...formErrors, billingPeriod: "" });
-                  }
-                }}
-              >
-                <SelectTrigger className={formErrors.billingPeriod ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2026 Q1">2026 Q1</SelectItem>
-                  <SelectItem value="2026 Q2">2026 Q2</SelectItem>
-                  <SelectItem value="2026 Q3">2026 Q3</SelectItem>
-                  <SelectItem value="2026 Q4">2026 Q4</SelectItem>
-                  <SelectItem value="Annual">Annual</SelectItem>
-                </SelectContent>
-              </Select>
-              {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
-            </div>
-
-            <div>
-              <Label>Due Date *</Label>
-              <Input
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => {
-                  setFormData({ ...formData, dueDate: e.target.value });
-                  if (formErrors.dueDate) {
-                    setFormErrors({ ...formErrors, dueDate: "" });
-                  }
-                }}
-                className={formErrors.dueDate ? "border-red-500" : ""}
-              />
-              {formErrors.dueDate && <p className="text-red-500 text-sm mt-1">{formErrors.dueDate}</p>}
-            </div>
-
-            <div>
-              <Label>Amount (Rp) *</Label>
-              <Input
-                type="number"
-                value={formData.amount}
-                onChange={(e) => {
-                  setFormData({ ...formData, amount: Number(e.target.value) });
-                  if (formErrors.amount) {
-                    setFormErrors({ ...formErrors, amount: "" });
-                  }
-                }}
-                className={formErrors.amount ? "border-red-500" : ""}
-              />
-              {formErrors.amount && <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>}
-            </div>
+            {/* Amount Breakdown */}
+            {formData.amount > 0 && (
+              <div className="space-y-2">
+                <Label>Invoice Breakdown</Label>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Base Amount ({formData.monthExemptions?.filter(m => !m.exempt).length || 0} months):</span>
+                    <span className="font-medium">
+                      Rp {(formData.baseAmount || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Government Tax (10%):</span>
+                    <span>Rp {(formData.taxAmount || 0).toLocaleString("id-ID")}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Total Amount</span>
+                    <span className="text-blue-600">
+                      Rp {((formData.baseAmount || 0) + (formData.taxAmount || 0)).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <Label>Payment Link</Label>
@@ -593,24 +850,6 @@ export default function Invoices() {
                 className={formErrors.paymentLink ? "border-red-500" : ""}
               />
               {formErrors.paymentLink && <p className="text-red-500 text-sm mt-1">{formErrors.paymentLink}</p>}
-            </div>
-
-            <div>
-              <Label>Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => setFormData({ ...formData, status: value as Invoice["status"] })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Draft">Draft</SelectItem>
-                  <SelectItem value="Sent">Sent</SelectItem>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                  <SelectItem value="Overdue">Overdue</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <DialogFooter>
@@ -631,7 +870,7 @@ export default function Invoices() {
           <DialogHeader>
             <DialogTitle>Generate Team Invoices</DialogTitle>
             <DialogDescription>
-              Create quarterly invoices for all paying members of a team (excludes Sponsored & Scholarship members)
+              Create quarterly invoices for all paying members of a team. Invoices will use the team's monthly fee × 3 months + 10% tax.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -650,9 +889,9 @@ export default function Invoices() {
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from(new Set(members.map((m) => m.teamAssignment))).filter(Boolean).map((team) => (
-                    <SelectItem key={team} value={team!}>
-                      {team}
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.name}>
+                      {team.name} (Rp {team.monthlyFee.toLocaleString("id-ID")}/month)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -675,11 +914,10 @@ export default function Invoices() {
                   <SelectValue placeholder="Select period" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2026 Q1">2026 Q1</SelectItem>
-                  <SelectItem value="2026 Q2">2026 Q2</SelectItem>
-                  <SelectItem value="2026 Q3">2026 Q3</SelectItem>
-                  <SelectItem value="2026 Q4">2026 Q4</SelectItem>
-                  <SelectItem value="Annual">Annual</SelectItem>
+                  <SelectItem value="2026 Q1">2026 Q1 (Jan-Mar)</SelectItem>
+                  <SelectItem value="2026 Q2">2026 Q2 (Apr-Jun)</SelectItem>
+                  <SelectItem value="2026 Q3">2026 Q3 (Jul-Sep)</SelectItem>
+                  <SelectItem value="2026 Q4">2026 Q4 (Oct-Dec)</SelectItem>
                 </SelectContent>
               </Select>
               {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
@@ -701,30 +939,34 @@ export default function Invoices() {
               {formErrors.dueDate && <p className="text-red-500 text-sm mt-1">{formErrors.dueDate}</p>}
             </div>
 
-            <div>
-              <Label>Amount per Member (Rp) *</Label>
-              <Input
-                type="number"
-                value={bulkFormData.amount}
-                onChange={(e) => {
-                  setBulkFormData({ ...bulkFormData, amount: Number(e.target.value) });
-                  if (formErrors.amount) {
-                    setFormErrors({ ...formErrors, amount: "" });
-                  }
-                }}
-                className={formErrors.amount ? "border-red-500" : ""}
-              />
-              {formErrors.amount && <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>}
-            </div>
-
             {bulkFormData.teamName && (
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-50 p-4 rounded-lg space-y-2">
                 <p className="text-sm text-blue-900">
                   <strong>
                     {members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member").length}
                   </strong>{" "}
                   paying member{members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member").length !== 1 ? "s" : ""} in {bulkFormData.teamName}
                 </p>
+                {teams.find(t => t.name === bulkFormData.teamName) && (
+                  <div className="text-sm text-blue-900 border-t border-blue-200 pt-2">
+                    <div className="flex justify-between">
+                      <span>Monthly Fee:</span>
+                      <span className="font-medium">Rp {teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee.toLocaleString("id-ID")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Quarterly (3 months):</span>
+                      <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3).toLocaleString("id-ID")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tax (10%):</span>
+                      <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3 * 0.10).toLocaleString("id-ID")}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-blue-300 pt-1 mt-1">
+                      <span className="font-bold">Total per member:</span>
+                      <span className="font-bold">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3 * 1.10).toLocaleString("id-ID")}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
