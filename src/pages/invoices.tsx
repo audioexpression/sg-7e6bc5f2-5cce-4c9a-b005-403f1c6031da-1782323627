@@ -150,6 +150,32 @@ export default function Invoices() {
     }
   }, []);
 
+  // Load teams from localStorage
+  useEffect(() => {
+    const savedTeams = localStorage.getItem("teams");
+    if (savedTeams) {
+      try {
+        const parsed = JSON.parse(savedTeams);
+        setTeams(parsed);
+      } catch (error) {
+        console.error("Failed to load teams:", error);
+      }
+    }
+  }, []);
+
+  // Load members from localStorage
+  useEffect(() => {
+    const savedMembers = localStorage.getItem("members");
+    if (savedMembers) {
+      try {
+        const parsed = JSON.parse(savedMembers);
+        setMembers(parsed);
+      } catch (error) {
+        console.error("Failed to load members:", error);
+      }
+    }
+  }, []);
+
   const saveInvoices = (updatedInvoices: Invoice[]) => {
     setInvoices(updatedInvoices);
     localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
