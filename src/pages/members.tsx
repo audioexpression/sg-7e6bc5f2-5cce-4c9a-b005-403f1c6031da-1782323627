@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User } from "lucide-react";
+import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone } from "lucide-react";
 import Link from "next/link";
 import { ImageModal } from "@/components/ImageModal";
 import { useRouter } from "next/router";
@@ -27,18 +29,19 @@ interface Member {
   id: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
-  nationality: string;
-  address: string;
-  email: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  address?: string;
+  email?: string;
   shirtNumber: string;
   category: "Junior" | "Youth" | "Adult";
   type: "Member" | "Sponsored" | "Scholarship";
   role: string;
   teamAssignment: string;
   joiningDate: string;
-  contactNumber: string;
-  whatsappLink: string;
+  contactNumber?: string;
+  profileImage?: string;
+  whatsappLink?: string;
   primaryContact: string;
   primaryContactNumber: string;
   secondaryContact: string;
@@ -245,6 +248,13 @@ export default function MembersPage() {
     setBulkMembershipCategory("");
   };
 
+  const handleDeleteMembers = () => {
+    const updated = members.filter(m => !selectedMembers.includes(m.id));
+    setMembers(updated);
+    localStorage.setItem("members", JSON.stringify(updated));
+    setSelectedMembers([]);
+  };
+
   const filteredAndSortedMembers = members.filter((member) => {
     const matchesSearch = searchTerm === "" || member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.email?.toLowerCase().includes(searchTerm.toLowerCase()) || member.contactNumber?.includes(searchTerm);
     const matchesCategory = filterCategory === "all" || member.category === filterCategory;
@@ -383,7 +393,7 @@ export default function MembersPage() {
                     </TableRow>
                   ) : (
                     currentMembers.map((member) => (
-                      <TableRow key={member.id}>
+                      <TableRow key={member.id} className="hover:bg-muted/50">
                         <TableCell>
                           <input
                             type="checkbox"
@@ -393,29 +403,32 @@ export default function MembersPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                              {member.photoUrl ? (
-                                <img 
-                                  src={member.photoUrl} 
-                                  alt={`${member.firstName} ${member.lastName}`} 
-                                  className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => setSelectedImage({ 
-                                    url: member.photoUrl!, 
-                                    name: `${member.firstName} ${member.lastName}` 
-                                  })}
-                                />
-                              ) : (
-                                <Users className="w-6 h-6 text-blue-600" />
-                              )}
-                            </div>
-                          </div>
+                          <Avatar>
+                            <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
+                            <AvatarFallback>
+                              {member.firstName[0]}{member.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
                         </TableCell>
                         <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                         <TableCell>{member.teamAssignment || "-"}</TableCell>
                         <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
                         <TableCell>{member.role}</TableCell>
-                        <TableCell className="text-sm">{member.contactNumber}</TableCell>
+                        <TableCell>
+                          {member.contactNumber ? (
+                            <a
+                              href={`https://wa.me/${member.contactNumber.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-green-600 hover:text-green-700 hover:underline"
+                            >
+                              <Phone className="h-4 w-4" />
+                              {member.contactNumber}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="ghost" onClick={() => handleEdit(member)} className="h-8 w-8 p-0"><Pencil className="w-4 h-4" /></Button>
@@ -520,8 +533,55 @@ export default function MembersPage() {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>{editingMember ? "Edit Member" : "Add Member"}</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <DialogHeader>
+              <DialogTitle>{editingMember ? "Edit Member" : "Add New Member"}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid gap-6 py-4">
+              {/* Photo Upload Section */}
+              <div className="space-y-2">
+                <Label>Profile Photo</Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={formData.profileImage} alt="Profile" />
+                      <AvatarFallback className="text-2xl">
+                        {formData.firstName?.[0]}{formData.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {formData.profileImage && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, profileImage: "" })}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData({ ...formData, profileImage: reader.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upload a profile photo (JPG, PNG, GIF)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Information */}
               <div className="space-y-2">
                 <Label>First Name *</Label>
                 <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
@@ -567,11 +627,12 @@ export default function MembersPage() {
                 <Label>Date of Birth</Label>
                 <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
               </div>
-              <div className="col-span-2 flex justify-end gap-2 mt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-blue-600">Save Member</Button>
-              </div>
-            </form>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button onClick={(e) => handleSubmit(e)}>Save Member</Button>
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 

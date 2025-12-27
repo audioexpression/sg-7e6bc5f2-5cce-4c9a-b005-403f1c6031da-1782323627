@@ -301,14 +301,9 @@ export default function Coaching() {
 
   // Delete coach
   const handleDeleteCoach = (id: string) => {
-    const hasBookings = sessions.some((s) => s.coachId === id);
-    if (hasBookings) {
-      setFormErrors({ coachId: "Cannot delete coach with existing bookings" });
-      return;
-    }
-    if (confirm("Are you sure you want to delete this coach?")) {
-      setCoaches(coaches.filter((c) => c.id !== id));
-    }
+    const updated = coaches.filter(c => c.id !== id);
+    setCoaches(updated);
+    localStorage.setItem("coaches", JSON.stringify(updated));
   };
 
   // Calendar helpers
@@ -742,8 +737,8 @@ export default function Coaching() {
                 Add a coach to your team. Pricing is automatically set based on tier.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
                 <Label htmlFor="coachName">Name *</Label>
                 <Input
                   id="coachName"
@@ -773,7 +768,7 @@ export default function Coaching() {
               </div>
               <div>
                 <Label htmlFor="coachTier">Tier</Label>
-                <Select value={coachTier} onValueChange={(value: Coach["tier"]) => setCoachTier(value)}>
+                <Select value={coachTier} onValueChange={(value: any) => setCoachTier(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
