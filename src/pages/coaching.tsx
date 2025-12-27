@@ -44,7 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 // Types
-import { Coach, TIER_RATES } from "@/types/coach-types";
+import { Coach, TIER_RATES } from "@/lib/coach-types";
 
 interface Member {
   id: string;

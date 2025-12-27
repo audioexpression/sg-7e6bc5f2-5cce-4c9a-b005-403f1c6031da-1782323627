@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,12 +50,12 @@ interface AdminStaff {
   email: string;
 }
 
-const COACH_RATES = {
-  "Head Coach": 750000,
-  "Goalkeeper Coach": 600000,
-  "Senior Coach": 500000,
-  "Assistant Coach": 400000,
-};
+interface Billing {
+  id: string;
+  amount: number;
+  dueDate: string;
+  status: "pending" | "paid" | "overdue";
+}
 
 const DEFAULT_TEAMS: Team[] = [
   // Junior Teams
@@ -262,29 +262,27 @@ export default function Settings() {
     setFormErrors({});
     const errors: Record<string, string> = {};
 
-    if (!coachName.trim()) errors.name = "Coach name is required";
-    if (!coachPhone.trim()) errors.phone = "Phone number is required";
+    if (!newCoach.name.trim()) errors.name = "Coach name is required";
+    if (!newCoach.phone.trim()) errors.phone = "Phone number is required";
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
 
-    const newCoach: Coach = {
+    const coach: Coach = {
       id: Date.now().toString(),
-      name: coachName,
-      phone: coachPhone,
-      tier: coachTier,
-      hourlyRate: getTierRate(coachTier),
+      name: newCoach.name,
+      phone: newCoach.phone,
+      tier: newCoach.tier,
+      hourlyRate: COACH_RATES[newCoach.tier],
     };
 
-    const updatedCoaches = [...coaches, newCoach];
+    const updatedCoaches = [...coaches, coach];
     setCoaches(updatedCoaches);
     localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
     setIsAddCoachOpen(false);
-    setCoachName("");
-    setCoachPhone("");
-    setCoachTier("Assistant Coach");
+    setNewCoach({ name: "", phone: "", tier: "Assistant Coach" });
     setFormErrors({});
     showSuccess("Coach added successfully!");
   };
@@ -295,8 +293,8 @@ export default function Settings() {
     setFormErrors({});
     const errors: Record<string, string> = {};
 
-    if (!coachName.trim()) errors.name = "Coach name is required";
-    if (!coachPhone.trim()) errors.phone = "Phone number is required";
+    if (!editingCoach.name.trim()) errors.name = "Coach name is required";
+    if (!editingCoach.phone.trim()) errors.phone = "Phone number is required";
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -307,10 +305,10 @@ export default function Settings() {
       c.id === editingCoach.id
         ? {
             ...c,
-            name: coachName,
-            phone: coachPhone,
-            tier: coachTier,
-            hourlyRate: getTierRate(coachTier),
+            name: editingCoach.name,
+            phone: editingCoach.phone,
+            tier: editingCoach.tier,
+            hourlyRate: COACH_RATES[editingCoach.tier],
           }
         : c
     );
@@ -319,9 +317,7 @@ export default function Settings() {
     localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
     setIsAddCoachOpen(false);
     setEditingCoach(null);
-    setCoachName("");
-    setCoachPhone("");
-    setCoachTier("Assistant Coach");
+    setNewCoach({ name: "", phone: "", tier: "Assistant Coach" });
     setFormErrors({});
     showSuccess("Coach updated successfully!");
   };
@@ -874,7 +870,7 @@ export default function Settings() {
                                 onValueChange={(value) => setEditingCoach({ 
                                   ...editingCoach, 
                                   tier: value as Coach["tier"],
-                                  rate: COACH_RATES[value as Coach["tier"]]
+                                  hourlyRate: COACH_RATES[value as Coach["tier"]]
                                 })}
                               >
                                 <SelectTrigger>
@@ -891,11 +887,11 @@ export default function Settings() {
                               <Badge className={getTierColor(coach.tier)}>{coach.tier}</Badge>
                             )}
                           </TableCell>
-                          <TableCell>{formatCurrency(coach.rate)}</TableCell>
+                          <TableCell>{formatCurrency(coach.hourlyRate)}</TableCell>
                           <TableCell className="text-right">
                             {editingCoach?.id === coach.id ? (
                               <div className="flex justify-end gap-2">
-                                <Button size="sm" onClick={handleUpdateCoach} className="bg-green-600 hover:bg-green-700">
+                                <Button size="sm" onClick={handleEditCoach} className="bg-green-600 hover:bg-green-700">
                                   <Save className="h-4 w-4" />
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => setEditingCoach(null)}>
