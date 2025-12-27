@@ -44,7 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 // Types
-import { Coach, TIER_RATES } from "@/lib/coach-types";
+import { Coach, TIER_RATES, loadCoaches, saveCoaches } from "@/lib/coach-types";
 
 interface Member {
   id: string;
@@ -104,15 +104,14 @@ export default function Coaching() {
 
   // Load data
   useEffect(() => {
-    const savedCoaches = localStorage.getItem("coaches");
+    // Load coaches using shared helper
+    const loadedCoaches = loadCoaches();
+    console.log("Loading coaches from localStorage:", loadedCoaches);
+    setCoaches(loadedCoaches);
+    
     const savedMembers = localStorage.getItem("members");
     const savedSessions = localStorage.getItem("sessions");
 
-    if (savedCoaches) {
-      const parsedCoaches = JSON.parse(savedCoaches);
-      console.log("Loading coaches from localStorage:", parsedCoaches);
-      setCoaches(parsedCoaches);
-    }
     if (savedMembers) {
       const allMembers = JSON.parse(savedMembers);
       setMembers(allMembers);
@@ -126,11 +125,6 @@ export default function Coaching() {
   useEffect(() => {
     localStorage.setItem("sessions", JSON.stringify(sessions));
   }, [sessions]);
-
-  // Save coaches to localStorage
-  useEffect(() => {
-    localStorage.setItem("coaches", JSON.stringify(coaches));
-  }, [coaches]);
 
   // Add coach
   const handleAddCoach = () => {
@@ -168,8 +162,8 @@ export default function Coaching() {
     setCoaches(updatedCoaches);
     console.log("🔵 State updated with setCoaches");
     
-    // Save to localStorage IMMEDIATELY with the same array
-    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+    // Save to localStorage using shared helper
+    saveCoaches(updatedCoaches);
     console.log("🔵 localStorage written:", localStorage.getItem("coaches"));
 
     // Close dialog and reset form
@@ -317,7 +311,7 @@ export default function Coaching() {
   const handleDeleteCoach = (id: string) => {
     const updated = coaches.filter(c => c.id !== id);
     setCoaches(updated);
-    localStorage.setItem("coaches", JSON.stringify(updated));
+    saveCoaches(updated);
   };
 
   // Calendar helpers
