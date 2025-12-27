@@ -153,26 +153,6 @@ export default function Dashboard() {
         description="Club management dashboard for Bali Bulldogs Football Club"
       />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
-        {/* Hero Section with Logo */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold mb-2">Bali Bulldogs</h1>
-                <p className="text-xl text-blue-100">Club Manager Dashboard</p>
-                <p className="text-blue-200 mt-2">Centralized member, team & financial management</p>
-              </div>
-              <div className="hidden md:block">
-                <img 
-                  src="/uploads/image_593fedce-c53e-4167-a6fc-886836fbbf61.png" 
-                  alt="Bali Bulldogs FC" 
-                  className="w-32 h-32 object-contain"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
