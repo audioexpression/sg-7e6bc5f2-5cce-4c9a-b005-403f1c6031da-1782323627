@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone } from "lucide-react";
+import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { ImageModal } from "@/components/ImageModal";
 import { useRouter } from "next/router";
@@ -92,6 +92,13 @@ export default function MembersPage() {
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
+  // Import state
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importData, setImportData] = useState<Partial<Member>[]>([]);
+  const [duplicates, setDuplicates] = useState<Array<{ imported: Partial<Member>; existing: Member; index: number }>>([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicateResolution, setDuplicateResolution] = useState<"skip" | "overwrite" | "create">("skip");
+
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
     if (savedMembers) {
@@ -99,7 +106,6 @@ export default function MembersPage() {
     }
   }, []);
 
-  // Handle opening edit dialog from URL query param
   useEffect(() => {
     const { memberId } = router.query;
     if (memberId && typeof memberId === "string") {
@@ -107,7 +113,6 @@ export default function MembersPage() {
       if (member) {
         setEditingMember(member);
         setIsDialogOpen(true);
-        // Clear the query param after opening
         router.replace("/members", undefined, { shallow: true });
       }
     }
@@ -129,7 +134,6 @@ export default function MembersPage() {
     setEditingMember(member);
     setFormData({ 
       ...member,
-      // Ensure profileImage is explicitly included
       profileImage: member.profileImage || ""
     });
     setIsDialogOpen(true);
@@ -164,7 +168,6 @@ export default function MembersPage() {
         m.id === editingMember.id ? { 
           ...m, 
           ...formData,
-          // Preserve profileImage if not being updated
           profileImage: formData.profileImage || m.profileImage
         } as Member : m
       );
@@ -192,29 +195,231 @@ export default function MembersPage() {
     setCurrentPage(1);
   };
 
-  const handleLoadLegends = () => {
-    if (!confirm("This will add 27 Legends players to your database. Continue?")) return;
-    
-    const legendsMembers: Member[] = [
-      { id: crypto.randomUUID(), firstName: "Pradana", lastName: "Ardhabanu", dateOfBirth: "1985-01-01", nationality: "Indonesia", address: "", email: "", shirtNumber: "1", category: "Adult", type: "Member", role: "Player", teamAssignment: "Legends 35+", joiningDate: "2024-01-01", contactNumber: "628777", whatsappLink: "https://wa.me/628777", primaryContact: "", primaryContactNumber: "", secondaryContact: "", secondaryContactNumber: "", medicalNotes: "", coachingCredits: 0, photoUrl: "" },
-      { id: crypto.randomUUID(), firstName: "Markez", lastName: "Laws", dateOfBirth: "1985-01-01", nationality: "Bermuda", address: "", email: "", shirtNumber: "2", category: "Adult", type: "Member", role: "Player", teamAssignment: "Legends 35+", joiningDate: "2024-01-01", contactNumber: "144159", whatsappLink: "https://wa.me/144159", primaryContact: "", primaryContactNumber: "", secondaryContact: "", secondaryContactNumber: "", medicalNotes: "", coachingCredits: 0, photoUrl: "" }
-    ];
-    
-    const updated = [...members, ...legendsMembers];
-    setMembers(updated);
-    localStorage.setItem("members", JSON.stringify(updated));
-    alert("Legends players added!");
+  const parseCSV = (text: string): Partial<Member>[] => {
+    const lines = text.split("\n").filter(line => line.trim());
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    const data: Partial<Member>[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(",").map(v => v.trim());
+      const member: Partial<Member> = {
+        category: "Junior",
+        type: "Member",
+        role: "Player",
+        coachingCredits: 0,
+        teamAssignment: "",
+        joiningDate: new Date().toISOString().split("T")[0],
+      };
+
+      headers.forEach((header, index) => {
+        const value = values[index];
+        if (!value) return;
+
+        if (header.includes("first") || header === "firstname") member.firstName = value;
+        else if (header.includes("last") || header === "lastname" || header === "surname") member.lastName = value;
+        else if (header.includes("email")) member.email = value;
+        else if (header.includes("phone") || header.includes("contact")) member.contactNumber = value;
+        else if (header.includes("shirt") || header.includes("number")) member.shirtNumber = value;
+        else if (header.includes("team")) member.teamAssignment = value;
+        else if (header.includes("category")) member.category = value as any;
+        else if (header.includes("role")) member.role = value;
+        else if (header.includes("dob") || header.includes("birth")) member.dateOfBirth = value;
+        else if (header.includes("nationality")) member.nationality = value;
+        else if (header.includes("address")) member.address = value;
+      });
+
+      if (member.firstName && member.lastName) {
+        data.push(member);
+      }
+    }
+
+    return data;
   };
 
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const parseExcel = async (file: File): Promise<Partial<Member>[]> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = (window as any).XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
+
+          const members: Partial<Member>[] = jsonData.map((row: any) => ({
+            firstName: row["First Name"] || row["FirstName"] || row["first_name"] || "",
+            lastName: row["Last Name"] || row["LastName"] || row["Surname"] || row["last_name"] || "",
+            email: row["Email"] || row["email"] || "",
+            contactNumber: row["Contact Number"] || row["Phone"] || row["contact_number"] || "",
+            shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt_number"] || "",
+            teamAssignment: row["Team"] || row["team"] || "",
+            category: (row["Category"] || row["category"] || "Junior") as any,
+            role: row["Role"] || row["role"] || "Player",
+            dateOfBirth: row["Date of Birth"] || row["DOB"] || row["date_of_birth"] || "",
+            nationality: row["Nationality"] || row["nationality"] || "",
+            address: row["Address"] || row["address"] || "",
+            type: "Member",
+            coachingCredits: 0,
+            joiningDate: new Date().toISOString().split("T")[0],
+          })).filter((m: any) => m.firstName && m.lastName);
+
+          resolve(members);
+        } catch (error) {
+          console.error("Error parsing Excel:", error);
+          alert("Error parsing Excel file. Please check the format.");
+          resolve([]);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const findDuplicates = (imported: Partial<Member>[]): Array<{ imported: Partial<Member>; existing: Member; index: number }> => {
+    const dupes: Array<{ imported: Partial<Member>; existing: Member; index: number }> = [];
+    
+    imported.forEach((imp, index) => {
+      const existing = members.find(m => 
+        m.firstName.toLowerCase() === imp.firstName?.toLowerCase() &&
+        m.lastName.toLowerCase() === imp.lastName?.toLowerCase()
+      );
+      
+      if (existing) {
+        dupes.push({ imported: imp, existing, index });
+      }
+    });
+
+    return dupes;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
+
+    setImportFile(file);
+    let parsed: Partial<Member>[] = [];
+
+    if (file.name.endsWith(".csv")) {
+      const text = await file.text();
+      parsed = parseCSV(text);
+    } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+      if (!(window as any).XLSX) {
+        const script = document.createElement("script");
+        script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
+        script.onload = async () => {
+          parsed = await parseExcel(file);
+          processImport(parsed);
+        };
+        document.head.appendChild(script);
+        return;
+      } else {
+        parsed = await parseExcel(file);
+      }
+    } else {
+      alert("Please upload a CSV or Excel file (.csv, .xlsx, .xls)");
+      return;
+    }
+
+    processImport(parsed);
+  };
+
+  const processImport = (parsed: Partial<Member>[]) => {
+    if (parsed.length === 0) {
+      alert("No valid data found in the file. Please check the format.");
+      return;
+    }
+
+    setImportData(parsed);
+    const dupes = findDuplicates(parsed);
+
+    if (dupes.length > 0) {
+      setDuplicates(dupes);
+      setCurrentDuplicateIndex(0);
+      setShowDuplicateDialog(true);
       setIsImportOpen(false);
-      alert("CSV Import feature coming soon");
-    };
-    reader.readAsText(file);
+    } else {
+      finalizeImport(parsed, {});
+    }
+  };
+
+  const handleDuplicateResolution = (resolution: "skip" | "overwrite" | "create") => {
+    const newResolutions = { ...duplicateResolutions, [currentDuplicateIndex]: resolution };
+    setDuplicateResolutions(newResolutions);
+
+    if (currentDuplicateIndex < duplicates.length - 1) {
+      setCurrentDuplicateIndex(currentDuplicateIndex + 1);
+    } else {
+      finalizeImport(importData, newResolutions);
+      setShowDuplicateDialog(false);
+    }
+  };
+
+  const finalizeImport = (data: Partial<Member>[], resolutions: Record<number, "skip" | "overwrite" | "create">) => {
+    let updatedMembers = [...members];
+    let imported = 0;
+    let skipped = 0;
+    let overwritten = 0;
+
+    data.forEach((item, index) => {
+      const duplicate = duplicates.find(d => d.index === index);
+      
+      if (duplicate) {
+        const resolution = resolutions[duplicates.indexOf(duplicate)] || "skip";
+        
+        if (resolution === "skip") {
+          skipped++;
+          return;
+        } else if (resolution === "overwrite") {
+          updatedMembers = updatedMembers.map(m => 
+            m.id === duplicate.existing.id 
+              ? { ...m, ...item, id: m.id } as Member
+              : m
+          );
+          overwritten++;
+          return;
+        }
+      }
+
+      const newMember = {
+        ...item,
+        id: crypto.randomUUID(),
+        firstName: item.firstName || "",
+        lastName: item.lastName || "",
+        shirtNumber: item.shirtNumber || "",
+        category: item.category || "Junior",
+        type: item.type || "Member",
+        role: item.role || "Player",
+        teamAssignment: item.teamAssignment || "",
+        joiningDate: item.joiningDate || new Date().toISOString().split("T")[0],
+        primaryContact: "",
+        primaryContactNumber: "",
+        secondaryContact: "",
+        secondaryContactNumber: "",
+        medicalNotes: "",
+        coachingCredits: 0,
+      } as Member;
+
+      updatedMembers.push(newMember);
+      imported++;
+    });
+
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+
+    let message = `Import complete!\n\n`;
+    if (imported > 0) message += `✅ Imported: ${imported} members\n`;
+    if (overwritten > 0) message += `🔄 Updated: ${overwritten} members\n`;
+    if (skipped > 0) message += `⏭️ Skipped: ${skipped} duplicates`;
+
+    alert(message);
+    
+    setIsImportOpen(false);
+    setImportData([]);
+    setDuplicates([]);
+    setDuplicateResolutions({});
+    setCurrentDuplicateIndex(0);
+    setImportFile(null);
   };
 
   const handleSelectAll = () => {
@@ -278,6 +483,8 @@ export default function MembersPage() {
   const endIndex = startIndex + itemsPerPage;
   const currentMembers = filteredAndSortedMembers.slice(startIndex, endIndex);
 
+  const currentDuplicate = duplicates[currentDuplicateIndex];
+
   return (
     <>
       <SEO title="Members - Bali Bulldogs" description="Club Member Management" />
@@ -306,9 +513,6 @@ export default function MembersPage() {
               <p className="text-sm text-gray-500">Manage all club registrations</p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleLoadLegends} variant="outline" size="sm" className="bg-yellow-50 hover:bg-yellow-100">
-                <Upload className="w-4 h-4 mr-2" />Load Legends
-              </Button>
               <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
                 <Upload className="w-4 h-4 mr-2" />Import CSV
               </Button>
@@ -396,7 +600,7 @@ export default function MembersPage() {
                 <TableBody>
                   {currentMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                         No members found. Try adjusting filters or adding a new member.
                       </TableCell>
                     </TableRow>
@@ -547,7 +751,6 @@ export default function MembersPage() {
             </DialogHeader>
             
             <div className="grid gap-6 py-4">
-              {/* Photo Upload Section */}
               <div className="space-y-2">
                 <Label>Profile Photo</Label>
                 <div className="flex items-center gap-4">
@@ -590,7 +793,6 @@ export default function MembersPage() {
                 </div>
               </div>
 
-              {/* Personal Information */}
               <div className="space-y-2">
                 <Label>First Name *</Label>
                 <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
@@ -645,21 +847,89 @@ export default function MembersPage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
-          <DialogContent className="max-w-lg p-0 border-0 bg-transparent shadow-none">
-            <div className="relative"><img src={previewPhotoUrl} className="rounded-lg max-w-full" alt="Member" /><Button className="absolute top-2 right-2 rounded-full" size="icon" variant="destructive" onClick={() => setIsPhotoPreviewOpen(false)}><X className="w-4 h-4" /></Button></div>
+        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import Member Data</DialogTitle>
+              <DialogDescription>
+                Upload a CSV or Excel file (.csv, .xlsx, .xls) with member information
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input 
+                type="file" 
+                accept=".csv,.xlsx,.xls" 
+                onChange={handleFileSelect}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Expected columns: First Name, Last Name, Email, Contact Number, Team, Category, Role, etc.
+              </p>
+            </div>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Import CSV</DialogTitle></DialogHeader>
-            <div className="py-4"><Input type="file" accept=".csv" onChange={handleImportCSV} /></div>
+        <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                Duplicate Member Found
+              </DialogTitle>
+              <DialogDescription>
+                Member {currentDuplicateIndex + 1} of {duplicates.length} duplicates
+              </DialogDescription>
+            </DialogHeader>
+            
+            {currentDuplicate && (
+              <div className="space-y-4">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="font-semibold text-sm mb-2">Importing:</p>
+                  <p className="text-sm">
+                    <strong>{currentDuplicate.imported.firstName} {currentDuplicate.imported.lastName}</strong>
+                    {currentDuplicate.imported.email && <span className="block text-gray-600">{currentDuplicate.imported.email}</span>}
+                    {currentDuplicate.imported.teamAssignment && <span className="block text-gray-600">Team: {currentDuplicate.imported.teamAssignment}</span>}
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="font-semibold text-sm mb-2">Already exists in database:</p>
+                  <p className="text-sm">
+                    <strong>{currentDuplicate.existing.firstName} {currentDuplicate.existing.lastName}</strong>
+                    {currentDuplicate.existing.email && <span className="block text-gray-600">{currentDuplicate.existing.email}</span>}
+                    {currentDuplicate.existing.teamAssignment && <span className="block text-gray-600">Team: {currentDuplicate.existing.teamAssignment}</span>}
+                  </p>
+                </div>
+
+                <p className="text-sm text-gray-600">How would you like to handle this duplicate?</p>
+              </div>
+            )}
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => handleDuplicateResolution("skip")}
+                className="w-full sm:w-auto"
+              >
+                Skip Import
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => handleDuplicateResolution("overwrite")}
+                className="w-full sm:w-auto"
+              >
+                Update Existing
+              </Button>
+              <Button 
+                onClick={() => handleDuplicateResolution("create")}
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+              >
+                Create Duplicate
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Image Modal */}
       <ImageModal
         imageUrl={selectedImage?.url || ""}
         name={selectedImage?.name || ""}
