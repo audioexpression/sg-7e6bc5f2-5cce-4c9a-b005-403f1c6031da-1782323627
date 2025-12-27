@@ -24,6 +24,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Coach, 
+  loadCoaches, 
+  saveCoaches, 
+  TIER_RATES 
+} from "@/lib/coach-types";
 
 interface Team {
   id: string;
@@ -154,6 +160,14 @@ export default function Settings() {
     if (savedCoaches) {
       setCoaches(JSON.parse(savedCoaches));
     }
+    
+    const savedAdminStaff = localStorage.getItem("adminStaff");
+    if (savedAdminStaff) {
+      setAdminStaff(JSON.parse(savedAdminStaff));
+    }
+    
+    // Mark loading as complete
+    setIsLoaded(true);
   }, []);
 
   // Save functions that persist immediately
@@ -266,7 +280,7 @@ export default function Settings() {
       name: newCoach.name,
       phone: newCoach.phone,
       tier: newCoach.tier,
-      hourlyRate: COACH_RATES[newCoach.tier],
+      hourlyRate: TIER_RATES[newCoach.tier],
     };
 
     const updatedCoaches = [...coaches, coach];
@@ -299,7 +313,7 @@ export default function Settings() {
             name: editingCoach.name,
             phone: editingCoach.phone,
             tier: editingCoach.tier,
-            hourlyRate: COACH_RATES[editingCoach.tier],
+            hourlyRate: TIER_RATES[editingCoach.tier],
           }
         : c
     );
@@ -861,7 +875,7 @@ export default function Settings() {
                                 onValueChange={(value) => setEditingCoach({ 
                                   ...editingCoach, 
                                   tier: value as Coach["tier"],
-                                  hourlyRate: COACH_RATES[value as Coach["tier"]]
+                                  hourlyRate: TIER_RATES[value as Coach["tier"]]
                                 })}
                               >
                                 <SelectTrigger>
