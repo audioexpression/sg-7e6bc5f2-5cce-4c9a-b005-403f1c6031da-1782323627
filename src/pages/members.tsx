@@ -85,19 +85,15 @@ export default function MembersPage() {
   const [bulkRole, setBulkRole] = useState("");
   const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
 
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-
-  // Image modal state
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importData, setImportData] = useState<Partial<Member>[]>([]);
   const [duplicates, setDuplicates] = useState<Array<{ imported: Partial<Member>; existing: Member; index: number }>>([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
-  const [duplicateResolution, setDuplicateResolution] = useState<"skip" | "overwrite" | "create">("skip");
+  const [currentDuplicateIndex, setCurrentDuplicateIndex] = useState(0);
+  const [duplicateResolutions, setDuplicateResolutions] = useState<Record<number, "skip" | "overwrite" | "create">>({});
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
@@ -514,7 +510,7 @@ export default function MembersPage() {
             </div>
             <div className="flex gap-2">
               <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
-                <Upload className="w-4 h-4 mr-2" />Import CSV
+                <Upload className="w-4 h-4 mr-2" />Import Data
               </Button>
               <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="bg-blue-600">
                 <UserPlus className="w-4 h-4 mr-2" />Add Member
