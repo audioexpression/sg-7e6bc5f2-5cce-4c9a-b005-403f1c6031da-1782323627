@@ -128,7 +128,7 @@ export const generateInvoicePDF = (data: InvoiceData): jsPDF => {
   doc.text(data.member.email, 120, yPos);
   
   // Billing period
-  yPos += 10;
+  yPos = 100;
   doc.setFont("helvetica", "bold");
   doc.setTextColor(primaryBlue);
   doc.setFontSize(10);
