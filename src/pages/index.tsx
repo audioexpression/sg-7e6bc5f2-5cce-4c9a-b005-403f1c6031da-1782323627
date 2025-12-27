@@ -99,6 +99,9 @@ export default function Dashboard() {
 
   // Filter states
   const [dateRange, setDateRange] = useState<"month" | "quarter" | "year" | "all" | "custom">("quarter");
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
 
   // Load Data
   useEffect(() => {
@@ -126,6 +129,50 @@ export default function Dashboard() {
     return "Q4";
   };
   const currentQuarterLabel = `${currentYear} ${getQuarter(currentDate)}`;
+
+  // Filter Logic
+  const filteredMembers = members.filter(member => {
+    // Team Filter
+    if (selectedTeam !== "all" && member.teamAssignment !== selectedTeam) return false;
+    // Category Filter
+    if (selectedCategory !== "all" && member.category !== selectedCategory) return false;
+    // Type Filter
+    if (selectedType !== "all" && member.type !== selectedType) return false;
+    
+    // Date Range Filter (based on Joining Date for members)
+    if (!member.joiningDate) return false;
+    const joinDate = new Date(member.joiningDate);
+    
+    if (dateRange === "month") {
+      return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
+    }
+    if (dateRange === "quarter") {
+      return getQuarter(joinDate) === getQuarter(currentDate) && joinDate.getFullYear() === currentYear;
+    }
+    if (dateRange === "year") {
+      return joinDate.getFullYear() === currentYear;
+    }
+    // "all" and "custom" (simplified for now) include all for date check on members list
+    // usually dashboard overview shows snapshot of current active members, 
+    // but for "New Members" stats we need time constraints.
+    // For the main list, we usually want ALL active members that match criteria, 
+    // but the KPIs (New, Revenue) will respect the date range.
+    
+    // For the purpose of "Filtered Members" list generally showing "Active Members matching criteria":
+    // If date range is "This Month", do we only show members JOINED this month? 
+    // Or members ACTIVE this month?
+    // Usually dashboards filter *Activity* by date.
+    // Let's assume filteredMembers implies "Members matching static criteria (Team/Cat/Type)".
+    // And SPECIFIC KPIs will use dateRange.
+    
+    // HOWEVER, to support the requested "Filter Dashboard Data" broadly:
+    // If user selects "This Month", they expect to see data relevant to this month.
+    // For a member list, that's ambiguous.
+    // Let's stick to: FilteredMembers respects Team, Category, Type.
+    // Date logic is applied per-metric where appropriate.
+    
+    return true;
+  });
 
   // 1. Overview KPIs
   const totalMembers = members.length;
