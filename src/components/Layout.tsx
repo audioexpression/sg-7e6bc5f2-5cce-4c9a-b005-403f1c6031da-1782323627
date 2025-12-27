@@ -36,10 +36,6 @@ export default function Layout({ children }: LayoutProps) {
                   height={64}
                   className="rounded-full object-contain"
                   priority
-                  onError={(e) => {
-                    // Fallback if logo fails to load
-                    e.currentTarget.style.display = 'none';
-                  }}
                 />
               </div>
               <div className="hidden md:block">
