@@ -259,7 +259,8 @@ export default function Invoices() {
       const team = teams.find(t => t.name === member.teamAssignment);
       if (team && formData.billingPeriod) {
         const exemptions = initializeMonthExemptions(formData.billingPeriod);
-        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions);
+        const isAnnual = formData.billingPeriod.includes("Annual");
+        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions, isAnnual);
         setFormData({
           ...formData,
           memberId,
@@ -280,7 +281,8 @@ export default function Invoices() {
       const team = teams.find(t => t.name === member.teamAssignment);
       if (team) {
         const exemptions = initializeMonthExemptions(billingPeriod);
-        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions);
+        const isAnnual = billingPeriod.includes("Annual");
+        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions, isAnnual);
         setFormData({
           ...formData,
           billingPeriod,
@@ -309,7 +311,8 @@ export default function Invoices() {
       reason: exempt ? updatedExemptions[index].reason || "Injury" : undefined,
     };
 
-    const amounts = calculateInvoiceAmount(team.monthlyFee, updatedExemptions);
+    const isAnnual = formData.billingPeriod?.includes("Annual") || false;
+    const amounts = calculateInvoiceAmount(team.monthlyFee, updatedExemptions, isAnnual);
     setFormData({
       ...formData,
       monthExemptions: updatedExemptions,
@@ -541,7 +544,8 @@ export default function Invoices() {
     }
 
     const exemptions = initializeMonthExemptions(bulkFormData.billingPeriod);
-    const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions);
+    const isAnnual = bulkFormData.billingPeriod.includes("Annual");
+    const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions, isAnnual);
 
     const newInvoices = teamMembers.map((member) => ({
       id: Date.now().toString() + Math.random(),
