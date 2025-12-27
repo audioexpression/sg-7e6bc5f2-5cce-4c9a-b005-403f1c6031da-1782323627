@@ -785,6 +785,7 @@ export default function Invoices() {
                     <SelectItem value="2026 Q2">2026 Q2 (Apr-Jun)</SelectItem>
                     <SelectItem value="2026 Q3">2026 Q3 (Jul-Sep)</SelectItem>
                     <SelectItem value="2026 Q4">2026 Q4 (Oct-Dec)</SelectItem>
+                    <SelectItem value="2026 Annual">2026 Annual (Jan-Dec) - 10% Discount</SelectItem>
                   </SelectContent>
                 </Select>
                 {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
@@ -877,6 +878,12 @@ export default function Invoices() {
                       Rp {(formData.baseAmount || 0).toLocaleString("id-ID")}
                     </span>
                   </div>
+                  {formData.discount && formData.discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Annual Discount (10%):</span>
+                      <span>- Rp {formData.discount.toLocaleString("id-ID")}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Government Tax (10%):</span>
                     <span>Rp {(formData.taxAmount || 0).toLocaleString("id-ID")}</span>
@@ -884,7 +891,7 @@ export default function Invoices() {
                   <div className="border-t pt-2 flex justify-between font-semibold">
                     <span>Total Amount</span>
                     <span className="text-blue-600">
-                      Rp {((formData.baseAmount || 0) + (formData.taxAmount || 0)).toLocaleString("id-ID")}
+                      Rp {((formData.baseAmount || 0) - (formData.discount || 0) + (formData.taxAmount || 0)).toLocaleString("id-ID")}
                     </span>
                   </div>
                 </div>
@@ -974,6 +981,7 @@ export default function Invoices() {
                   <SelectItem value="2026 Q2">2026 Q2 (Apr-Jun)</SelectItem>
                   <SelectItem value="2026 Q3">2026 Q3 (Jul-Sep)</SelectItem>
                   <SelectItem value="2026 Q4">2026 Q4 (Oct-Dec)</SelectItem>
+                  <SelectItem value="2026 Annual">2026 Annual (Jan-Dec) - 10% Discount</SelectItem>
                 </SelectContent>
               </Select>
               {formErrors.billingPeriod && <p className="text-red-500 text-sm mt-1">{formErrors.billingPeriod}</p>}
@@ -1009,17 +1017,45 @@ export default function Invoices() {
                       <span>Monthly Fee:</span>
                       <span className="font-medium">Rp {teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee.toLocaleString("id-ID")}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Quarterly (3 months):</span>
-                      <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3).toLocaleString("id-ID")}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax (10%):</span>
-                      <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3 * 0.10).toLocaleString("id-ID")}</span>
-                    </div>
+                    {bulkFormData.billingPeriod === "2026 Annual" ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Annual (12 months):</span>
+                          <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 12).toLocaleString("id-ID")}</span>
+                        </div>
+                        <div className="flex justify-between text-green-600">
+                          <span>Annual Discount (10%):</span>
+                          <span className="font-medium">- Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 12 * 0.10).toLocaleString("id-ID")}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>After Discount:</span>
+                          <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 12 * 0.9).toLocaleString("id-ID")}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tax (10%):</span>
+                          <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 12 * 0.9 * 0.10).toLocaleString("id-ID")}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Quarterly (3 months):</span>
+                          <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3).toLocaleString("id-ID")}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tax (10%):</span>
+                          <span className="font-medium">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3 * 0.10).toLocaleString("id-ID")}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between border-t border-blue-300 pt-1 mt-1">
                       <span className="font-bold">Total per member:</span>
-                      <span className="font-bold">Rp {(teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3 * 1.10).toLocaleString("id-ID")}</span>
+                      <span className="font-bold">
+                        Rp {bulkFormData.billingPeriod === "2026 Annual" 
+                          ? (teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 12 * 0.9 * 1.10).toLocaleString("id-ID")
+                          : (teams.find(t => t.name === bulkFormData.teamName)!.monthlyFee * 3 * 1.10).toLocaleString("id-ID")
+                        }
+                      </span>
                     </div>
                   </div>
                 )}
