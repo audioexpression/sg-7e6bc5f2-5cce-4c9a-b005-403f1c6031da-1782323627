@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { loadCoaches } from "@/lib/coaches";
+import { loadCoaches } from "@/lib/coach-types";
 
 // --- Interfaces ---
 
