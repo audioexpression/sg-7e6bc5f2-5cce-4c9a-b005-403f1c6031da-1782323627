@@ -171,15 +171,19 @@ export default function Coaching() {
 
     console.log("🔵 New coach created:", newCoach);
 
+    // Create updated array
     const updatedCoaches = [...coaches, newCoach];
     console.log("🔵 Updated coaches array:", updatedCoaches);
     
+    // Update state
     setCoaches(updatedCoaches);
     console.log("🔵 State updated with setCoaches");
     
+    // Save to localStorage IMMEDIATELY with the same array
     localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
     console.log("🔵 localStorage written:", localStorage.getItem("coaches"));
 
+    // Close dialog and reset form
     setShowCoachDialog(false);
     setCoachName("");
     setCoachPhone("");
