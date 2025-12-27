@@ -17,6 +17,7 @@ interface Team {
   name: string;
   category: "Junior" | "Youth" | "Adult";
   monthlyFee: number;
+  taxRate?: number; // Tax rate as percentage (e.g., 11 for 11%)
 }
 
 interface Coach {
@@ -71,6 +72,13 @@ const DEFAULT_TEAMS: Team[] = [
   { id: "first-team", name: "1st Team", category: "Adult", monthlyFee: 0 },
 ];
 
+// Calculate quarterly fee with tax
+const calculateQuarterlyFee = (monthlyFee: number, taxRate: number = 11): number => {
+  const quarterlyBase = monthlyFee * 3;
+  const taxAmount = (quarterlyBase * taxRate) / 100;
+  return quarterlyBase + taxAmount;
+};
+
 export default function Settings() {
   const router = useRouter();
 
@@ -81,7 +89,12 @@ export default function Settings() {
   
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
-  const [newTeam, setNewTeam] = useState({ name: "", category: "Junior" as Team["category"], monthlyFee: 0 });
+  const [newTeam, setNewTeam] = useState({ 
+    name: "", 
+    category: "Junior" as Team["category"], 
+    monthlyFee: 0,
+    taxRate: 11
+  });
   const [teamSearchTerm, setTeamSearchTerm] = useState("");
   const [teamCategoryFilter, setTeamCategoryFilter] = useState<string>("All");
 
@@ -99,6 +112,18 @@ export default function Settings() {
   const [successMessage, setSuccessMessage] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const [teamForm, setTeamForm] = useState<{
+    name: string;
+    category: "Junior" | "Youth" | "Adult";
+    monthlyFee: number;
+    taxRate: number;
+  }>({ 
+    name: "", 
+    category: "Junior", 
+    monthlyFee: 0,
+    taxRate: 11
+  });
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -194,11 +219,12 @@ export default function Settings() {
       name: newTeam.name.trim(),
       category: newTeam.category,
       monthlyFee: newTeam.monthlyFee,
+      taxRate: newTeam.taxRate || 11,
     };
 
     const updatedTeams = [...teams, team];
     saveTeamsToStorage(updatedTeams);
-    setNewTeam({ name: "", category: "Junior", monthlyFee: 0 });
+    setNewTeam({ name: "", category: "Junior", monthlyFee: 0, taxRate: 11 });
     setIsAddTeamOpen(false);
     showSuccess("Team added and saved successfully!");
   };
@@ -218,6 +244,17 @@ export default function Settings() {
       saveTeamsToStorage(updatedTeams);
       showSuccess("Team deleted and saved successfully!");
     }
+  };
+
+  const handleEditClick = (team: Team) => {
+    setEditingTeam(team);
+    setTeamForm({
+      name: team.name,
+      category: team.category,
+      monthlyFee: team.monthlyFee,
+      taxRate: team.taxRate || 11,
+    });
+    setIsAddTeamOpen(true);
   };
 
   // Coaches Functions
@@ -481,7 +518,7 @@ export default function Settings() {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="monthlyFee">Monthly Fee (IDR) *</Label>
+                        <Label htmlFor="monthlyFee">Monthly Fee (Rp)</Label>
                         <Input
                           id="monthlyFee"
                           type="number"
@@ -490,10 +527,45 @@ export default function Settings() {
                             setNewTeam({ ...newTeam, monthlyFee: parseInt(e.target.value) || 0 });
                             if (formErrors.monthlyFee) setFormErrors({ ...formErrors, monthlyFee: "" });
                           }}
-                          placeholder="e.g., 500000"
+                          placeholder="850000"
                           className={formErrors.monthlyFee ? "border-red-500" : ""}
                         />
                         {formErrors.monthlyFee && <p className="text-red-500 text-sm mt-1">{formErrors.monthlyFee}</p>}
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                        <Input
+                          id="taxRate"
+                          type="number"
+                          value={newTeam.taxRate || 11}
+                          onChange={(e) => setNewTeam({ ...newTeam, taxRate: parseInt(e.target.value) || 11 })}
+                          placeholder="11"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Default: 11% (Indonesian VAT)
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-muted rounded-lg space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Monthly Fee:</span>
+                          <span className="font-medium">{formatCurrency(newTeam.monthlyFee)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Quarterly (3 months):</span>
+                          <span className="font-medium">{formatCurrency(newTeam.monthlyFee * 3)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Tax ({newTeam.taxRate || 11}%):</span>
+                          <span className="font-medium">{formatCurrency((newTeam.monthlyFee * 3 * (newTeam.taxRate || 11)) / 100)}</span>
+                        </div>
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex justify-between font-semibold text-green-600">
+                            <span>Quarter Fee (inc Tax):</span>
+                            <span>{formatCurrency(calculateQuarterlyFee(newTeam.monthlyFee, newTeam.taxRate || 11))}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <DialogFooter>
@@ -546,13 +618,14 @@ export default function Settings() {
                           <TableRow>
                             <TableHead>Team Name</TableHead>
                             <TableHead>Monthly Fee</TableHead>
+                            <TableHead>Quarter Fee (inc Tax)</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {categoryTeams.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={3} className="text-center text-gray-500">
+                              <TableCell colSpan={4} className="text-center text-gray-500">
                                 {teamSearchTerm ? "No teams match your search" : "No teams in this category"}
                               </TableCell>
                             </TableRow>
@@ -579,6 +652,9 @@ export default function Settings() {
                                   ) : (
                                     formatCurrency(team.monthlyFee)
                                   )}
+                                </TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  {formatCurrency(calculateQuarterlyFee(team.monthlyFee, team.taxRate || 11))}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {editingTeam?.id === team.id ? (
