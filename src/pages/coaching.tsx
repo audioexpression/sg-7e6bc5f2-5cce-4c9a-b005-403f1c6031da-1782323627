@@ -131,12 +131,13 @@ export default function Coaching() {
 
   // Save data
   useEffect(() => {
-    localStorage.setItem("coaches", JSON.stringify(coaches));
-  }, [coaches]);
-
-  useEffect(() => {
     localStorage.setItem("sessions", JSON.stringify(sessions));
   }, [sessions]);
+
+  // Save coaches to localStorage
+  useEffect(() => {
+    localStorage.setItem("coaches", JSON.stringify(coaches));
+  }, [coaches]);
 
   // Add coach
   const handleAddCoach = () => {
