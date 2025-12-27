@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Users, TrendingUp, AlertCircle, DollarSign, Calendar, ArrowRight, Settings } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { useRouter } from "next/router";
+import Link from "next/link";
 
 interface Member {
   id: string;
@@ -105,6 +106,14 @@ export default function Dashboard() {
     })
     .reduce((sum, inv) => sum + inv.amount, 0);
 
+  const stats = {
+    totalMembers,
+    newThisMonth,
+    leftThisMonth,
+    outstandingInvoices,
+    outstandingAmount
+  };
+
   // Team distribution data
   const teamDistribution = members.reduce((acc: any, member) => {
     if (member.teamAssignment) {
@@ -166,71 +175,89 @@ export default function Dashboard() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-            <Card className="border-l-4 border-l-blue-600">
-              <CardHeader className="pb-3">
-                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <Users className="h-4 w-4" />
-                  TOTAL MEMBERS
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-900">{totalMembers}</div>
-                <p className="text-sm text-gray-500 mt-1">Active players & staff</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-green-600">
-              <CardHeader className="pb-3">
-                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <TrendingUp className="h-4 w-4" />
-                  NEW THIS MONTH
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-700">{newThisMonth}</div>
-                <p className="text-sm text-gray-500 mt-1">Recent joiners</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-red-600">
-              <CardHeader className="pb-3">
-                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <TrendingUp className="h-4 w-4 rotate-180" />
-                  LEFT THIS MONTH
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-700">{leftThisMonth}</div>
-                <p className="text-sm text-gray-500 mt-1">Recent departures</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-orange-600">
-              <CardHeader className="pb-3">
-                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <AlertCircle className="h-4 w-4" />
-                  OUTSTANDING INVOICES
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-orange-700">{outstandingInvoices}</div>
-                <p className="text-sm text-gray-500 mt-1">Pending payments</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-purple-600">
-              <CardHeader className="pb-3">
-                <CardDescription className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                  <DollarSign className="h-4 w-4" />
-                  OUTSTANDING AMOUNT
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-purple-700">
-                  Rp {outstandingAmount.toLocaleString("id-ID")}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    TOTAL MEMBERS
+                  </p>
+                  <span className="text-3xl">🏃</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">Total due</p>
+                <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.totalMembers}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Active players & staff
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-gray-900">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    NEW THIS MONTH
+                  </p>
+                  <span className="text-3xl">📈</span>
+                </div>
+                <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.newThisMonth}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Recent joiners
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-red-500 bg-gradient-to-br from-red-50 to-white dark:from-red-950 dark:to-gray-900">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    LEFT THIS MONTH
+                  </p>
+                  <span className="text-3xl">📉</span>
+                </div>
+                <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.leftThisMonth}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Recent departures
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-gray-900">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    OUTSTANDING INVOICES
+                  </p>
+                  <span className="text-3xl">📋</span>
+                </div>
+                <p className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                  {stats.outstandingInvoices}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Pending payments
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-gray-900">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    OUTSTANDING AMOUNT
+                  </p>
+                  <span className="text-3xl">💵</span>
+                </div>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  Rp {stats.outstandingAmount.toLocaleString("id-ID")}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Total due
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -334,47 +361,82 @@ export default function Dashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-8">
-            <Button
-              onClick={() => router.push("/members")}
-              className="h-20 text-lg bg-blue-600 hover:bg-blue-700"
-            >
-              <Users className="mr-2 h-5 w-5" />
-              Manage Members
-              <ArrowRight className="ml-auto h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push("/teams")}
-              className="h-20 text-lg bg-yellow-600 hover:bg-yellow-700"
-            >
-              <Users className="mr-2 h-5 w-5" />
-              View Teams
-              <ArrowRight className="ml-auto h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push("/invoices")}
-              className="h-20 text-lg bg-green-600 hover:bg-green-700"
-            >
-              <DollarSign className="mr-2 h-5 w-5" />
-              Manage Invoices
-              <ArrowRight className="ml-auto h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push("/coaching")}
-              className="h-20 text-lg bg-purple-600 hover:bg-purple-700"
-            >
-              <Calendar className="mr-2 h-5 w-5" />
-              Coaching Sessions
-              <ArrowRight className="ml-auto h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push("/settings")}
-              className="h-20 text-lg bg-slate-600 hover:bg-slate-700"
-            >
-              <Settings className="mr-2 h-5 w-5" />
-              Club Settings
-              <ArrowRight className="ml-auto h-5 w-5" />
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Link href="/members">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-blue-500 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Quick Access
+                      </p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="text-4xl">👥</span>
+                        Manage Members
+                      </h3>
+                    </div>
+                    <ArrowRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/teams">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-yellow-500 bg-gradient-to-br from-yellow-50 to-white dark:from-yellow-950 dark:to-gray-900">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Quick Access
+                      </p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="text-4xl">⚽</span>
+                        View Teams
+                      </h3>
+                    </div>
+                    <ArrowRight className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/invoices">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950 dark:to-gray-900">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Quick Access
+                      </p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="text-4xl">💰</span>
+                        Manage Invoices
+                      </h3>
+                    </div>
+                    <ArrowRight className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/coaching">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-purple-500 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-gray-900">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        Quick Access
+                      </p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="text-4xl">🎯</span>
+                        Coaching Sessions
+                      </h3>
+                    </div>
+                    <ArrowRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
       </div>
