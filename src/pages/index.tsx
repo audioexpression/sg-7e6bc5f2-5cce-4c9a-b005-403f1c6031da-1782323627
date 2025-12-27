@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { loadCoaches } from "@/lib/coaches";
 
 // --- Interfaces ---
 
@@ -109,9 +110,11 @@ export default function Dashboard() {
     const loadedMembers = JSON.parse(localStorage.getItem("members") || "[]");
     const loadedInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
     const loadedSessions = JSON.parse(localStorage.getItem("coachingSessions") || "[]");
+    const loadedCoaches = JSON.parse(localStorage.getItem("coaches") || "[]");
     setMembers(loadedMembers);
     setInvoices(loadedInvoices);
     setSessions(loadedSessions);
+    setCoaches(loadedCoaches);
   }, []);
 
   // --- Calculations ---
@@ -441,7 +444,7 @@ export default function Dashboard() {
                       <div>
                         <p className="text-sm font-medium text-gray-500">Active Coaches</p>
                         <h3 className="text-3xl font-bold text-gray-900 mt-2">
-                          {members.filter(m => m.role.includes("Coach")).length}
+                          {coaches.length}
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
                           {sessions.filter(s => s.status === "Scheduled").length} sessions booked
