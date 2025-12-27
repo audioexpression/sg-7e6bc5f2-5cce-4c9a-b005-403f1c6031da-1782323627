@@ -104,10 +104,12 @@ export default function Coaching() {
 
   // Load data
   useEffect(() => {
-    // Load coaches using shared helper
-    const loadedCoaches = loadCoaches();
-    console.log("Loading coaches from localStorage:", loadedCoaches);
-    setCoaches(loadedCoaches);
+    const savedCoaches = localStorage.getItem("coaches");
+    if (savedCoaches) {
+      const parsedCoaches = JSON.parse(savedCoaches);
+      console.log("Loading coaches from localStorage:", parsedCoaches);
+      setCoaches(parsedCoaches);
+    }
     
     const savedMembers = localStorage.getItem("members");
     const savedSessions = localStorage.getItem("sessions");
