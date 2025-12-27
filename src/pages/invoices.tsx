@@ -56,12 +56,14 @@ interface MonthExemption {
 
 interface Invoice {
   id: string;
+  invoiceNumber?: string;
   memberId: string;
   billingPeriod: string;
   dueDate: string;
   baseAmount: number;
   taxAmount: number;
   amount: number;
+  discount?: number;
   monthExemptions?: MonthExemption[];
   paymentLink?: string;
   status: "Draft" | "Sent" | "Paid" | "Overdue";
@@ -72,9 +74,27 @@ const QUARTER_MONTHS: Record<string, string[]> = {
   "2026 Q2": ["April", "May", "June"],
   "2026 Q3": ["July", "August", "September"],
   "2026 Q4": ["October", "November", "December"],
+  "2026 Annual": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
 };
 
 const TAX_RATE = 0.10; // 10% government tax
+
+const generateInvoiceNumber = (billingPeriod: string, teamName: string, existingInvoices: Invoice[]): string => {
+  const year = billingPeriod.includes("2026") ? "2026" : "2025";
+  const period = billingPeriod.includes("Annual") ? "ANNUAL" : billingPeriod.split(" ")[1];
+  const teamCode = teamName.replace(/\s+/g, "").substring(0, 4).toUpperCase();
+  
+  const prefix = `BBFC-${period}-${year}-${teamCode}`;
+  const existingNumbers = existingInvoices
+    .filter(inv => inv.invoiceNumber?.startsWith(prefix))
+    .map(inv => {
+      const match = inv.invoiceNumber?.match(/-(\d+)$/);
+      return match ? parseInt(match[1]) : 0;
+    });
+  
+  const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+  return `${prefix}-${String(nextNumber).padStart(3, "0")}`;
+};
 
 export default function Invoices() {
   const router = useRouter();
@@ -181,14 +201,24 @@ export default function Invoices() {
     localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
   };
 
-  const calculateInvoiceAmount = (monthlyFee: number, exemptions: MonthExemption[] = []) => {
+  const calculateInvoiceAmount = (monthlyFee: number, exemptions: MonthExemption[] = [], isAnnual: boolean = false) => {
     const activeMonths = exemptions.filter(e => !e.exempt).length;
     const baseAmount = monthlyFee * activeMonths;
-    const taxAmount = baseAmount * TAX_RATE;
-    const totalAmount = baseAmount + taxAmount;
+    
+    let discount = 0;
+    let discountedBase = baseAmount;
+    
+    if (isAnnual && activeMonths === 12) {
+      discount = baseAmount * 0.10; // 10% discount for annual
+      discountedBase = baseAmount - discount;
+    }
+    
+    const taxAmount = discountedBase * TAX_RATE;
+    const totalAmount = discountedBase + taxAmount;
     
     return {
       baseAmount,
+      discount,
       taxAmount,
       amount: totalAmount,
     };
