@@ -562,7 +562,7 @@ export default function MembersPage() {
                 <SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Teams</SelectItem>
-                  {teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {filterCategory === "all" ? teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>) : (TEAMS_BY_CATEGORY[filterCategory as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
               {(searchTerm || filterTeam !== "all" || filterCategory !== "all") && (
@@ -589,6 +589,7 @@ export default function MembersPage() {
                     <TableHead>Team</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Membership</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -596,7 +597,7 @@ export default function MembersPage() {
                 <TableBody>
                   {currentMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                         No members found. Try adjusting filters or adding a new member.
                       </TableCell>
                     </TableRow>
@@ -623,6 +624,7 @@ export default function MembersPage() {
                         <TableCell>{member.teamAssignment || "-"}</TableCell>
                         <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
                         <TableCell>{member.role}</TableCell>
+                        <TableCell><Badge variant="outline">{member.type}</Badge></TableCell>
                         <TableCell>
                           {member.contactNumber ? (
                             <a
@@ -712,6 +714,7 @@ export default function MembersPage() {
                     <option value="Player">Player</option>
                     <option value="Coach">Coach</option>
                     <option value="Admin">Admin</option>
+                    <option value="Player-Coach">Player-Coach</option>
                   </select>
                 </div>
                 <div>
