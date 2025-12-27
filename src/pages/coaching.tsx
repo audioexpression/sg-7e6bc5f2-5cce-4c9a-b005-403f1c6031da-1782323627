@@ -145,6 +145,10 @@ export default function Coaching() {
 
   // Add coach
   const handleAddCoach = () => {
+    console.log("🔵 handleAddCoach called");
+    console.log("🔵 Current coaches state:", coaches);
+    console.log("🔵 Form data:", { coachName, coachPhone, coachTier });
+    
     setFormErrors({});
     const errors: Record<string, string> = {};
 
@@ -152,6 +156,7 @@ export default function Coaching() {
     if (!coachPhone.trim()) errors.coachPhone = "Phone number is required";
 
     if (Object.keys(errors).length > 0) {
+      console.log("❌ Validation errors:", errors);
       setFormErrors(errors);
       return;
     }
@@ -164,15 +169,24 @@ export default function Coaching() {
       hourlyRate: TIER_RATES[coachTier],
     };
 
+    console.log("🔵 New coach created:", newCoach);
+
     const updatedCoaches = [...coaches, newCoach];
+    console.log("🔵 Updated coaches array:", updatedCoaches);
+    
     setCoaches(updatedCoaches);
+    console.log("🔵 State updated with setCoaches");
+    
     localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+    console.log("🔵 localStorage written:", localStorage.getItem("coaches"));
 
     setShowCoachDialog(false);
     setCoachName("");
     setCoachPhone("");
     setCoachTier("Assistant Coach");
     setFormErrors({});
+    
+    console.log("✅ handleAddCoach completed");
   };
 
   // Check for double booking
