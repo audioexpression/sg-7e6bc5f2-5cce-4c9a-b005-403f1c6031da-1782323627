@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User } from "lucide-react";
 import Link from "next/link";
 import { ImageModal } from "@/components/ImageModal";
+import { useRouter } from "next/router";
 
 const TEAMS_BY_CATEGORY = {
   Junior: ["Toddler", "Kindy/U6 1", "Kindy/U6 2", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Girls", "U12 Dev", "U12 Adv"],
@@ -47,9 +48,13 @@ interface Member {
   photoUrl?: string;
 }
 
-export default function Members() {
+export default function MembersPage() {
+  const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedTeam, setSelectedTeam] = useState("all");
+  const [selectedType, setSelectedType] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = useState(false);
@@ -82,13 +87,28 @@ export default function Members() {
 
   // Image modal state
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("members");
-    if (saved) {
-      setMembers(JSON.parse(saved));
+    const savedMembers = localStorage.getItem("members");
+    if (savedMembers) {
+      setMembers(JSON.parse(savedMembers));
     }
   }, []);
+
+  // Handle opening edit dialog from URL query param
+  useEffect(() => {
+    const { memberId } = router.query;
+    if (memberId && typeof memberId === "string") {
+      const member = members.find(m => m.id === memberId);
+      if (member) {
+        setEditingMember(member);
+        setIsDialogOpen(true);
+        // Clear the query param after opening
+        router.replace("/members", undefined, { shallow: true });
+      }
+    }
+  }, [router.query, members]);
 
   const resetForm = () => {
     setFormData({

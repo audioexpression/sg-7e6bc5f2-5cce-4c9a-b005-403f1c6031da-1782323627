@@ -184,7 +184,14 @@ export default function TeamsPage() {
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {team.players.map((player) => (
-                        <div key={player.id} className="bg-gray-50 p-4 rounded-lg">
+                        <button
+                          key={player.id}
+                          className="bg-gray-50 p-4 rounded-lg"
+                          onClick={() => setSelectedImage({ 
+                            url: player.photoUrl!, 
+                            name: `${player.firstName} ${player.lastName}` 
+                          })}
+                        >
                           <div className="flex items-start space-x-3">
                             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                               {player.photoUrl ? (
@@ -192,10 +199,6 @@ export default function TeamsPage() {
                                   src={player.photoUrl} 
                                   alt={`${player.firstName} ${player.lastName}`}
                                   className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => setSelectedImage({ 
-                                    url: player.photoUrl!, 
-                                    name: `${player.firstName} ${player.lastName}` 
-                                  })}
                                 />
                               ) : (
                                 <Users className="w-6 h-6 text-blue-600" />
@@ -217,7 +220,7 @@ export default function TeamsPage() {
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </CardContent>
