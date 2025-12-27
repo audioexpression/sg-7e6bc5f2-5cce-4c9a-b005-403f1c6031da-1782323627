@@ -38,6 +38,7 @@ interface Member {
   firstName: string;
   lastName: string;
   email: string;
+  address?: string; // Added address field
   type: "Member" | "Sponsored" | "Scholarship";
   teamAssignment?: string;
 }
