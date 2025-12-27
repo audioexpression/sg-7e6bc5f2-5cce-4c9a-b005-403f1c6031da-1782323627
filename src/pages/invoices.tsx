@@ -354,6 +354,13 @@ export default function Invoices() {
     }
   };
 
+  const handleStatusChange = (invoiceId: string, newStatus: Invoice["status"]) => {
+    const updatedInvoices = invoices.map((inv) =>
+      inv.id === invoiceId ? { ...inv, status: newStatus } : inv
+    );
+    saveInvoices(updatedInvoices);
+  };
+
   const handleDownloadPDF = (invoice: Invoice) => {
     const member = members.find(m => m.id === invoice.memberId);
     if (!member) {
@@ -745,7 +752,30 @@ export default function Invoices() {
                                 minimumFractionDigits: 0
                               }).format(invoice.amount || (invoice.baseAmount || 0) + (invoice.taxAmount || 0))}
                             </TableCell>
-                            <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={invoice.status}
+                                onValueChange={(value) => handleStatusChange(invoice.id, value as Invoice["status"])}
+                              >
+                                <SelectTrigger className="w-[120px] h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Draft">
+                                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">Draft</Badge>
+                                  </SelectItem>
+                                  <SelectItem value="Sent">
+                                    <Badge className="bg-blue-100 text-blue-700">Sent</Badge>
+                                  </SelectItem>
+                                  <SelectItem value="Paid">
+                                    <Badge className="bg-green-100 text-green-700">Paid</Badge>
+                                  </SelectItem>
+                                  <SelectItem value="Overdue">
+                                    <Badge variant="destructive" className="bg-red-100 text-red-700">Overdue</Badge>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button
