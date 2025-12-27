@@ -33,15 +33,6 @@ interface Team {
   taxRate?: number; // Tax rate as percentage (e.g., 11 for 11%)
 }
 
-interface Coach {
-  id: string;
-  name: string;
-  phone: string;
-  tier: "Head Coach" | "Goalkeeper Coach" | "Senior Coach" | "Assistant Coach";
-  rate: number;
-  hourlyRate: number;
-}
-
 interface AdminStaff {
   id: string;
   name: string;
