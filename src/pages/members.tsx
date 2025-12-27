@@ -838,6 +838,34 @@ export default function MembersPage() {
                 <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
               </div>
 
+              {formData.category === "Adult" && (
+                <div className="space-y-2">
+                  <Label>Fee Structure</Label>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Annual Membership Fee</Label>
+                      <Input type="number" value={formData.coachingCredits || 0} onChange={e => setFormData({...formData, coachingCredits: parseInt(e.target.value, 10) || 0})} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Payment Frequency</Label>
+                      <Select value={formData.coachingCredits ? "annually" : "monthly"} onValueChange={(v) => {
+                        if (v === "annually") {
+                          setFormData({ ...formData, coachingCredits: 1200 });
+                        } else {
+                          setFormData({ ...formData, coachingCredits: 100 });
+                        }
+                      }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="annually">Annually</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button onClick={(e) => handleSubmit(e)}>Save Member</Button>
