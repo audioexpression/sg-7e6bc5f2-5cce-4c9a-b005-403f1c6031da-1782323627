@@ -50,6 +50,7 @@ export interface Member {
   secondaryContactNumber?: string;
   medicalNotes?: string;
   coachingCredits: number;
+  feeStructure?: "Regular" | "Reduced";
 }
 
 export const SAMPLE_MEMBERS: Member[] = [

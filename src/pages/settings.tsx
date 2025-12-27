@@ -37,6 +37,7 @@ interface Team {
   category: "Junior" | "Youth" | "Adult";
   monthlyFee: number;
   taxRate?: number; // Tax rate as percentage (e.g., 11 for 11%)
+  reducedMonthlyFee?: number;
 }
 
 interface AdminStaff {
@@ -130,6 +131,7 @@ export default function Settings() {
     category: "Junior" | "Youth" | "Adult";
     monthlyFee: number;
     taxRate: number;
+    reducedMonthlyFee?: number;
   }>({ 
     name: "", 
     category: "Junior", 
