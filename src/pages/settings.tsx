@@ -1117,6 +1117,190 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Member Fee Assignments */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <CardTitle>Member Fee Assignments</CardTitle>
+                    <CardDescription>Set fee structures for adult team members</CardDescription>
+                  </div>
+                </div>
+                <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Fee Assignment
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Fee Assignment</DialogTitle>
+                      <DialogDescription>Set a fee structure for an adult team member</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="feeMember">Member *</Label>
+                        <Input
+                          id="feeMember"
+                          value={newAdmin.name}
+                          onChange={(e) => {
+                            setNewAdmin({ ...newAdmin, name: e.target.value });
+                            if (formErrors.adminName) setFormErrors({ ...formErrors, adminName: "" });
+                          }}
+                          placeholder="Member name"
+                          className={formErrors.adminName ? "border-red-500" : ""}
+                        />
+                        {formErrors.adminName && <p className="text-red-500 text-sm mt-1">{formErrors.adminName}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="feeAmount">Amount (Rp) *</Label>
+                        <Input
+                          id="feeAmount"
+                          type="number"
+                          value={newAdmin.phone}
+                          onChange={(e) => {
+                            setNewAdmin({ ...newAdmin, phone: e.target.value });
+                            if (formErrors.adminPhone) setFormErrors({ ...formErrors, adminPhone: "" });
+                          }}
+                          placeholder="Fee amount"
+                          className={formErrors.adminPhone ? "border-red-500" : ""}
+                        />
+                        {formErrors.adminPhone && <p className="text-red-500 text-sm mt-1">{formErrors.adminPhone}</p>}
+                      </div>
+                      <div>
+                        <Label htmlFor="feeCategory">Category *</Label>
+                        <Select
+                          value={newAdmin.role}
+                          onValueChange={(value) => setNewAdmin({ ...newAdmin, role: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Adult">Adult</SelectItem>
+                            <SelectItem value="Youth">Youth</SelectItem>
+                            <SelectItem value="Junior">Junior</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsAddAdminOpen(false)}>Cancel</Button>
+                      <Button onClick={handleAddAdmin} className="bg-blue-600 hover:bg-blue-700">Add Fee Assignment</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Search */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search staff by name, email, or role..."
+                    value={adminSearchTerm}
+                    onChange={(e) => setAdminSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAdminStaff.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-gray-500">
+                          {adminSearchTerm ? "No staff members match your search" : "No admin staff added yet"}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAdminStaff.map((admin) => (
+                        <TableRow key={admin.id}>
+                          <TableCell>
+                            {editingAdmin?.id === admin.id ? (
+                              <Input
+                                value={editingAdmin.name}
+                                onChange={(e) => setEditingAdmin({ ...editingAdmin, name: e.target.value })}
+                              />
+                            ) : (
+                              admin.name
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingAdmin?.id === admin.id ? (
+                              <Input
+                                value={editingAdmin.role}
+                                onChange={(e) => setEditingAdmin({ ...editingAdmin, role: e.target.value })}
+                              />
+                            ) : (
+                              <Badge variant="outline">{admin.role}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingAdmin?.id === admin.id ? (
+                              <Input
+                                value={editingAdmin.phone}
+                                onChange={(e) => setEditingAdmin({ ...editingAdmin, phone: e.target.value })}
+                              />
+                            ) : (
+                              admin.phone
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingAdmin?.id === admin.id ? (
+                              <Input
+                                type="email"
+                                value={editingAdmin.email}
+                                onChange={(e) => setEditingAdmin({ ...editingAdmin, email: e.target.value })}
+                              />
+                            ) : (
+                              admin.email
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {editingAdmin?.id === admin.id ? (
+                              <div className="flex justify-end gap-2">
+                                <Button size="sm" onClick={handleUpdateAdmin} className="bg-green-600 hover:bg-green-700">
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditingAdmin(null)}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => setEditingAdmin(admin)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteAdmin(admin.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </>
