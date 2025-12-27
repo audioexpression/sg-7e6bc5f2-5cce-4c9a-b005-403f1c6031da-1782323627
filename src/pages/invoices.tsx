@@ -105,6 +105,8 @@ export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -354,11 +356,68 @@ export default function Invoices() {
     }
   };
 
-  const handleStatusChange = (invoiceId: string, newStatus: Invoice["status"]) => {
-    const updatedInvoices = invoices.map((inv) =>
-      inv.id === invoiceId ? { ...inv, status: newStatus } : inv
-    );
+  const handleBulkDelete = (selectedIds: Set<string>) => {
+    const updatedInvoices = invoices.filter((inv) => !selectedIds.has(inv.id));
     saveInvoices(updatedInvoices);
+    setSelectedInvoices(new Set());
+  };
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    const member = members.find((m) => m.id === invoice.memberId);
+    const memberName = member ? `${member.firstName} ${member.lastName}`.toLowerCase() : "";
+
+    const matchesSearch = memberName.includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === "all" || invoice.status === selectedStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalRevenue = invoices
+    .filter((inv) => {
+      const member = members.find((m) => m.id === inv.memberId);
+      return member && member.type === "Member" && inv.status === "Paid";
+    })
+    .reduce((sum, inv) => sum + inv.amount, 0);
+
+  const outstandingAmount = invoices
+    .filter((inv) => {
+      const member = members.find((m) => m.id === inv.memberId);
+      return member && member.type === "Member" && inv.status !== "Paid";
+    })
+    .reduce((sum, inv) => sum + inv.amount, 0);
+
+  const outstandingCount = invoices.filter((inv) => {
+    const member = members.find((m) => m.id === inv.memberId);
+    return member && member.type === "Member" && inv.status !== "Paid";
+  }).length;
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
+      Draft: { variant: "secondary", className: "bg-gray-100 text-gray-700" },
+      Sent: { variant: "default", className: "bg-blue-100 text-blue-700" },
+      Paid: { variant: "default", className: "bg-green-100 text-green-700" },
+      Overdue: { variant: "destructive", className: "bg-red-100 text-red-700" },
+    };
+    const config = variants[status] || variants.Draft;
+    return <Badge variant={config.variant} className={config.className}>{status}</Badge>;
+  };
+
+  // Calculate invoice amounts based on team monthly fee and active months
+  const calculateInvoiceAmounts = (
+    monthlyFee: number,
+    monthExemptions: MonthExemption[]
+  ) => {
+    const activeMonths = monthExemptions.filter((m) => !m.exempt).length;
+    const baseAmount = monthlyFee * activeMonths;
+    const taxAmount = baseAmount * 0.1; // 10% government tax ADDED ON TOP
+    const totalAmount = baseAmount + taxAmount;
+
+    return { baseAmount, taxAmount, totalAmount };
+  };
+
+  const handleStatusChange = (id: string, newStatus: Invoice["status"]) => {
+    const updated = invoices.map(inv => inv.id === id ? { ...inv, status: newStatus } : inv);
+    saveInvoices(updated);
   };
 
   const handleDownloadPDF = (invoice: Invoice) => {
@@ -508,57 +567,22 @@ export default function Invoices() {
     });
   };
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const member = members.find((m) => m.id === invoice.memberId);
-    const memberName = member ? `${member.firstName} ${member.lastName}`.toLowerCase() : "";
-
-    const matchesSearch = memberName.includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === "all" || invoice.status === selectedStatus;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalRevenue = invoices
-    .filter((inv) => {
-      const member = members.find((m) => m.id === inv.memberId);
-      return member && member.type === "Member" && inv.status === "Paid";
-    })
-    .reduce((sum, inv) => sum + inv.amount, 0);
-
-  const outstandingAmount = invoices
-    .filter((inv) => {
-      const member = members.find((m) => m.id === inv.memberId);
-      return member && member.type === "Member" && inv.status !== "Paid";
-    })
-    .reduce((sum, inv) => sum + inv.amount, 0);
-
-  const outstandingCount = invoices.filter((inv) => {
-    const member = members.find((m) => m.id === inv.memberId);
-    return member && member.type === "Member" && inv.status !== "Paid";
-  }).length;
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
-      Draft: { variant: "secondary", className: "bg-gray-100 text-gray-700" },
-      Sent: { variant: "default", className: "bg-blue-100 text-blue-700" },
-      Paid: { variant: "default", className: "bg-green-100 text-green-700" },
-      Overdue: { variant: "destructive", className: "bg-red-100 text-red-700" },
-    };
-    const config = variants[status] || variants.Draft;
-    return <Badge variant={config.variant} className={config.className}>{status}</Badge>;
+  const toggleInvoiceSelection = (id: string) => {
+    const newSelected = new Set(selectedInvoices);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedInvoices(newSelected);
   };
 
-  // Calculate invoice amounts based on team monthly fee and active months
-  const calculateInvoiceAmounts = (
-    monthlyFee: number,
-    monthExemptions: MonthExemption[]
-  ) => {
-    const activeMonths = monthExemptions.filter((m) => !m.exempt).length;
-    const baseAmount = monthlyFee * activeMonths;
-    const taxAmount = baseAmount * 0.1; // 10% government tax ADDED ON TOP
-    const totalAmount = baseAmount + taxAmount;
-
-    return { baseAmount, taxAmount, totalAmount };
+  const toggleSelectAll = () => {
+    if (selectedInvoices.size === filteredInvoices.length) {
+      setSelectedInvoices(new Set());
+    } else {
+      setSelectedInvoices(new Set(filteredInvoices.map(inv => inv.id)));
+    }
   };
 
   return (
@@ -689,22 +713,47 @@ export default function Invoices() {
           {/* Invoice List */}
           <Card>
             <CardHeader>
-              <CardTitle>Invoice List</CardTitle>
-              <CardDescription>
-                Total: {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  Invoice List
+                  <span className="text-sm font-normal text-gray-500 ml-2">
+                    Total: {filteredInvoices.length} invoices
+                    {selectedInvoices.size > 0 && ` (${selectedInvoices.size} selected)`}
+                  </span>
+                </CardTitle>
+                {selectedInvoices.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete ${selectedInvoices.size} invoice(s)?`)) {
+                        handleBulkDelete(selectedInvoices);
+                      }
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Selected ({selectedInvoices.size})
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {filteredInvoices.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No invoices found. Create your first invoice or use bulk generation.</p>
+                  <p className="text-lg font-medium mb-2">No invoices found</p>
+                  <p className="text-sm">Generate invoices for your teams to get started</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                            aria-label="Select all"
+                          />
+                        </TableHead>
                         <TableHead>Invoice #</TableHead>
                         <TableHead>Member</TableHead>
                         <TableHead>Team</TableHead>
@@ -721,8 +770,16 @@ export default function Invoices() {
                       {filteredInvoices.map((invoice) => {
                         const member = members.find((m) => m.id === invoice.memberId);
                         const activeMonths = invoice.monthExemptions?.filter(e => !e.exempt).length || 3;
+                        
                         return (
                           <TableRow key={invoice.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedInvoices.has(invoice.id)}
+                                onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                                aria-label={`Select invoice ${invoice.invoiceNumber || invoice.id}`}
+                              />
+                            </TableCell>
                             <TableCell className="font-mono text-sm">
                               {invoice.invoiceNumber || "—"}
                             </TableCell>
