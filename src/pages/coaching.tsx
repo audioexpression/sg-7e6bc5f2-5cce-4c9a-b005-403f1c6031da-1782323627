@@ -121,7 +121,11 @@ export default function Coaching() {
     const savedMembers = localStorage.getItem("members");
     const savedSessions = localStorage.getItem("sessions");
 
-    if (savedCoaches) setCoaches(JSON.parse(savedCoaches));
+    if (savedCoaches) {
+      const parsedCoaches = JSON.parse(savedCoaches);
+      console.log("Loading coaches from localStorage:", parsedCoaches);
+      setCoaches(parsedCoaches);
+    }
     if (savedMembers) {
       const allMembers = JSON.parse(savedMembers);
       setMembers(allMembers);
@@ -160,7 +164,10 @@ export default function Coaching() {
       hourlyRate: TIER_RATES[coachTier],
     };
 
-    setCoaches([...coaches, newCoach]);
+    const updatedCoaches = [...coaches, newCoach];
+    setCoaches(updatedCoaches);
+    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+
     setShowCoachDialog(false);
     setCoachName("");
     setCoachPhone("");
