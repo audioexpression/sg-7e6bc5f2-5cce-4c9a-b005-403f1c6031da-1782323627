@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, ArrowLeft, Home, Users, DollarSign, Calendar, Settings, User } from "lucide-react";
 import Link from "next/link";
+import { ImageModal } from "@/components/ImageModal";
 
 interface Member {
   id: string;
@@ -32,6 +33,9 @@ interface TeamStats {
 export default function TeamsPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
+
+  // Image modal state
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
@@ -180,34 +184,37 @@ export default function TeamsPage() {
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {team.players.map((player) => (
-                        <div
-                          key={player.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                        >
-                          {player.photoUrl ? (
-                            <img
-                              src={player.photoUrl}
-                              alt={`${player.firstName} ${player.lastName}`}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                              <User className="w-6 h-6 text-blue-600" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 truncate">
-                              {player.firstName} {player.lastName}
-                            </p>
-                            <div className="flex gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {player.role}
-                              </Badge>
-                              {player.type !== "Member" && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {player.type}
-                                </Badge>
+                        <div key={player.id} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {player.photoUrl ? (
+                                <img 
+                                  src={player.photoUrl} 
+                                  alt={`${player.firstName} ${player.lastName}`}
+                                  className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedImage({ 
+                                    url: player.photoUrl!, 
+                                    name: `${player.firstName} ${player.lastName}` 
+                                  })}
+                                />
+                              ) : (
+                                <Users className="w-6 h-6 text-blue-600" />
                               )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 truncate">
+                                {player.firstName} {player.lastName}
+                              </p>
+                              <div className="flex gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {player.role}
+                                </Badge>
+                                {player.type !== "Member" && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {player.type}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -220,6 +227,14 @@ export default function TeamsPage() {
           )}
         </main>
       </div>
+
+      {/* Image Modal */}
+      <ImageModal
+        imageUrl={selectedImage?.url || ""}
+        name={selectedImage?.name || ""}
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+      />
     </>
   );
 }

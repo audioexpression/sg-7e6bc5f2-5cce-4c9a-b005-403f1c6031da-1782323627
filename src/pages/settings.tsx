@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Edit, Save, X, Users, UserCog, ShieldCheck, Search, Home, DollarSign, Calendar } from "lucide-react";
-import { Settings as SettingsIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useRouter } from "next/router";
 
@@ -43,48 +42,55 @@ const COACH_RATES = {
   "Assistant Coach": 400000,
 };
 
+const DEFAULT_TEAMS: Team[] = [
+  // Junior Teams
+  { id: "toddler", name: "Toddler", category: "Junior", monthlyFee: 0 },
+  { id: "kindy-1", name: "Kindy 1", category: "Junior", monthlyFee: 0 },
+  { id: "kindy-2", name: "Kindy 2", category: "Junior", monthlyFee: 0 },
+  { id: "u6", name: "U6", category: "Junior", monthlyFee: 0 },
+  { id: "u8-dev", name: "U8 Dev", category: "Junior", monthlyFee: 0 },
+  { id: "u8-adv", name: "U8 Adv", category: "Junior", monthlyFee: 0 },
+  { id: "u10-dev", name: "U10 Dev", category: "Junior", monthlyFee: 0 },
+  { id: "u10-adv", name: "U10 Adv", category: "Junior", monthlyFee: 0 },
+  { id: "u12-dev", name: "U12 Dev", category: "Junior", monthlyFee: 0 },
+  { id: "u12-adv", name: "U12 Adv", category: "Junior", monthlyFee: 0 },
+  { id: "u12-girls", name: "U12 Girls", category: "Junior", monthlyFee: 0 },
+  
+  // Youth Teams
+  { id: "u14", name: "U14", category: "Youth", monthlyFee: 0 },
+  { id: "u14-girls", name: "U14 Girls", category: "Youth", monthlyFee: 0 },
+  { id: "u16", name: "U16", category: "Youth", monthlyFee: 0 },
+  { id: "u18-girls", name: "U18 Girls", category: "Youth", monthlyFee: 0 },
+  { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
+  
+  // Adult Teams
+  { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
+  { id: "masters-45", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
+  { id: "legends", name: "Legends", category: "Adult", monthlyFee: 0 },
+  { id: "social", name: "Social", category: "Adult", monthlyFee: 0 },
+  { id: "first-team", name: "1st Team", category: "Adult", monthlyFee: 0 },
+];
+
 export default function Settings() {
   const router = useRouter();
 
-  // Teams State
-  const [teams, setTeams] = useState([
-    { id: "toddler", name: "Toddler", category: "Junior", monthlyFee: 0 },
-    { id: "kindy1", name: "Kindy/U6 1", category: "Junior", monthlyFee: 0 },
-    { id: "kindy2", name: "Kindy/U6 2", category: "Junior", monthlyFee: 0 },
-    { id: "u8dev", name: "U8 Dev", category: "Junior", monthlyFee: 0 },
-    { id: "u8adv", name: "U8 Adv", category: "Junior", monthlyFee: 0 },
-    { id: "u10dev", name: "U10 Dev", category: "Junior", monthlyFee: 0 },
-    { id: "u10adv", name: "U10 Adv", category: "Junior", monthlyFee: 0 },
-    { id: "u12dev", name: "U12 Dev", category: "Junior", monthlyFee: 0 },
-    { id: "u12adv", name: "U12 Adv", category: "Junior", monthlyFee: 0 },
-    { id: "u12girls", name: "U12 Girls", category: "Junior", monthlyFee: 0 },
-    { id: "u14", name: "U14", category: "Youth", monthlyFee: 0 },
-    { id: "u14girls", name: "U14 Girls", category: "Youth", monthlyFee: 0 },
-    { id: "u16", name: "U16", category: "Youth", monthlyFee: 0 },
-    { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
-    { id: "u18girls", name: "U18 Girls", category: "Youth", monthlyFee: 0 },
-    { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
-    { id: "masters", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
-    { id: "legends", name: "Legends 35+", category: "Adult", monthlyFee: 0 },
-    { id: "social", name: "Social Team", category: "Adult", monthlyFee: 0 },
-    { id: "firstteam", name: "1st Team", category: "Adult", monthlyFee: 0 },
-  ]);
+  // Initialize state with empty arrays - will be populated from localStorage
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [adminStaff, setAdminStaff] = useState<AdminStaff[]>([]);
+  
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [newTeam, setNewTeam] = useState({ name: "", category: "Junior" as Team["category"], monthlyFee: 0 });
   const [teamSearchTerm, setTeamSearchTerm] = useState("");
   const [teamCategoryFilter, setTeamCategoryFilter] = useState<string>("All");
 
-  // Coaches State
-  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [isAddCoachOpen, setIsAddCoachOpen] = useState(false);
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
   const [newCoach, setNewCoach] = useState({ name: "", phone: "", tier: "Assistant Coach" as Coach["tier"] });
   const [coachSearchTerm, setCoachSearchTerm] = useState("");
   const [coachTierFilter, setCoachTierFilter] = useState<string>("All");
 
-  // Admin Staff State
-  const [adminStaff, setAdminStaff] = useState<AdminStaff[]>([]);
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminStaff | null>(null);
   const [newAdmin, setNewAdmin] = useState({ name: "", phone: "", role: "", email: "" });
@@ -92,69 +98,78 @@ export default function Settings() {
 
   const [successMessage, setSuccessMessage] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load data from localStorage
+  // Load data from localStorage on mount
   useEffect(() => {
     const savedTeams = localStorage.getItem("teams");
     const savedCoaches = localStorage.getItem("coaches");
-    const savedAdmins = localStorage.getItem("admins");
+    const savedAdmins = localStorage.getItem("adminStaff");
 
     if (savedTeams) {
-      setTeams(JSON.parse(savedTeams));
+      try {
+        setTeams(JSON.parse(savedTeams));
+      } catch (error) {
+        console.error("Error loading teams:", error);
+        setTeams(DEFAULT_TEAMS);
+        localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
+      }
     } else {
-      // Initialize with default teams from spreadsheet
-      const defaultTeams: Team[] = [
-        // Junior Teams
-        { id: "toddler", name: "Toddler", category: "Junior" as const, monthlyFee: 0 },
-        { id: "kindy-1", name: "Kindy 1", category: "Junior" as const, monthlyFee: 0 },
-        { id: "kindy-2", name: "Kindy 2", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u6", name: "U6", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u8-dev", name: "U8 Dev", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u8-adv", name: "U8 Adv", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u10-dev", name: "U10 Dev", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u10-adv", name: "U10 Adv", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u12-dev", name: "U12 Dev", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u12-adv", name: "U12 Adv", category: "Junior" as const, monthlyFee: 0 },
-        { id: "u12-girls", name: "U12 Girls", category: "Junior" as const, monthlyFee: 0 },
-        
-        // Youth Teams
-        { id: "u14", name: "U14", category: "Youth" as const, monthlyFee: 0 },
-        { id: "u14-girls", name: "U14 Girls", category: "Youth" as const, monthlyFee: 0 },
-        { id: "u16", name: "U16", category: "Youth" as const, monthlyFee: 0 },
-        { id: "u18-girls", name: "U18 Girls", category: "Youth" as const, monthlyFee: 0 },
-        { id: "u18", name: "U18", category: "Youth" as const, monthlyFee: 0 },
-        
-        // Adult Teams
-        { id: "women", name: "Women", category: "Adult" as const, monthlyFee: 0 },
-        { id: "masters-45", name: "Masters 45+", category: "Adult" as const, monthlyFee: 0 },
-        { id: "legends", name: "Legends", category: "Adult" as const, monthlyFee: 0 },
-        { id: "social", name: "Social", category: "Adult" as const, monthlyFee: 0 },
-        { id: "first-team", name: "1st Team", category: "Adult" as const, monthlyFee: 0 },
-      ];
-      setTeams(defaultTeams);
-      localStorage.setItem("teams", JSON.stringify(defaultTeams));
+      setTeams(DEFAULT_TEAMS);
+      localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
     }
 
     if (savedCoaches) {
-      setCoaches(JSON.parse(savedCoaches));
+      try {
+        setCoaches(JSON.parse(savedCoaches));
+      } catch (error) {
+        console.error("Error loading coaches:", error);
+        setCoaches([]);
+      }
     }
+
     if (savedAdmins) {
-      setAdminStaff(JSON.parse(savedAdmins));
+      try {
+        setAdminStaff(JSON.parse(savedAdmins));
+      } catch (error) {
+        console.error("Error loading admin staff:", error);
+        setAdminStaff([]);
+      }
     }
+
+    setIsLoaded(true);
   }, []);
 
-  // Save to localStorage whenever data changes
-  useEffect(() => {
-    localStorage.setItem("teams", JSON.stringify(teams));
-  }, [teams]);
+  // Save functions that persist immediately
+  const saveTeamsToStorage = (updatedTeams: Team[]) => {
+    try {
+      localStorage.setItem("teams", JSON.stringify(updatedTeams));
+      setTeams(updatedTeams);
+    } catch (error) {
+      console.error("Error saving teams:", error);
+      alert("Failed to save teams. Please try again.");
+    }
+  };
 
-  useEffect(() => {
-    localStorage.setItem("coaches", JSON.stringify(coaches));
-  }, [coaches]);
+  const saveCoachesToStorage = (updatedCoaches: Coach[]) => {
+    try {
+      localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+      setCoaches(updatedCoaches);
+    } catch (error) {
+      console.error("Error saving coaches:", error);
+      alert("Failed to save coaches. Please try again.");
+    }
+  };
 
-  useEffect(() => {
-    localStorage.setItem("adminStaff", JSON.stringify(adminStaff));
-  }, [adminStaff]);
+  const saveAdminToStorage = (updatedAdmin: AdminStaff[]) => {
+    try {
+      localStorage.setItem("adminStaff", JSON.stringify(updatedAdmin));
+      setAdminStaff(updatedAdmin);
+    } catch (error) {
+      console.error("Error saving admin staff:", error);
+      alert("Failed to save admin staff. Please try again.");
+    }
+  };
 
   const showSuccess = (message: string) => {
     setSuccessMessage(message);
@@ -181,24 +196,27 @@ export default function Settings() {
       monthlyFee: newTeam.monthlyFee,
     };
 
-    setTeams([...teams, team]);
+    const updatedTeams = [...teams, team];
+    saveTeamsToStorage(updatedTeams);
     setNewTeam({ name: "", category: "Junior", monthlyFee: 0 });
     setIsAddTeamOpen(false);
-    showSuccess("Team added successfully!");
+    showSuccess("Team added and saved successfully!");
   };
 
   const handleUpdateTeam = () => {
     if (!editingTeam) return;
 
-    setTeams(teams.map(t => t.id === editingTeam.id ? editingTeam : t));
+    const updatedTeams = teams.map(t => t.id === editingTeam.id ? editingTeam : t);
+    saveTeamsToStorage(updatedTeams);
     setEditingTeam(null);
-    showSuccess("Team updated successfully!");
+    showSuccess("Team updated and saved successfully!");
   };
 
   const handleDeleteTeam = (id: string) => {
     if (confirm("Are you sure you want to delete this team?")) {
-      setTeams(teams.filter(t => t.id !== id));
-      showSuccess("Team deleted successfully!");
+      const updatedTeams = teams.filter(t => t.id !== id);
+      saveTeamsToStorage(updatedTeams);
+      showSuccess("Team deleted and saved successfully!");
     }
   };
 
@@ -223,24 +241,27 @@ export default function Settings() {
       rate: COACH_RATES[newCoach.tier],
     };
 
-    setCoaches([...coaches, coach]);
+    const updatedCoaches = [...coaches, coach];
+    saveCoachesToStorage(updatedCoaches);
     setNewCoach({ name: "", phone: "", tier: "Assistant Coach" });
     setIsAddCoachOpen(false);
-    showSuccess("Coach added successfully!");
+    showSuccess("Coach added and saved successfully!");
   };
 
   const handleUpdateCoach = () => {
     if (!editingCoach) return;
 
-    setCoaches(coaches.map(c => c.id === editingCoach.id ? editingCoach : c));
+    const updatedCoaches = coaches.map(c => c.id === editingCoach.id ? editingCoach : c);
+    saveCoachesToStorage(updatedCoaches);
     setEditingCoach(null);
-    showSuccess("Coach updated successfully!");
+    showSuccess("Coach updated and saved successfully!");
   };
 
   const handleDeleteCoach = (id: string) => {
     if (confirm("Are you sure you want to delete this coach?")) {
-      setCoaches(coaches.filter(c => c.id !== id));
-      showSuccess("Coach deleted successfully!");
+      const updatedCoaches = coaches.filter(c => c.id !== id);
+      saveCoachesToStorage(updatedCoaches);
+      showSuccess("Coach deleted and saved successfully!");
     }
   };
 
@@ -271,24 +292,27 @@ export default function Settings() {
       email: newAdmin.email.trim(),
     };
 
-    setAdminStaff([...adminStaff, admin]);
+    const updatedAdmin = [...adminStaff, admin];
+    saveAdminToStorage(updatedAdmin);
     setNewAdmin({ name: "", phone: "", role: "", email: "" });
     setIsAddAdminOpen(false);
-    showSuccess("Admin staff added successfully!");
+    showSuccess("Admin staff added and saved successfully!");
   };
 
   const handleUpdateAdmin = () => {
     if (!editingAdmin) return;
 
-    setAdminStaff(adminStaff.map(a => a.id === editingAdmin.id ? editingAdmin : a));
+    const updatedAdmin = adminStaff.map(a => a.id === editingAdmin.id ? editingAdmin : a);
+    saveAdminToStorage(updatedAdmin);
     setEditingAdmin(null);
-    showSuccess("Admin staff updated successfully!");
+    showSuccess("Admin staff updated and saved successfully!");
   };
 
   const handleDeleteAdmin = (id: string) => {
     if (confirm("Are you sure you want to delete this staff member?")) {
-      setAdminStaff(adminStaff.filter(a => a.id !== id));
-      showSuccess("Admin staff deleted successfully!");
+      const updatedAdmin = adminStaff.filter(a => a.id !== id);
+      saveAdminToStorage(updatedAdmin);
+      showSuccess("Admin staff deleted and saved successfully!");
     }
   };
 
@@ -345,6 +369,18 @@ export default function Settings() {
     Youth: filteredTeams.filter(t => t.category === "Youth"),
     Adult: filteredTeams.filter(t => t.category === "Adult"),
   };
+
+  // Don't render until data is loaded
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -556,10 +592,7 @@ export default function Settings() {
                                     </div>
                                   ) : (
                                     <div className="flex justify-end gap-2">
-                                      <Button size="sm" variant="outline" onClick={() => setEditingTeam({ 
-                                        ...team,
-                                        category: team.category as Team["category"]
-                                      })}>
+                                      <Button size="sm" variant="outline" onClick={() => setEditingTeam(team)}>
                                         <Edit className="h-4 w-4" />
                                       </Button>
                                       <Button size="sm" variant="destructive" onClick={() => handleDeleteTeam(team.id)}>

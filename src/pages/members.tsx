@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User } from "lucide-react";
 import Link from "next/link";
+import { ImageModal } from "@/components/ImageModal";
 
 const TEAMS_BY_CATEGORY = {
   Junior: ["Toddler", "Kindy/U6 1", "Kindy/U6 2", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Girls", "U12 Dev", "U12 Adv"],
@@ -75,6 +76,12 @@ export default function Members() {
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkRole, setBulkRole] = useState("");
   const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
+
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+
+  // Image modal state
+  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("members");
@@ -366,11 +373,23 @@ export default function Members() {
                           />
                         </TableCell>
                         <TableCell>
-                          {member.photoUrl ? (
-                            <img src={member.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover cursor-pointer" onClick={() => { setPreviewPhotoUrl(member.photoUrl!); setIsPhotoPreviewOpen(true); }} />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><User className="w-4 h-4 text-gray-400" /></div>
-                          )}
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {member.photoUrl ? (
+                                <img 
+                                  src={member.photoUrl} 
+                                  alt={`${member.firstName} ${member.lastName}`} 
+                                  className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedImage({ 
+                                    url: member.photoUrl!, 
+                                    name: `${member.firstName} ${member.lastName}` 
+                                  })}
+                                />
+                              ) : (
+                                <Users className="w-6 h-6 text-blue-600" />
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                         <TableCell>{member.teamAssignment || "-"}</TableCell>
@@ -549,6 +568,14 @@ export default function Members() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Image Modal */}
+      <ImageModal
+        imageUrl={selectedImage?.url || ""}
+        name={selectedImage?.name || ""}
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+      />
     </>
   );
 }
