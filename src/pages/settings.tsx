@@ -1,16 +1,29 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import SEO from "@/components/SEO";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Users,
+  UserCog,
+  ShieldCheck,
+  Search,
+  Home,
+  DollarSign,
+  Calendar,
+  Plus,
+  Trash2,
+  Edit,
+  Save,
+  X,
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit, Save, X, Users, UserCog, ShieldCheck, Search, Home, DollarSign, Calendar } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRouter } from "next/router";
 
 interface Team {
   id: string;
@@ -26,6 +39,7 @@ interface Coach {
   phone: string;
   tier: "Head Coach" | "Goalkeeper Coach" | "Senior Coach" | "Assistant Coach";
   rate: number;
+  hourlyRate: number;
 }
 
 interface AdminStaff {
@@ -63,6 +77,7 @@ const DEFAULT_TEAMS: Team[] = [
   { id: "u16", name: "U16", category: "Youth", monthlyFee: 0 },
   { id: "u18-girls", name: "U18 Girls", category: "Youth", monthlyFee: 0 },
   { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
+  { id: "u20", name: "U20", category: "Youth", monthlyFee: 0 },
   
   // Adult Teams
   { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
@@ -125,12 +140,9 @@ export default function Settings() {
     taxRate: 11
   });
 
-  // Load data from localStorage on mount
+  // Load data on mount
   useEffect(() => {
     const savedTeams = localStorage.getItem("teams");
-    const savedCoaches = localStorage.getItem("coaches");
-    const savedAdmins = localStorage.getItem("adminStaff");
-
     if (savedTeams) {
       try {
         setTeams(JSON.parse(savedTeams));
@@ -144,25 +156,13 @@ export default function Settings() {
       localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
     }
 
+    const savedTax = localStorage.getItem("taxRate");
+    if (savedTax) setNewTeam({ ...newTeam, taxRate: parseInt(savedTax) });
+
+    const savedCoaches = localStorage.getItem("coaches");
     if (savedCoaches) {
-      try {
-        setCoaches(JSON.parse(savedCoaches));
-      } catch (error) {
-        console.error("Error loading coaches:", error);
-        setCoaches([]);
-      }
+      setCoaches(JSON.parse(savedCoaches));
     }
-
-    if (savedAdmins) {
-      try {
-        setAdminStaff(JSON.parse(savedAdmins));
-      } catch (error) {
-        console.error("Error loading admin staff:", error);
-        setAdminStaff([]);
-      }
-    }
-
-    setIsLoaded(true);
   }, []);
 
   // Save functions that persist immediately
@@ -262,43 +262,76 @@ export default function Settings() {
     setFormErrors({});
     const errors: Record<string, string> = {};
 
-    if (!newCoach.name.trim()) errors.coachName = "Name is required";
-    if (!newCoach.phone.trim()) errors.coachPhone = "Phone is required";
+    if (!coachName.trim()) errors.name = "Coach name is required";
+    if (!coachPhone.trim()) errors.phone = "Phone number is required";
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
 
-    const coach: Coach = {
+    const newCoach: Coach = {
       id: Date.now().toString(),
-      name: newCoach.name.trim(),
-      phone: newCoach.phone.trim(),
-      tier: newCoach.tier,
-      rate: COACH_RATES[newCoach.tier],
+      name: coachName,
+      phone: coachPhone,
+      tier: coachTier,
+      hourlyRate: getTierRate(coachTier),
     };
 
-    const updatedCoaches = [...coaches, coach];
-    saveCoachesToStorage(updatedCoaches);
-    setNewCoach({ name: "", phone: "", tier: "Assistant Coach" });
+    const updatedCoaches = [...coaches, newCoach];
+    setCoaches(updatedCoaches);
+    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
     setIsAddCoachOpen(false);
-    showSuccess("Coach added and saved successfully!");
+    setCoachName("");
+    setCoachPhone("");
+    setCoachTier("Assistant Coach");
+    setFormErrors({});
+    showSuccess("Coach added successfully!");
   };
 
-  const handleUpdateCoach = () => {
+  const handleEditCoach = () => {
     if (!editingCoach) return;
+    
+    setFormErrors({});
+    const errors: Record<string, string> = {};
 
-    const updatedCoaches = coaches.map(c => c.id === editingCoach.id ? editingCoach : c);
-    saveCoachesToStorage(updatedCoaches);
+    if (!coachName.trim()) errors.name = "Coach name is required";
+    if (!coachPhone.trim()) errors.phone = "Phone number is required";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    const updatedCoaches = coaches.map((c) =>
+      c.id === editingCoach.id
+        ? {
+            ...c,
+            name: coachName,
+            phone: coachPhone,
+            tier: coachTier,
+            hourlyRate: getTierRate(coachTier),
+          }
+        : c
+    );
+
+    setCoaches(updatedCoaches);
+    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+    setIsAddCoachOpen(false);
     setEditingCoach(null);
-    showSuccess("Coach updated and saved successfully!");
+    setCoachName("");
+    setCoachPhone("");
+    setCoachTier("Assistant Coach");
+    setFormErrors({});
+    showSuccess("Coach updated successfully!");
   };
 
   const handleDeleteCoach = (id: string) => {
     if (confirm("Are you sure you want to delete this coach?")) {
-      const updatedCoaches = coaches.filter(c => c.id !== id);
-      saveCoachesToStorage(updatedCoaches);
-      showSuccess("Coach deleted and saved successfully!");
+      const updatedCoaches = coaches.filter((c) => c.id !== id);
+      setCoaches(updatedCoaches);
+      localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+      showSuccess("Coach deleted successfully!");
     }
   };
 

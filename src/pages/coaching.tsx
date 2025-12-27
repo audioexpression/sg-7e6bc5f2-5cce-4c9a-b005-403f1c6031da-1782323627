@@ -44,13 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 // Types
-interface Coach {
-  id: string;
-  name: string;
-  phone: string;
-  tier: "Head Coach" | "Goalkeeper Coach" | "Senior Coach" | "Assistant Coach";
-  hourlyRate: number;
-}
+import { Coach, TIER_RATES } from "@/types/coach-types";
 
 interface Member {
   id: string;
@@ -73,13 +67,6 @@ interface Session {
 }
 
 type ViewMode = "month" | "week" | "day" | "list";
-
-const TIER_RATES: Record<Coach["tier"], number> = {
-  "Head Coach": 750000,
-  "Goalkeeper Coach": 600000,
-  "Senior Coach": 500000,
-  "Assistant Coach": 400000,
-};
 
 const LOCATIONS = [
   "Bulldogs Arena",
