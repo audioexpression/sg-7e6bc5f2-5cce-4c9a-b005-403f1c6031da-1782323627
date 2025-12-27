@@ -127,7 +127,11 @@ export default function MembersPage() {
 
   const handleEdit = (member: Member) => {
     setEditingMember(member);
-    setFormData({ ...member });
+    setFormData({ 
+      ...member,
+      // Ensure profileImage is explicitly included
+      profileImage: member.profileImage || ""
+    });
     setIsDialogOpen(true);
   };
 
@@ -157,7 +161,12 @@ export default function MembersPage() {
     let updatedMembers;
     if (editingMember) {
       updatedMembers = members.map((m) =>
-        m.id === editingMember.id ? { ...m, ...formData } as Member : m
+        m.id === editingMember.id ? { 
+          ...m, 
+          ...formData,
+          // Preserve profileImage if not being updated
+          profileImage: formData.profileImage || m.profileImage
+        } as Member : m
       );
     } else {
       const newMember = {
