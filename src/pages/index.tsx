@@ -54,6 +54,22 @@ interface CoachingSession {
   status: "Scheduled" | "Completed" | "Cancelled";
 }
 
+interface Team {
+  id: string;
+  name: string;
+  category: string;
+  monthlyFee: number;
+}
+
+interface Coach {
+  id: string;
+  name: string;
+  role: string;
+  rate: number;
+  email?: string;
+  phone?: string;
+}
+
 // --- Helper Functions ---
 
 const formatCurrency = (amount: number) => {
@@ -73,18 +89,25 @@ export default function Dashboard() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [sessions, setSessions] = useState<CoachingSession[]>([]);
+  
+  // Add mounted state to prevent hydration issues
+  const [mounted, setMounted] = useState(false);
+
+  // Filter states
+  const [dateRange, setDateRange] = useState<"month" | "quarter" | "year" | "all" | "custom">("quarter");
 
   // Load Data
   useEffect(() => {
-    const storedMembers = localStorage.getItem("members");
-    if (storedMembers) setMembers(JSON.parse(storedMembers));
-
-    const storedInvoices = localStorage.getItem("invoices");
-    if (storedInvoices) setInvoices(JSON.parse(storedInvoices));
-
-    const storedSessions = localStorage.getItem("coachingSessions");
-    if (storedSessions) setSessions(JSON.parse(storedSessions));
+    setMounted(true);
+    const loadedMembers = JSON.parse(localStorage.getItem("members") || "[]");
+    const loadedInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
+    const loadedSessions = JSON.parse(localStorage.getItem("coachingSessions") || "[]");
+    setMembers(loadedMembers);
+    setInvoices(loadedInvoices);
+    setSessions(loadedSessions);
   }, []);
 
   // --- Calculations ---
@@ -262,18 +285,21 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
           {/* Header */}
-          <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Club Command Center</h1>
-              <p className="text-gray-500 mt-1">
-                Overview of club performance, financials, and daily operations.
+              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                Welcome back! Here's what's happening with Bali Bulldogs FC
               </p>
             </div>
-            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border shadow-sm">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <span className="font-medium text-gray-700">
-                {currentDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </span>
+            <div className="mt-4 md:mt-0 text-sm text-muted-foreground">
+              {mounted ? (
+                <span suppressHydrationWarning>
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+              ) : (
+                <span>Loading...</span>
+              )}
             </div>
           </div>
 
