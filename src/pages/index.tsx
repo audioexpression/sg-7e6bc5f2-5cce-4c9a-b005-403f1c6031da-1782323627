@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Users, TrendingUp, AlertCircle, DollarSign, Calendar, ArrowRight, 
   Settings, Activity, CreditCard, Award, UserPlus, Clock, ArrowUpRight,
-  TrendingDown, Percent, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon
+  TrendingDown, Percent, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
+  Gift, Cake, CheckCircle2
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
@@ -181,6 +182,25 @@ export default function Dashboard() {
   // Average Revenue Per Member
   const avgRevenuePerMember = paidMembersCount > 0 ? totalRevenueAllTime / paidMembersCount : 0;
 
+  // Renewals Logic
+  const membersNeedingRenewal = filteredMembers.filter(m => {
+    if (!m.joiningDate) return false;
+    const joinDate = new Date(m.joiningDate);
+    const renewalMonth = joinDate.getMonth();
+    const currentMonth = new Date().getMonth();
+    // Simple check: renewal due this quarter?
+    const renewalQuarter = Math.floor(renewalMonth / 3);
+    const currentQuarter = Math.floor(currentMonth / 3);
+    return renewalQuarter === currentQuarter;
+  });
+
+  // Coaching Stats Calculations
+  // Note: Using 'sessions' (all sessions) instead of filtered to show global coaching status, 
+  // or we could use filteredSessions if we had that logic. For now, using global 'sessions'.
+  const completedSessions = sessions.filter(s => s.status === "Completed").length;
+  const upcomingSessions = sessions.filter(s => s.status === "Scheduled").length;
+  const membersWithCredits = members.filter(m => m.coachingCredits > 0);
+
   // Revenue Trends (Mock simulation based on existing invoices if periods matched, or simplified grouping)
   // Grouping paid invoices by billing period for trend
   const revenueTrendMap: Record<string, number> = {};
@@ -245,8 +265,6 @@ export default function Dashboard() {
     .filter(s => s.status === "Completed" || s.status === "Scheduled") 
     .reduce((sum, s) => sum + s.cost, 0);
 
-  const lowCreditsMembers = members.filter(m => m.coachingCredits <= 1 && m.coachingCredits >= 0);
-
   // Sessions by Month (Utilization)
   const sessionsByMonth: Record<string, number> = {};
   sessions.forEach(s => {
@@ -261,16 +279,18 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.joiningDate).getTime() - new Date(a.joiningDate).getTime())
     .slice(0, 5);
 
+  // Upcoming Birthdays (This Month)
   const upcomingBirthdays = members
     .filter(m => {
       if (!m.dateOfBirth) return false;
       const dob = new Date(m.dateOfBirth);
-      return dob.getMonth() === currentMonth;
+      const today = new Date();
+      return dob.getMonth() === today.getMonth();
     })
     .sort((a, b) => {
-      const dateA = new Date(a.dateOfBirth).getDate();
-      const dateB = new Date(b.dateOfBirth).getDate();
-      return dateA - dateB;
+      const dobA = new Date(a.dateOfBirth!);
+      const dobB = new Date(b.dateOfBirth!);
+      return dobA.getDate() - dobB.getDate();
     })
     .slice(0, 5);
 
@@ -536,63 +556,95 @@ export default function Dashboard() {
                     </CardContent>
                   </Card>
 
-                  {/* Upcoming Birthdays (Expiring Memberships Proxy) */}
-                  <Card className="border-t-4 border-t-blue-400 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-blue-600 text-lg">
-                        <Award className="h-5 w-5" />
+                  {/* Birthdays & Renewals */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Gift className="h-5 w-5 text-purple-500" />
                         Birthdays & Renewals
                       </CardTitle>
                       <CardDescription>Upcoming dates to remember</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      {upcomingBirthdays.length > 0 ? (
-                        <div className="space-y-3">
-                          {upcomingBirthdays.map((m, i) => (
-                            <div key={i} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                              <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 text-xs font-bold border border-yellow-200">
-                                {new Date(m.dateOfBirth).getDate()}
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{m.firstName} {m.lastName}</p>
-                                <p className="text-xs text-gray-500">{m.category} • {m.teamAssignment}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500 text-center py-4">No birthdays coming up this month.</p>
-                      )}
+                    <CardContent className="space-y-6">
+                      {/* Birthdays This Month */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                          <Cake className="h-4 w-4" />
+                          Birthdays This Month
+                        </h4>
+                        {upcomingBirthdays.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No birthdays this month</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {upcomingBirthdays.map((member, idx) => {
+                              const dob = new Date(member.dateOfBirth!);
+                              const birthdayDate = dob.toLocaleDateString('en-US', { 
+                                month: 'long', 
+                                day: 'numeric' 
+                              });
+                              return (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/20">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900 text-sm font-medium">
+                                      {idx + 1}
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm">{member.firstName} {member.lastName}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {member.category} • {member.teamAssignment}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                                      {birthdayDate}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Turns {new Date().getFullYear() - dob.getFullYear()}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Membership Renewals Due */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Renewals This Quarter
+                        </h4>
+                        {membersNeedingRenewal.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No renewals due this quarter</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {membersNeedingRenewal.slice(0, 5).map((member, idx) => {
+                              const joinDate = new Date(member.joiningDate);
+                              const nextRenewal = new Date(joinDate);
+                              nextRenewal.setFullYear(new Date().getFullYear());
+                              if (nextRenewal < new Date()) {
+                                nextRenewal.setFullYear(nextRenewal.getFullYear() + 1);
+                              }
+                              
+                              return (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+                                  <div>
+                                    <p className="font-medium text-sm">{member.firstName} {member.lastName}</p>
+                                    <p className="text-xs text-muted-foreground">{member.teamAssignment}</p>
+                                  </div>
+                                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                                    {nextRenewal.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
-                  
-                  {/* Low Coaching Credits */}
-                  {lowCreditsMembers.length > 0 && (
-                    <Card className="border-t-4 border-t-purple-500 shadow-sm">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-purple-600 text-lg">
-                          <Clock className="h-5 w-5" />
-                          Low Credits
-                        </CardTitle>
-                        <CardDescription>Members needing top-up</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                         <div className="space-y-3">
-                            {lowCreditsMembers.slice(0, 3).map((m, i) => (
-                              <div key={i} className="flex items-center justify-between text-sm">
-                                <span className="text-gray-700">{m.firstName} {m.lastName}</span>
-                                <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
-                                  {m.coachingCredits} left
-                                </Badge>
-                              </div>
-                            ))}
-                            <Button variant="ghost" size="sm" className="w-full text-purple-600 text-xs h-8" onClick={() => router.push('/coaching')}>
-                               Manage Credits
-                            </Button>
-                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
                 </div>
               </div>
             </TabsContent>
@@ -800,121 +852,83 @@ export default function Dashboard() {
               </div>
             </TabsContent>
 
-            {/* --- COACHING TAB --- */}
+            {/* Coaching Tab */}
             <TabsContent value="coaching" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                       <div className="p-3 bg-purple-100 rounded-full text-purple-600">
-                          <DollarSign className="w-6 h-6" />
-                       </div>
-                       <div>
-                          <p className="text-sm font-medium text-gray-500">Coaching Revenue</p>
-                          <h3 className="text-2xl font-bold text-gray-900">{formatCurrency(coachingRevenue)}</h3>
-                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                       <div className="p-3 bg-blue-100 rounded-full text-blue-600">
-                          <Clock className="w-6 h-6" />
-                       </div>
-                       <div>
-                          <p className="text-sm font-medium text-gray-500">Sessions Completed</p>
-                          <h3 className="text-2xl font-bold text-gray-900">{sessions.filter(s => s.status === "Completed").length}</h3>
-                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4">
-                       <div className="p-3 bg-green-100 rounded-full text-green-600">
-                          <Calendar className="w-6 h-6" />
-                       </div>
-                       <div>
-                          <p className="text-sm font-medium text-gray-500">Sessions Scheduled</p>
-                          <h3 className="text-2xl font-bold text-gray-900">{sessions.filter(s => s.status === "Scheduled").length}</h3>
-                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Utilization Chart */}
-                <Card className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle>Coaching Utilization Stats</CardTitle>
-                    <CardDescription>Private sessions booked per month</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={sessionsTrendData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                        <XAxis dataKey="name" />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip contentStyle={{borderRadius: '8px'}} />
-                        <Bar dataKey="sessions" fill="#8B5CF6" radius={[4, 4, 0, 0]} barSize={40} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Low Credits Alert */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gray-900 flex items-center gap-2">
-                      <CreditCard className="h-5 w-5 text-gray-500" />
-                      Member Credit Status
-                    </CardTitle>
-                    <CardDescription>Track member coaching balances</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Coaching Revenue</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-                      {members.filter(m => m.coachingCredits < 3).length > 0 ? members
-                        .filter(m => m.coachingCredits < 3)
-                        .sort((a,b) => a.coachingCredits - b.coachingCredits)
-                        .map((m, i) => (
-                        <div key={i} className="flex items-center justify-between border-b pb-3 last:border-0">
-                          <div>
-                            <p className="font-medium text-sm">{m.firstName} {m.lastName}</p>
-                            <p className="text-xs text-gray-500">{m.category}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                             <span className="text-xs text-gray-500">Balance:</span>
-                             <Badge variant={m.coachingCredits === 0 ? "destructive" : "secondary"} className="min-w-[30px] justify-center">
-                               {m.coachingCredits}
-                             </Badge>
-                          </div>
-                        </div>
-                      )) : (
-                        <p className="text-sm text-gray-500">All members have sufficient credits (3+).</p>
-                      )}
+                    <div className="text-2xl font-bold">
+                      Rp {coachingRevenue.toLocaleString()}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      From private sessions
+                    </p>
                   </CardContent>
                 </Card>
 
-                {/* Top Coaches */}
-                 <Card>
-                    <CardHeader>
-                       <CardTitle>Top Coaches</CardTitle>
-                       <CardDescription>Most requested trainers</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                       <div className="space-y-4">
-                          {/* Mocking top coaches logic based on session counts per coachId would go here if we had coach names linked to IDs */}
-                          {/* For now showing placeholders or deriving from sessions if coach names available */}
-                          <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
-                             Coach analytics will appear here once more sessions are completed.
-                          </div>
-                       </div>
-                    </CardContent>
-                 </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Sessions Completed</CardTitle>
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{completedSessions}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This period
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Sessions Scheduled</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{upcomingSessions}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upcoming bookings
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{membersWithCredits.length}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Members using coaching
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
+
+              {/* Simple note about coaching */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Private Coaching Overview</CardTitle>
+                  <CardDescription>
+                    Private coaching is available for select members. View the Coaching page for full session management.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => router.push('/coaching')}
+                    className="w-full md:w-auto"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Manage Coaching Sessions
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
