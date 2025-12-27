@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign } from "lucide-react";
 import { useRouter } from "next/router";
+import { generateInvoicePDF } from "@/lib/invoice-generator";
 
 interface Member {
   id: string;
@@ -352,6 +353,36 @@ export default function Invoices() {
     }
   };
 
+  const handleDownloadPDF = (invoice: Invoice) => {
+    const member = members.find(m => m.id === invoice.memberId);
+    if (!member) {
+      alert("Member not found");
+      return;
+    }
+
+    const team = teams.find(t => t.name === member.teamAssignment);
+    const invoiceData = {
+      invoiceNumber: invoice.invoiceNumber || "N/A",
+      invoiceDate: new Date().toISOString().split("T")[0],
+      dueDate: invoice.dueDate,
+      member: {
+        name: `${member.firstName} ${member.lastName}`,
+        address: member.address || "No address provided",
+        email: member.email || "No email provided",
+      },
+      billingPeriod: invoice.billingPeriod,
+      items: [],
+      baseAmount: invoice.baseAmount,
+      discount: invoice.discount,
+      taxAmount: invoice.taxAmount,
+      totalAmount: invoice.amount,
+      monthExemptions: invoice.monthExemptions,
+    };
+
+    const pdf = generateInvoicePDF(invoiceData);
+    pdf.save(`${invoice.invoiceNumber || invoice.id}.pdf`);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -447,12 +478,14 @@ export default function Invoices() {
 
     const newInvoices = teamMembers.map((member) => ({
       id: Date.now().toString() + Math.random(),
+      invoiceNumber: generateInvoiceNumber(bulkFormData.billingPeriod, team.name, invoices),
       memberId: member.id,
       billingPeriod: bulkFormData.billingPeriod,
       dueDate: bulkFormData.dueDate,
       baseAmount: amounts.baseAmount,
       taxAmount: amounts.taxAmount,
       amount: amounts.amount,
+      discount: amounts.discount,
       monthExemptions: exemptions,
       paymentLink: "",
       status: "Draft" as const,
@@ -664,6 +697,7 @@ export default function Invoices() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Invoice #</TableHead>
                         <TableHead>Member</TableHead>
                         <TableHead>Team</TableHead>
                         <TableHead>Period</TableHead>
@@ -681,6 +715,9 @@ export default function Invoices() {
                         const activeMonths = invoice.monthExemptions?.filter(e => !e.exempt).length || 3;
                         return (
                           <TableRow key={invoice.id}>
+                            <TableCell className="font-mono text-sm">
+                              {invoice.invoiceNumber || "—"}
+                            </TableCell>
                             <TableCell className="font-medium">
                               {member ? `${member.firstName} ${member.lastName}` : "Unknown"}
                             </TableCell>
@@ -710,6 +747,15 @@ export default function Invoices() {
                             <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadPDF(invoice)}
+                                  className="text-green-600 hover:text-green-700"
+                                  title="Download PDF"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
