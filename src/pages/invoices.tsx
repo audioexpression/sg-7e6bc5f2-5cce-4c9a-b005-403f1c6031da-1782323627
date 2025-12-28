@@ -41,6 +41,7 @@ interface Member {
   address?: string; // Added address field
   type: "Member" | "Sponsored" | "Scholarship";
   teamAssignment?: string;
+  feeTier?: "Standard" | "Reduced";
 }
 
 interface Team {
