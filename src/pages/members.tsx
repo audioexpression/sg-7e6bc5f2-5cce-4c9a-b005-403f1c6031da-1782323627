@@ -87,6 +87,7 @@ export default function MembersPage() {
   const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
+  const [teamsData, setTeamsData] = useState<any[]>([]);
 
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -100,6 +101,10 @@ export default function MembersPage() {
     const savedMembers = localStorage.getItem("members");
     if (savedMembers) {
       setMembers(JSON.parse(savedMembers));
+    }
+    const savedTeams = localStorage.getItem("teams");
+    if (savedTeams) {
+      setTeamsData(JSON.parse(savedTeams));
     }
   }, []);
 
