@@ -136,7 +136,7 @@ export default function Coaching() {
 
   // Save data
   useEffect(() => {
-    localStorage.setItem("coachingSessions", JSON.stringify(sessions));
+    localStorage.setItem("privateCoachingSessions", JSON.stringify(sessions));
   }, [sessions]);
 
   // Add coach

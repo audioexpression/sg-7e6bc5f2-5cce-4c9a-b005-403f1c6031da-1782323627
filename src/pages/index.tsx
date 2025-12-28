@@ -109,7 +109,7 @@ export default function Dashboard() {
     setMounted(true);
     const loadedMembers = JSON.parse(localStorage.getItem("members") || "[]");
     const loadedInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
-    const loadedSessions = JSON.parse(localStorage.getItem("coachingSessions") || "[]");
+    const loadedSessions = JSON.parse(localStorage.getItem("privateCoachingSessions") || "[]");
     const loadedCoaches = JSON.parse(localStorage.getItem("coaches") || "[]");
     setMembers(loadedMembers);
     setInvoices(loadedInvoices);
