@@ -689,6 +689,9 @@ export default function Settings() {
                                     formatCurrency(team.monthlyFee)
                                   )}
                                 </TableCell>
+                                <TableCell>
+                                  {formatCurrency(calculateQuarterlyFee(team.monthlyFee, team.taxRate || 11))}
+                                </TableCell>
                                 <TableCell className="text-right">
                                   {editingTeam?.id === team.id ? (
                                     <div className="flex justify-end gap-2">
