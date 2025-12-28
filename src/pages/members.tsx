@@ -867,6 +867,39 @@ export default function MembersPage() {
                 <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
               </div>
 
+              {(() => {
+                const selectedTeam = teamsData.find(t => t.name === formData.teamAssignment);
+                const hasReducedFee = selectedTeam && selectedTeam.reducedMonthlyFee && selectedTeam.reducedMonthlyFee > 0;
+                
+                if (hasReducedFee) {
+                  return (
+                    <div className="space-y-2">
+                      <Label>Fee Tier *</Label>
+                      <Select 
+                        value={formData.feeTier || ""} 
+                        onValueChange={(v: "standard" | "reduced") => setFormData({...formData, feeTier: v})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select fee tier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="standard">
+                            Standard Rate (Rp {selectedTeam.standardMonthlyFee?.toLocaleString('id-ID')}/month)
+                          </SelectItem>
+                          <SelectItem value="reduced">
+                            Reduced Rate (Rp {selectedTeam.reducedMonthlyFee?.toLocaleString('id-ID')}/month)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Select the applicable fee tier for this member
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button onClick={(e) => handleSubmit(e)}>Save Member</Button>
