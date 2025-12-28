@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import SEO from "@/components/SEO";
+import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,27 +87,11 @@ export default function TeamsPage() {
     <>
       <SEO title="Team Roster - Bali Bulldogs" description="View all teams and their members" />
       
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50">
-        <nav className="bg-blue-800 text-white shadow-md">
-          <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <div className="flex items-center font-bold text-lg">
-              <Users className="h-5 w-5 text-yellow-400 mr-2" />
-              Bali Bulldogs
-            </div>
-            <div className="flex space-x-1">
-              <Link href="/"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Home className="h-4 w-4 mr-1" />Home</Button></Link>
-              <Link href="/members"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Users className="h-4 w-4 mr-1" />Members</Button></Link>
-              <Link href="/invoices"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><DollarSign className="h-4 w-4 mr-1" />Invoices</Button></Link>
-              <Link href="/coaching"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Calendar className="h-4 w-4 mr-1" />Coaching</Button></Link>
-              <Link href="/settings"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Settings className="h-4 w-4 mr-1" />Settings</Button></Link>
-            </div>
-          </div>
-        </nav>
-
-        <main className="max-w-7xl mx-auto w-full px-4 py-4">
+      <Layout>
+        <div className="max-w-7xl mx-auto w-full px-4 py-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Team Roster</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Team Roster</h1>
               <p className="text-sm text-gray-500">{teamStats.length} teams • {members.filter(m => m.teamAssignment && m.teamAssignment !== "-").length} assigned members</p>
             </div>
             <Button onClick={() => router.push("/members")} variant="outline" size="sm">
@@ -229,7 +214,7 @@ export default function TeamsPage() {
             </div>
           )}
         </main>
-      </div>
+      </Layout>
 
       {/* Image Modal */}
       <ImageModal
