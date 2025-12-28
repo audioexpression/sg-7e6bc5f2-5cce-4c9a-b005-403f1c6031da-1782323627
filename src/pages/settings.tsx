@@ -102,11 +102,18 @@ export default function Settings() {
   
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
-  const [newTeam, setNewTeam] = useState({ 
+  const [newTeam, setNewTeam] = useState<{
+    name: string;
+    category: "Junior" | "Youth" | "Adult";
+    monthlyFee: number;
+    taxRate: number;
+    reducedMonthlyFee?: number;
+  }>({ 
     name: "", 
-    category: "Junior" as Team["category"], 
+    category: "Junior", 
     monthlyFee: 0,
-    taxRate: 11
+    taxRate: 11,
+    reducedMonthlyFee: undefined
   });
   const [teamSearchTerm, setTeamSearchTerm] = useState("");
   const [teamCategoryFilter, setTeamCategoryFilter] = useState<string>("All");
@@ -227,11 +234,12 @@ export default function Settings() {
       category: newTeam.category,
       monthlyFee: newTeam.monthlyFee,
       taxRate: newTeam.taxRate || 11,
+      reducedMonthlyFee: newTeam.reducedMonthlyFee,
     };
 
     const updatedTeams = [...teams, team];
     saveTeamsToStorage(updatedTeams);
-    setNewTeam({ name: "", category: "Junior", monthlyFee: 0, taxRate: 11 });
+    setNewTeam({ name: "", category: "Junior", monthlyFee: 0, taxRate: 11, reducedMonthlyFee: undefined });
     setIsAddTeamOpen(false);
     showSuccess("Team added and saved successfully!");
   };
