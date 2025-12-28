@@ -115,19 +115,28 @@ export default function Coaching() {
     
     const savedMembers = localStorage.getItem("members");
     const savedSessions = localStorage.getItem("coachingSessions");
+    
+    // ONE-TIME MIGRATION: Check for sessions in old key
+    const oldSessions = localStorage.getItem("sessions");
+    if (oldSessions && !savedSessions) {
+      console.log("📦 Migrating sessions from old key to new key");
+      localStorage.setItem("coachingSessions", oldSessions);
+      localStorage.removeItem("sessions"); // Clean up old key
+    }
 
     if (savedMembers) {
       const allMembers = JSON.parse(savedMembers);
       setMembers(allMembers);
     }
     if (savedSessions) setSessions(JSON.parse(savedSessions));
+    else if (oldSessions) setSessions(JSON.parse(oldSessions)); // Fallback to old key
     
     console.log("📊 Initial data loaded");
   }, []);
 
   // Save data
   useEffect(() => {
-    localStorage.setItem("sessions", JSON.stringify(sessions));
+    localStorage.setItem("coachingSessions", JSON.stringify(sessions));
   }, [sessions]);
 
   // Add coach
