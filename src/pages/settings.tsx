@@ -78,10 +78,10 @@ const DEFAULT_TEAMS: Team[] = [
   { id: "u20", name: "U20", category: "Youth", monthlyFee: 0 },
   
   // Adult Teams
-  { id: "women", name: "Women", category: "Adult", monthlyFee: 0 },
+  { id: "women", name: "Women", category: "Adult", monthlyFee: 0, taxRate: 10 },
   { id: "masters-45", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
   { id: "legends", name: "Legends", category: "Adult", monthlyFee: 0 },
-  { id: "social", name: "Social", category: "Adult", monthlyFee: 0 },
+  { id: "social", name: "Social", category: "Adult", monthlyFee: 0, taxRate: 10 },
   { id: "first-team", name: "1st Team", category: "Adult", monthlyFee: 0 },
 ];
 
@@ -583,6 +583,20 @@ export default function Settings() {
                         </p>
                       </div>
 
+                      <div>
+                        <Label htmlFor="reducedMonthlyFee">Reduced Monthly Fee (Rp) - Optional</Label>
+                        <Input
+                          id="reducedMonthlyFee"
+                          type="number"
+                          value={newTeam.reducedMonthlyFee || ""}
+                          onChange={(e) => setNewTeam({ ...newTeam, reducedMonthlyFee: parseInt(e.target.value) || undefined })}
+                          placeholder="500000"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Lower rate for local players with limited funds
+                        </p>
+                      </div>
+
                       <div className="p-4 bg-muted rounded-lg space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Monthly Fee:</span>
@@ -602,6 +616,32 @@ export default function Settings() {
                             <span>{formatCurrency(calculateQuarterlyFee(newTeam.monthlyFee, newTeam.taxRate || 11))}</span>
                           </div>
                         </div>
+                        
+                        {newTeam.reducedMonthlyFee && newTeam.reducedMonthlyFee > 0 && (
+                          <>
+                            <div className="border-t pt-2 mt-3">
+                              <p className="text-xs font-semibold text-muted-foreground mb-2">REDUCED RATE:</p>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Reduced Monthly:</span>
+                                <span className="font-medium">{formatCurrency(newTeam.reducedMonthlyFee)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Reduced Quarterly:</span>
+                                <span className="font-medium">{formatCurrency(newTeam.reducedMonthlyFee * 3)}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Tax ({newTeam.taxRate || 11}%):</span>
+                                <span className="font-medium">{formatCurrency((newTeam.reducedMonthlyFee * 3 * (newTeam.taxRate || 11)) / 100)}</span>
+                              </div>
+                              <div className="border-t pt-2 mt-2">
+                                <div className="flex justify-between font-semibold text-orange-600">
+                                  <span>Reduced Quarter Fee:</span>
+                                  <span>{formatCurrency(calculateQuarterlyFee(newTeam.reducedMonthlyFee, newTeam.taxRate || 11))}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     <DialogFooter>
@@ -653,8 +693,10 @@ export default function Settings() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Team Name</TableHead>
-                            <TableHead>Monthly Fee</TableHead>
-                            <TableHead>Quarter Fee (inc Tax)</TableHead>
+                            <TableHead>Standard Monthly</TableHead>
+                            <TableHead>Standard Quarter</TableHead>
+                            <TableHead>Reduced Monthly</TableHead>
+                            <TableHead>Reduced Quarter</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -690,7 +732,38 @@ export default function Settings() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {formatCurrency(calculateQuarterlyFee(team.monthlyFee, team.taxRate || 11))}
+                                  {editingTeam?.id === team.id ? (
+                                    <span className="text-sm text-muted-foreground">
+                                      {formatCurrency(calculateQuarterlyFee(editingTeam.monthlyFee, editingTeam.taxRate || 11))}
+                                    </span>
+                                  ) : (
+                                    formatCurrency(calculateQuarterlyFee(team.monthlyFee, team.taxRate || 11))
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingTeam?.id === team.id ? (
+                                    <Input
+                                      type="number"
+                                      value={editingTeam.reducedMonthlyFee || ""}
+                                      onChange={(e) => setEditingTeam({ ...editingTeam, reducedMonthlyFee: parseInt(e.target.value) || undefined })}
+                                      placeholder="Optional"
+                                    />
+                                  ) : (
+                                    team.reducedMonthlyFee ? formatCurrency(team.reducedMonthlyFee) : <span className="text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {editingTeam?.id === team.id ? (
+                                    editingTeam.reducedMonthlyFee ? (
+                                      <span className="text-sm text-muted-foreground">
+                                        {formatCurrency(calculateQuarterlyFee(editingTeam.reducedMonthlyFee, editingTeam.taxRate || 11))}
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
+                                    )
+                                  ) : (
+                                    team.reducedMonthlyFee ? formatCurrency(calculateQuarterlyFee(team.reducedMonthlyFee, team.taxRate || 11)) : <span className="text-muted-foreground">—</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {editingTeam?.id === team.id ? (
