@@ -481,6 +481,19 @@ export default function MembersPage() {
 
   const currentDuplicate = duplicates[currentDuplicateIndex];
 
+  const getMembershipBadgeColor = (type: string) => {
+    switch (type) {
+      case "Member":
+        return "bg-blue-100 text-blue-800 border-blue-300";
+      case "Sponsored":
+        return "bg-green-100 text-green-800 border-green-300";
+      case "Scholarship":
+        return "bg-purple-100 text-purple-800 border-purple-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+
   return (
     <>
       <SEO title="Members - Bali Bulldogs" description="Club Member Management" />
@@ -624,7 +637,11 @@ export default function MembersPage() {
                         <TableCell>{member.teamAssignment || "-"}</TableCell>
                         <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
                         <TableCell>{member.role}</TableCell>
-                        <TableCell><Badge variant="outline">{member.type}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={getMembershipBadgeColor(member.type)}>
+                            {member.type}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           {member.contactNumber ? (
                             <a
@@ -823,6 +840,17 @@ export default function MembersPage() {
                 <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Membership Category</Label>
+                <Select value={formData.type} onValueChange={(v: "Member" | "Sponsored" | "Scholarship") => setFormData({...formData, type: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Member">Member</SelectItem>
+                    <SelectItem value="Sponsored">Sponsored</SelectItem>
+                    <SelectItem value="Scholarship">Scholarship</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
