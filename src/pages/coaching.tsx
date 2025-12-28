@@ -421,7 +421,9 @@ export default function Coaching() {
   const getSessionsForDate = (date: Date | null) => {
     if (!date) return [];
     const dateStr = date.toISOString().split("T")[0];
-    return sessions.filter((s) => s.date === dateStr);
+    const filtered = sessions.filter((s) => s.date === dateStr);
+    console.log(`🔍 getSessionsForDate(${dateStr}): ${filtered.length} sessions`);
+    return filtered;
   };
 
   const formatDateStr = (dateStr: string) => {
