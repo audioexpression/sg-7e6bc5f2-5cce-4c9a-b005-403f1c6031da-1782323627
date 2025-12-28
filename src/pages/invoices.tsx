@@ -48,6 +48,7 @@ interface Team {
   name: string;
   category: "Junior" | "Youth" | "Adult";
   monthlyFee: number;
+  reducedMonthlyFee?: number; // Added reduced monthly fee
 }
 
 interface MonthExemption {
@@ -69,6 +70,9 @@ interface Invoice {
   monthExemptions?: MonthExemption[];
   paymentLink?: string;
   status: "Draft" | "Sent" | "Paid" | "Overdue";
+  deletedAt?: string;
+  deletedBy?: string;
+  deletionReason?: string;
 }
 
 const QUARTER_MONTHS: Record<string, string[]> = {
@@ -108,8 +112,12 @@ export default function Invoices() {
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [deletionReason, setDeletionReason] = useState("");
 
   // Validation State
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -353,10 +361,46 @@ export default function Invoices() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this invoice?")) {
-      const updatedInvoices = invoices.filter((inv) => inv.id !== id);
-      saveInvoices(updatedInvoices);
+    setInvoiceToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!invoiceToDelete || !deletionReason.trim()) {
+      setFormErrors({ deletionReason: "Please provide a reason for deletion" });
+      return;
     }
+
+    const updatedInvoices = invoices.map((inv) =>
+      inv.id === invoiceToDelete
+        ? {
+            ...inv,
+            deletedAt: new Date().toISOString(),
+            deletedBy: "Admin",
+            deletionReason: deletionReason.trim(),
+          }
+        : inv
+    ).filter(inv => inv.id !== invoiceToDelete); // Remove from active list
+
+    saveInvoices(updatedInvoices);
+    
+    // Store deleted invoices separately for audit trail
+    const deletedInvoices = JSON.parse(localStorage.getItem("deletedInvoices") || "[]");
+    const deletedInvoice = invoices.find(inv => inv.id === invoiceToDelete);
+    if (deletedInvoice) {
+      deletedInvoices.push({
+        ...deletedInvoice,
+        deletedAt: new Date().toISOString(),
+        deletedBy: "Admin",
+        deletionReason: deletionReason.trim(),
+      });
+      localStorage.setItem("deletedInvoices", JSON.stringify(deletedInvoices));
+    }
+
+    setDeleteDialogOpen(false);
+    setInvoiceToDelete(null);
+    setDeletionReason("");
+    setFormErrors({});
   };
 
   const handleBulkDelete = (selectedIds: Set<string>) => {
@@ -368,11 +412,13 @@ export default function Invoices() {
   const filteredInvoices = invoices.filter((invoice) => {
     const member = members.find((m) => m.id === invoice.memberId);
     const memberName = member ? `${member.firstName} ${member.lastName}`.toLowerCase() : "";
+    const memberTeam = member?.teamAssignment || "";
 
     const matchesSearch = memberName.includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === "all" || invoice.status === selectedStatus;
+    const matchesTeam = selectedTeam === "all" || memberTeam === selectedTeam;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesTeam;
   });
 
   const totalRevenue = invoices
@@ -545,22 +591,31 @@ export default function Invoices() {
 
     const exemptions = initializeMonthExemptions(bulkFormData.billingPeriod);
     const isAnnual = bulkFormData.billingPeriod.includes("Annual");
-    const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions, isAnnual);
 
-    const newInvoices = teamMembers.map((member) => ({
-      id: Date.now().toString() + Math.random(),
-      invoiceNumber: generateInvoiceNumber(bulkFormData.billingPeriod, team.name, invoices),
-      memberId: member.id,
-      billingPeriod: bulkFormData.billingPeriod,
-      dueDate: bulkFormData.dueDate,
-      baseAmount: amounts.baseAmount,
-      taxAmount: amounts.taxAmount,
-      amount: amounts.amount,
-      discount: amounts.discount,
-      monthExemptions: exemptions,
-      paymentLink: "",
-      status: "Draft" as const,
-    }));
+    const newInvoices = teamMembers.map((member) => {
+      // Determine which monthly fee to use based on member's fee tier
+      let monthlyFee = team.monthlyFee;
+      if (member.feeTier === "Reduced" && team.reducedMonthlyFee) {
+        monthlyFee = team.reducedMonthlyFee;
+      }
+
+      const amounts = calculateInvoiceAmount(monthlyFee, exemptions, isAnnual);
+
+      return {
+        id: Date.now().toString() + Math.random(),
+        invoiceNumber: generateInvoiceNumber(bulkFormData.billingPeriod, team.name, invoices),
+        memberId: member.id,
+        billingPeriod: bulkFormData.billingPeriod,
+        dueDate: bulkFormData.dueDate,
+        baseAmount: amounts.baseAmount,
+        taxAmount: amounts.taxAmount,
+        amount: amounts.amount,
+        discount: amounts.discount,
+        monthExemptions: exemptions,
+        paymentLink: "",
+        status: "Draft" as const,
+      };
+    });
 
     saveInvoices([...invoices, ...newInvoices]);
     setShowBulkDialog(false);
@@ -698,6 +753,17 @@ export default function Invoices() {
                     />
                   </div>
                 </div>
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="All Teams" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {Array.from(new Set(members.map(m => m.teamAssignment).filter(Boolean))).sort().map(team => (
+                      <SelectItem key={team} value={team!}>{team}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="All Statuses" />
@@ -1207,6 +1273,56 @@ export default function Invoices() {
             </Button>
             <Button onClick={handleBulkGenerate} className="bg-yellow-600 hover:bg-yellow-700">
               Generate Invoices
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for deleting this invoice. This action cannot be undone, but the deletion will be recorded for audit purposes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Reason for Deletion *</Label>
+              <Input
+                placeholder="e.g., Duplicate entry, Member withdrew, Billing error..."
+                value={deletionReason}
+                onChange={(e) => {
+                  setDeletionReason(e.target.value);
+                  if (formErrors.deletionReason) {
+                    setFormErrors({ ...formErrors, deletionReason: "" });
+                  }
+                }}
+                className={formErrors.deletionReason ? "border-red-500" : ""}
+              />
+              {formErrors.deletionReason && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.deletionReason}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setInvoiceToDelete(null);
+                setDeletionReason("");
+                setFormErrors({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Delete Invoice
             </Button>
           </DialogFooter>
         </DialogContent>
