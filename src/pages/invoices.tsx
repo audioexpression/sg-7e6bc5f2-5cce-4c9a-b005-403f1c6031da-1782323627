@@ -71,6 +71,7 @@ interface Invoice {
   monthExemptions?: MonthExemption[];
   paymentLink?: string;
   status: "Draft" | "Sent" | "Paid" | "Overdue";
+  createdAt?: string;
   deletedAt?: string;
   deletedBy?: string;
   deletionReason?: string;
@@ -550,6 +551,7 @@ export default function Invoices() {
         monthExemptions: formData.monthExemptions || [],
         paymentLink: formData.paymentLink || "",
         status: formData.status || "Draft",
+        createdAt: new Date().toISOString(),
       };
       saveInvoices([...invoices, newInvoice]);
     }
@@ -615,6 +617,7 @@ export default function Invoices() {
         monthExemptions: exemptions,
         paymentLink: "",
         status: "Draft" as const,
+        createdAt: new Date().toISOString(),
       };
     });
 
@@ -829,6 +832,7 @@ export default function Invoices() {
                         <TableHead>Member</TableHead>
                         <TableHead>Team</TableHead>
                         <TableHead>Period</TableHead>
+                        <TableHead>Created</TableHead>
                         <TableHead>Due Date</TableHead>
                         <TableHead>Base</TableHead>
                         <TableHead>Tax (10%)</TableHead>
@@ -865,6 +869,9 @@ export default function Invoices() {
                                   {activeMonths} month{activeMonths !== 1 ? "s" : ""}
                                 </Badge>
                               )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString("id-ID") : "—"}
                             </TableCell>
                             <TableCell>{new Date(invoice.dueDate).toLocaleDateString("id-ID")}</TableCell>
                             <TableCell className="text-sm">
