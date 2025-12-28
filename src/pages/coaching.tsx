@@ -102,6 +102,10 @@ export default function Coaching() {
   // Validation State
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Session editing state
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
   // Load data
   useEffect(() => {
     // Load coaches using shared helper
@@ -305,6 +309,63 @@ export default function Coaching() {
 
       setSessions(sessions.filter((s) => s.id !== id));
     }
+  };
+
+  // Handle session click for editing
+  const handleSessionClick = (session: Session) => {
+    setSelectedSession(session);
+    setShowEditDialog(true);
+  };
+
+  // Handle session update
+  const handleUpdateSession = () => {
+    if (!selectedSession) return;
+
+    setFormErrors({});
+    const errors: Record<string, string> = {};
+
+    if (!selectedSession.date) errors.sessionDate = "Date is required";
+    if (!selectedSession.time) errors.sessionTime = "Time is required";
+
+    const hours = parseFloat(selectedSession.hours.toString());
+    if (isNaN(hours) || hours <= 0 || hours > 8) {
+      errors.sessionHours = "Please enter valid hours (0.5 - 8)";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    // Check coach availability (excluding current session)
+    if (!isCoachAvailable(selectedSession.coachId, selectedSession.date, selectedSession.time, hours)) {
+      const otherSession = sessions.find((s) => 
+        s.id !== selectedSession.id &&
+        s.coachId === selectedSession.coachId && 
+        s.date === selectedSession.date
+      );
+      if (otherSession) {
+        errors.availability = `${selectedSession.coachName} is not available on ${selectedSession.date} at ${selectedSession.time}`;
+        setFormErrors(errors);
+        return;
+      }
+    }
+
+    // Update session
+    const updatedSessions = sessions.map((s) =>
+      s.id === selectedSession.id ? selectedSession : s
+    );
+    setSessions(updatedSessions);
+    setShowEditDialog(false);
+    setSelectedSession(null);
+  };
+
+  // Handle session delete from edit dialog
+  const handleDeleteFromDialog = () => {
+    if (!selectedSession) return;
+    setShowEditDialog(false);
+    handleDeleteSession(selectedSession.id);
+    setSelectedSession(null);
   };
 
   // Delete coach
@@ -539,8 +600,9 @@ export default function Coaching() {
                                 {daySessions.slice(0, 2).map((session) => (
                                   <div
                                     key={session.id}
-                                    className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded truncate"
+                                    className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded truncate cursor-pointer hover:bg-blue-200 transition-colors"
                                     title={`${session.time} - ${session.memberName} with ${session.coachName}`}
+                                    onClick={() => handleSessionClick(session)}
                                   >
                                     {session.time} {session.memberName}
                                   </div>
@@ -590,7 +652,8 @@ export default function Coaching() {
                             {daySessions.map((session) => (
                               <div
                                 key={session.id}
-                                className="text-xs bg-white border rounded p-2"
+                                className="text-xs bg-white border rounded p-2 cursor-pointer hover:shadow-md transition-shadow"
+                                onClick={() => handleSessionClick(session)}
                               >
                                 <div className="font-semibold">{session.time}</div>
                                 <div className="text-gray-600">{session.memberName}</div>
@@ -630,7 +693,7 @@ export default function Coaching() {
                   </div>
                   <div className="space-y-3">
                     {getSessionsForDate(currentDate).sort((a, b) => a.time.localeCompare(b.time)).map((session) => (
-                      <Card key={session.id} className="border-l-4 border-l-blue-500">
+                      <Card key={session.id} className="border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleSessionClick(session)}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div className="space-y-2">
@@ -973,6 +1036,125 @@ export default function Coaching() {
                 Cancel
               </Button>
               <Button onClick={handleBookSession}>Book Session</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Session Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Coaching Session</DialogTitle>
+              <DialogDescription>
+                Update session details or delete the session.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedSession && (
+              <>
+                {formErrors.availability && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4">
+                    {formErrors.availability}
+                  </div>
+                )}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Member</Label>
+                      <Input value={selectedSession.memberName} disabled className="bg-gray-50" />
+                    </div>
+                    <div>
+                      <Label>Coach</Label>
+                      <Input value={selectedSession.coachName} disabled className="bg-gray-50" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="editDate">Date *</Label>
+                      <Input
+                        id="editDate"
+                        type="date"
+                        value={selectedSession.date}
+                        onChange={(e) => setSelectedSession({ ...selectedSession, date: e.target.value })}
+                        className={formErrors.sessionDate ? "border-red-500" : ""}
+                      />
+                      {formErrors.sessionDate && <p className="text-red-500 text-sm mt-1">{formErrors.sessionDate}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="editTime">Time *</Label>
+                      <Input
+                        id="editTime"
+                        type="time"
+                        value={selectedSession.time}
+                        onChange={(e) => setSelectedSession({ ...selectedSession, time: e.target.value })}
+                        className={formErrors.sessionTime ? "border-red-500" : ""}
+                      />
+                      {formErrors.sessionTime && <p className="text-red-500 text-sm mt-1">{formErrors.sessionTime}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="editHours">Hours *</Label>
+                      <Input
+                        id="editHours"
+                        type="number"
+                        step="0.5"
+                        min="0.5"
+                        max="8"
+                        value={selectedSession.hours}
+                        onChange={(e) => setSelectedSession({ ...selectedSession, hours: parseFloat(e.target.value) || 1 })}
+                        className={formErrors.sessionHours ? "border-red-500" : ""}
+                      />
+                      {formErrors.sessionHours && <p className="text-red-500 text-sm mt-1">{formErrors.sessionHours}</p>}
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="editLocation">Location *</Label>
+                    <Select 
+                      value={selectedSession.location} 
+                      onValueChange={(val) => setSelectedSession({ ...selectedSession, location: val })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LOCATIONS.map((loc) => (
+                          <SelectItem key={loc} value={loc}>
+                            {loc}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {selectedSession.location === "Other" && (
+                    <div>
+                      <Label htmlFor="editLocationDetails">Location Details *</Label>
+                      <Input
+                        id="editLocationDetails"
+                        value={selectedSession.locationDetails || ""}
+                        onChange={(e) => setSelectedSession({ ...selectedSession, locationDetails: e.target.value })}
+                        placeholder="Enter specific location details"
+                      />
+                    </div>
+                  )}
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm">
+                      <DollarSign className="w-4 h-4 text-blue-600" />
+                      <span className="font-semibold">Session Cost:</span>
+                      <span>Rp {((TIER_RATES[coaches.find(c => c.id === selectedSession.coachId)?.tier as Coach["tier"]] || 0) * selectedSession.hours).toLocaleString("id-ID")}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            <DialogFooter className="flex justify-between">
+              <Button variant="destructive" onClick={handleDeleteFromDialog}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Session
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateSession}>Save Changes</Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
