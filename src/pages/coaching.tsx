@@ -114,7 +114,7 @@ export default function Coaching() {
     setCoaches(loadedCoaches);
     
     const savedMembers = localStorage.getItem("members");
-    const savedSessions = localStorage.getItem("sessions");
+    const savedSessions = localStorage.getItem("coachingSessions");
 
     if (savedMembers) {
       const allMembers = JSON.parse(savedMembers);
