@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Home, Users, Shield, DollarSign, Target, Settings } from "lucide-react";
+import { Home, Users, Shield, Target, Settings } from "lucide-react";
 import Image from "next/image";
 
 interface LayoutProps {
@@ -15,7 +15,7 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/", label: "Dashboard", icon: Home },
     { href: "/members", label: "Members", icon: Users },
     { href: "/teams", label: "Teams", icon: Shield },
-    { href: "/invoices", label: "Invoices", icon: DollarSign },
+    { href: "/invoices", label: "IDR", icon: null, isText: true },
     { href: "/coaching", label: "Coaching", icon: Target },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
@@ -63,8 +63,14 @@ export default function Layout({ children }: LayoutProps) {
                         : "text-white hover:bg-blue-700 hover:scale-105"
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="hidden lg:inline">{item.label}</span>
+                    {item.isText ? (
+                      <span className="font-bold">{item.label}</span>
+                    ) : (
+                      <>
+                        {Icon && <Icon className="w-5 h-5" />}
+                        <span className="hidden lg:inline">{item.label}</span>
+                      </>
+                    )}
                   </Link>
                 );
               })}
