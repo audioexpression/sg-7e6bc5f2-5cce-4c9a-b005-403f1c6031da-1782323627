@@ -505,22 +505,6 @@ export default function MembersPage() {
       <SEO title="Members - Bali Bulldogs" description="Club Member Management" />
       
       <div className="min-h-screen bg-gray-50">
-        <nav className="bg-blue-800 text-white shadow-md">
-          <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <div className="flex items-center font-bold text-lg">
-              <Users className="h-5 w-5 text-yellow-400 mr-2" />
-              Bali Bulldogs
-            </div>
-            <div className="flex space-x-1">
-              <Link href="/"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Home className="h-4 w-4 mr-1" />Home</Button></Link>
-              <Link href="/teams"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Users className="h-4 w-4 mr-1" />Teams</Button></Link>
-              <Link href="/invoices"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><DollarSign className="h-4 w-4 mr-1" />Invoices</Button></Link>
-              <Link href="/coaching"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Calendar className="h-4 w-4 mr-1" />Coaching</Button></Link>
-              <Link href="/settings"><Button variant="ghost" size="sm" className="text-white hover:bg-blue-700 h-9"><Settings className="h-4 w-4 mr-1" />Settings</Button></Link>
-            </div>
-          </div>
-        </nav>
-
         <main className="max-w-7xl mx-auto w-full px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
