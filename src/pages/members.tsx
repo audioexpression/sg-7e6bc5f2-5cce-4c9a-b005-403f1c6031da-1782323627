@@ -764,7 +764,7 @@ export default function MembersPage() {
             </div>
 
             <div className="w-full overflow-x-auto border rounded-lg">
-              <Table>
+              <Table style={{ minWidth: "2000px" }}>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12 sticky left-0 bg-white z-10">
