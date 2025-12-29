@@ -166,18 +166,7 @@ export default function TeamsPage() {
                 <CardContent className="pt-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {team.players.map((player) => (
-                      <button
-                        key={player.id}
-                        className="bg-gray-50 p-4 rounded-lg w-full text-left"
-                        onClick={() => {
-                          if (player.photoUrl) {
-                            setSelectedImage({ 
-                              url: player.photoUrl, 
-                              name: `${player.firstName} ${player.lastName}` 
-                            });
-                          }
-                        }}
-                      >
+                      <div key={player.id} className="bg-gray-50 p-4 rounded-lg w-full text-left">
                         <div className="flex items-start space-x-3">
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${player.photoUrl ? 'cursor-pointer hover:opacity-80' : 'bg-blue-100'}`}>
                             {player.photoUrl ? (
@@ -206,7 +195,7 @@ export default function TeamsPage() {
                             </div>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </CardContent>
