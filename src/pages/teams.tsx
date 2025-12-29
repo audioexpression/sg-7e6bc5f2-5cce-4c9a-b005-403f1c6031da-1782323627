@@ -18,6 +18,7 @@ interface Member {
   type: string;
   role: string;
   photoUrl?: string;
+  profileImage?: string;
 }
 
 interface TeamStats {
@@ -168,17 +169,33 @@ export default function TeamsPage() {
                     {team.players.map((player) => (
                       <div key={player.id} className="bg-gray-50 p-4 rounded-lg w-full text-left">
                         <div className="flex items-start space-x-3">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${player.photoUrl ? 'cursor-pointer hover:opacity-80' : 'bg-blue-100'}`}>
-                            {player.photoUrl ? (
-                              <img 
-                                src={player.photoUrl} 
+                          <button
+                            type="button"
+                            className={`w-12 h-12 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${
+                              (player.profileImage || player.photoUrl)
+                                ? "cursor-pointer hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                : "bg-blue-100"
+                            }`}
+                            onClick={() => {
+                              const image = player.profileImage || player.photoUrl;
+                              if (image) {
+                                setSelectedImage({
+                                  url: image,
+                                  name: `${player.firstName} ${player.lastName}`,
+                                });
+                              }
+                            }}
+                          >
+                            {player.profileImage || player.photoUrl ? (
+                              <img
+                                src={player.profileImage || player.photoUrl}
                                 alt={`${player.firstName} ${player.lastName}`}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
                               <Users className="w-6 h-6 text-blue-600" />
                             )}
-                          </div>
+                          </button>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 truncate">
                               {player.firstName} {player.lastName}
