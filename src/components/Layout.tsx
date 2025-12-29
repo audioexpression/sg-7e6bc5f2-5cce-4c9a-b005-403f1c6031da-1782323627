@@ -30,7 +30,7 @@ export default function Layout({ children }: LayoutProps) {
             <Link href="/" className="flex items-center gap-4 group">
               <div className="relative w-16 h-16 rounded-full bg-white p-1 shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <Image
-                  src="/logo.png"
+                  src="/Bali_Bulldogs_Logo.png"
                   alt="Bali Bulldogs FC"
                   width={64}
                   height={64}
