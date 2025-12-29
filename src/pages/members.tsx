@@ -763,7 +763,7 @@ export default function MembersPage() {
               )}
             </div>
 
-            <div className="rounded-md border overflow-x-auto">
+            <div className="w-full overflow-x-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
