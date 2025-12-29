@@ -23,6 +23,156 @@ const TEAMS_BY_CATEGORY = {
 
 const ROLES = ["Admin", "Coach", "Player-Coach", "Player"];
 
+const COUNTRIES = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Andorra",
+  "Angola",
+  "Antigua and Barbuda",
+  "Argentina",
+  "Armenia",
+  "Australia",
+  "Austria",
+  "Azerbaijan",
+  "Bahamas",
+  "Bahrain",
+  "Bangladesh",
+  "Barbados",
+  "Belarus",
+  "Belgium",
+  "Belize",
+  "Benin",
+  "Bhutan",
+  "Bolivia",
+  "Bosnia and Herzegovina",
+  "Botswana",
+  "Brazil",
+  "Brunei",
+  "Bulgaria",
+  "Burkina Faso",
+  "Burundi",
+  "Cambodia",
+  "Cameroon",
+  "Canada",
+  "Cape Verde",
+  "Central African Republic",
+  "Chad",
+  "Chile",
+  "China",
+  "Colombia",
+  "Comoros",
+  "Congo (Brazzaville)",
+  "Congo (Kinshasa)",
+  "Costa Rica",
+  "Croatia",
+  "Cuba",
+  "Cyprus",
+  "Czech Republic",
+  "Denmark",
+  "Djibouti",
+  "Dominica",
+  "Dominican Republic",
+  "Ecuador",
+  "Egypt",
+  "El Salvador",
+  "Equatorial Guinea",
+  "Eritrea",
+  "Estonia",
+  "Eswatini",
+  "Ethiopia",
+  "Fiji",
+  "Finland",
+  "France",
+  "Gabon",
+  "Gambia",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Guatemala",
+  "Haiti",
+  "Honduras",
+  "Hungary",
+  "Iceland",
+  "India",
+  "Indonesia",
+  "Iran",
+  "Iraq",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Jamaica",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kiribati",
+  "Kuwait",
+  "Latvia",
+  "Lebanon",
+  "Madagascar",
+  "Malawi",
+  "Malaysia",
+  "Mali",
+  "Mauritania",
+  "Mexico",
+  "Moldova",
+  "Mongolia",
+  "Morocco",
+  "Mozambique",
+  "Myanmar",
+  "Namibia",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nigeria",
+  "North Korea",
+  "North Macedonia",
+  "Norway",
+  "Oman",
+  "Pakistan",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Romania",
+  "Russia",
+  "Rwanda",
+  "Saint Kitts and Nevis",
+  "Saint Lucia",
+  "Saint Vincent and the Grenadines",
+  "Samoa",
+  "Senegal",
+  "Serbia",
+  "Seychelles",
+  "Sierra Leone",
+  "Singapore",
+  "Slovakia",
+  "Slovenia",
+  "South Africa",
+  "South Korea",
+  "Spain",
+  "Sudan",
+  "Sweden",
+  "Switzerland",
+  "Tajikistan",
+  "Tanzania",
+  "Thailand",
+  "Togo",
+  "Tunisia",
+  "Turkey",
+  "Uganda",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uruguay",
+  "Venezuela",
+  "Vietnam",
+  "Yemen",
+  "Zambia",
+  "Zimbabwe",
+];
+
 const teamOptions = [...TEAMS_BY_CATEGORY.Junior, ...TEAMS_BY_CATEGORY.Youth, ...TEAMS_BY_CATEGORY.Adult];
 
 interface Member {
@@ -855,7 +1005,14 @@ export default function MembersPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Nationality</Label>
-                  <Input value={formData.nationality || ""} onChange={e => setFormData({...formData, nationality: e.target.value})} placeholder="e.g., Indonesian" />
+                  <Select value={formData.nationality || ""} onValueChange={(v: string) => setFormData({...formData, nationality: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select nationality" /></SelectTrigger>
+                    <SelectContent>
+                      {COUNTRIES.map(country => (
+                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -960,52 +1117,6 @@ export default function MembersPage() {
                   Important medical information for coaches and staff
                 </p>
               </div>
-
-              <div className="space-y-2">
-                <Label>Coaching Credits</Label>
-                <Input 
-                  type="number" 
-                  value={formData.coachingCredits || 0} 
-                  onChange={e => setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0})} 
-                  min="0"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Number of prepaid private coaching sessions
-                </p>
-              </div>
-
-              {(() => {
-                const selectedTeam = teamsData.find(t => t.name === formData.teamAssignment);
-                const hasReducedFee = selectedTeam && selectedTeam.reducedMonthlyFee && selectedTeam.reducedMonthlyFee > 0;
-                
-                if (hasReducedFee) {
-                  return (
-                    <div className="space-y-2">
-                      <Label>Fee Tier *</Label>
-                      <Select 
-                        value={formData.feeTier || ""} 
-                        onValueChange={(v: "standard" | "reduced") => setFormData({...formData, feeTier: v})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select fee tier" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="standard">
-                            Standard Rate (Rp {selectedTeam.standardMonthlyFee?.toLocaleString('id-ID')}/month)
-                          </SelectItem>
-                          <SelectItem value="reduced">
-                            Reduced Rate (Rp {selectedTeam.reducedMonthlyFee?.toLocaleString('id-ID')}/month)
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Select the applicable fee tier for this member
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
