@@ -568,6 +568,15 @@ export default function MembersPage() {
                   {filterCategory === "all" ? teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>) : (TEAMS_BY_CATEGORY[filterCategory as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Select value={filterMembershipCategory} onValueChange={setFilterMembershipCategory}>
+                <SelectTrigger><SelectValue placeholder="Membership Type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Member">Member</SelectItem>
+                  <SelectItem value="Sponsored">Sponsored</SelectItem>
+                  <SelectItem value="Scholarship">Scholarship</SelectItem>
+                </SelectContent>
+              </Select>
               {(searchTerm || filterTeam !== "all" || filterCategory !== "all") && (
                 <Button variant="ghost" onClick={handleClearFilters} className="text-red-600">
                   <X className="w-4 h-4 mr-1" />Clear
