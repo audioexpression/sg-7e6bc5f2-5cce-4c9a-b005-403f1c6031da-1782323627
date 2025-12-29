@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone, AlertTriangle } from "lucide-react";
+import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone, AlertTriangle, Mail, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { ImageModal } from "@/components/ImageModal";
 import { useRouter } from "next/router";
@@ -256,11 +256,11 @@ export default function MembersPage() {
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkRole, setBulkRole] = useState("");
   const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
+  const [bulkNationality, setBulkNationality] = useState("");
 
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [teamsData, setTeamsData] = useState<any[]>([]);
 
-  // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importData, setImportData] = useState<Partial<Member>[]>([]);
   const [duplicates, setDuplicates] = useState<Array<{ imported: Partial<Member>; existing: Member; index: number }>>([]);
@@ -619,7 +619,8 @@ export default function MembersPage() {
           ...(bulkTeam && { teamAssignment: bulkTeam }),
           ...(bulkCategory && { category: bulkCategory as "Junior" | "Youth" | "Adult" }),
           ...(bulkRole && { role: bulkRole }),
-          ...(bulkMembershipCategory && { type: bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship" })
+          ...(bulkMembershipCategory && { type: bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship" }),
+          ...(bulkNationality && { nationality: bulkNationality })
         };
       }
       return member;
@@ -633,6 +634,7 @@ export default function MembersPage() {
     setBulkCategory("");
     setBulkRole("");
     setBulkMembershipCategory("");
+    setBulkNationality("");
   };
 
   const handleDeleteMembers = () => {
@@ -669,6 +671,12 @@ export default function MembersPage() {
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
   };
 
   return (
@@ -759,7 +767,7 @@ export default function MembersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">
+                    <TableHead className="w-12 sticky left-0 bg-white z-10">
                       <input
                         type="checkbox"
                         checked={selectedMembers.length === currentMembers.length && currentMembers.length > 0}
@@ -767,27 +775,36 @@ export default function MembersPage() {
                         className="w-4 h-4 cursor-pointer"
                       />
                     </TableHead>
-                    <TableHead className="w-[60px]">Photo</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Membership</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-[60px] sticky left-12 bg-white z-10">Photo</TableHead>
+                    <TableHead className="sticky left-[108px] bg-white z-10 min-w-[150px]">Name</TableHead>
+                    <TableHead className="min-w-[120px]">Team</TableHead>
+                    <TableHead className="min-w-[80px]">Category</TableHead>
+                    <TableHead className="min-w-[100px]">Role</TableHead>
+                    <TableHead className="min-w-[110px]">Membership</TableHead>
+                    <TableHead className="min-w-[80px]">Shirt #</TableHead>
+                    <TableHead className="min-w-[100px]">DOB</TableHead>
+                    <TableHead className="min-w-[130px]">Nationality</TableHead>
+                    <TableHead className="min-w-[150px]">Address</TableHead>
+                    <TableHead className="min-w-[180px]">Email</TableHead>
+                    <TableHead className="min-w-[140px]">Contact</TableHead>
+                    <TableHead className="min-w-[100px]">Joined</TableHead>
+                    <TableHead className="min-w-[180px]">Primary Contact</TableHead>
+                    <TableHead className="min-w-[180px]">Secondary Contact</TableHead>
+                    <TableHead className="min-w-[200px]">Medical Notes</TableHead>
+                    <TableHead className="text-right sticky right-0 bg-white z-10 min-w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={18} className="text-center py-8 text-gray-500">
                         No members found. Try adjusting filters or adding a new member.
                       </TableCell>
                     </TableRow>
                   ) : (
                     currentMembers.map((member) => (
                       <TableRow key={member.id} className="hover:bg-muted/50">
-                        <TableCell>
+                        <TableCell className="sticky left-0 bg-white">
                           <input
                             type="checkbox"
                             checked={selectedMembers.includes(member.id)}
@@ -795,7 +812,7 @@ export default function MembersPage() {
                             className="w-4 h-4 cursor-pointer"
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="sticky left-12 bg-white">
                           <button
                             onClick={() => {
                               if (member.profileImage) {
@@ -815,14 +832,35 @@ export default function MembersPage() {
                             </Avatar>
                           </button>
                         </TableCell>
-                        <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
-                        <TableCell>{member.teamAssignment || "-"}</TableCell>
+                        <TableCell className="font-medium sticky left-[108px] bg-white">{member.firstName} {member.lastName}</TableCell>
+                        <TableCell>{member.teamAssignment || "—"}</TableCell>
                         <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
                         <TableCell>{member.role}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={getMembershipBadgeColor(member.type)}>
                             {member.type}
                           </Badge>
+                        </TableCell>
+                        <TableCell>{member.shirtNumber || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {member.dateOfBirth || "—"}
+                        </TableCell>
+                        <TableCell>{member.nationality || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {member.address || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {member.email ? (
+                            <a
+                              href={`mailto:${member.email}`}
+                              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline text-sm"
+                            >
+                              <Mail className="h-3 w-3" />
+                              {member.email}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {member.contactNumber ? (
@@ -839,7 +877,58 @@ export default function MembersPage() {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(member.joiningDate)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {member.primaryContact ? (
+                            <div>
+                              <div className="font-medium">{member.primaryContact}</div>
+                              {member.primaryContactNumber && (
+                                <a
+                                  href={`tel:${member.primaryContactNumber}`}
+                                  className="text-blue-600 hover:underline text-xs"
+                                >
+                                  {member.primaryContactNumber}
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {member.secondaryContact ? (
+                            <div>
+                              <div className="font-medium">{member.secondaryContact}</div>
+                              {member.secondaryContactNumber && (
+                                <a
+                                  href={`tel:${member.secondaryContactNumber}`}
+                                  className="text-blue-600 hover:underline text-xs"
+                                >
+                                  {member.secondaryContactNumber}
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {member.medicalNotes ? (
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                              <span className="text-sm text-muted-foreground" title={member.medicalNotes}>
+                                {member.medicalNotes.length > 50 
+                                  ? `${member.medicalNotes.substring(0, 50)}...` 
+                                  : member.medicalNotes}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right sticky right-0 bg-white">
                           <div className="flex justify-end gap-1">
                             <Button size="sm" variant="ghost" onClick={() => handleEdit(member)} className="h-8 w-8 p-0"><Pencil className="w-4 h-4" /></Button>
                             <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-4 h-4" /></Button>
@@ -927,6 +1016,19 @@ export default function MembersPage() {
                     <option value="Member">Member</option>
                     <option value="Sponsored">Sponsored</option>
                     <option value="Scholarship">Scholarship</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Change Nationality</label>
+                  <select
+                    value={bulkNationality}
+                    onChange={(e) => setBulkNationality(e.target.value)}
+                    className="w-full border rounded-lg p-2 max-h-[200px]"
+                  >
+                    <option value="">Keep Current</option>
+                    {COUNTRIES.map((country) => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                 </div>
               </div>
