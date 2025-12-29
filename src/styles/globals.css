@@ -70,7 +70,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Work Sans', sans-serif;
   }
 }
 
@@ -88,4 +87,28 @@
 
 .bg-bulldogs-yellow {
   background-color: hsl(var(--bulldogs-yellow));
+}
+
+/* Custom scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary)) hsl(var(--background));
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border-radius: 5px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary-foreground));
 }

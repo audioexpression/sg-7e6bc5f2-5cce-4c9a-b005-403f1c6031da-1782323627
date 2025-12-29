@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign } from "lucide-react";
+import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign, CheckCircle } from "lucide-react";
 import { useRouter } from "next/router";
 import { generateInvoicePDF } from "@/lib/invoice-generator";
 
@@ -38,7 +38,7 @@ interface Member {
   firstName: string;
   lastName: string;
   email: string;
-  address?: string; // Added address field
+  address?: string;
   type: "Member" | "Sponsored" | "Scholarship";
   teamAssignment?: string;
   feeTier?: "Standard" | "Reduced";
@@ -49,7 +49,7 @@ interface Team {
   name: string;
   category: "Junior" | "Youth" | "Adult";
   monthlyFee: number;
-  reducedMonthlyFee?: number; // Added reduced monthly fee
+  reducedMonthlyFee?: number;
 }
 
 interface MonthExemption {
@@ -85,7 +85,7 @@ const QUARTER_MONTHS: Record<string, string[]> = {
   "2026 Annual": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
 };
 
-const TAX_RATE = 0.10; // 10% government tax
+const TAX_RATE = 0.10;
 
 const generateInvoiceNumber = (billingPeriod: string, teamName: string, existingInvoices: Invoice[]): string => {
   const year = billingPeriod.includes("2026") ? "2026" : "2025";
@@ -111,6 +111,7 @@ export default function Invoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -118,13 +119,13 @@ export default function Invoices() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [deletionReason, setDeletionReason] = useState("");
+  const [bulkStatusValue, setBulkStatusValue] = useState<Invoice["status"]>("Sent");
 
-  // Validation State
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Single Invoice Form State
   const [formData, setFormData] = useState<Partial<Invoice>>({
     memberId: "",
     billingPeriod: "",
@@ -137,26 +138,22 @@ export default function Invoices() {
     status: "Draft",
   });
 
-  // Bulk Generation Form State
   const [bulkFormData, setBulkFormData] = useState({
     teamName: "",
     billingPeriod: "",
     dueDate: "",
   });
 
-  // Load invoices from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("invoices");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         
-        // Migrate old invoices to new format
         const migrated = parsed.map((invoice: any) => {
           if (!invoice.monthExemptions) {
-            // Old format - reverse calculate base from total (total = base × 1.1)
             const totalAmount = invoice.amount || 0;
-            const baseAmount = totalAmount / 1.1; // Remove the 10% to get base
+            const baseAmount = totalAmount / 1.1;
             const taxAmount = totalAmount - baseAmount;
 
             const months = QUARTER_MONTHS[invoice.billingPeriod] || [];
@@ -184,7 +181,6 @@ export default function Invoices() {
     }
   }, []);
 
-  // Load teams from localStorage
   useEffect(() => {
     const savedTeams = localStorage.getItem("teams");
     if (savedTeams) {
@@ -197,7 +193,6 @@ export default function Invoices() {
     }
   }, []);
 
-  // Load members from localStorage
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
     if (savedMembers) {
@@ -223,7 +218,7 @@ export default function Invoices() {
     let discountedBase = baseAmount;
     
     if (isAnnual && activeMonths === 12) {
-      discount = baseAmount * 0.10; // 10% discount for annual
+      discount = baseAmount * 0.10;
       discountedBase = baseAmount - discount;
     }
     
@@ -382,11 +377,10 @@ export default function Invoices() {
             deletionReason: deletionReason.trim(),
           }
         : inv
-    ).filter(inv => inv.id !== invoiceToDelete); // Remove from active list
+    ).filter(inv => inv.id !== invoiceToDelete);
 
     saveInvoices(updatedInvoices);
     
-    // Store deleted invoices separately for audit trail
     const deletedInvoices = JSON.parse(localStorage.getItem("deletedInvoices") || "[]");
     const deletedInvoice = invoices.find(inv => inv.id === invoiceToDelete);
     if (deletedInvoice) {
@@ -405,10 +399,56 @@ export default function Invoices() {
     setFormErrors({});
   };
 
-  const handleBulkDelete = (selectedIds: Set<string>) => {
-    const updatedInvoices = invoices.filter((inv) => !selectedIds.has(inv.id));
+  const handleBulkDelete = () => {
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    if (!deletionReason.trim()) {
+      setFormErrors({ deletionReason: "Please provide a reason for bulk deletion" });
+      return;
+    }
+
+    const deletedInvoices = JSON.parse(localStorage.getItem("deletedInvoices") || "[]");
+    const timestamp = new Date().toISOString();
+    
+    selectedInvoices.forEach(invId => {
+      const invoice = invoices.find(inv => inv.id === invId);
+      if (invoice) {
+        deletedInvoices.push({
+          ...invoice,
+          deletedAt: timestamp,
+          deletedBy: "Admin",
+          deletionReason: deletionReason.trim(),
+        });
+      }
+    });
+
+    localStorage.setItem("deletedInvoices", JSON.stringify(deletedInvoices));
+
+    const updatedInvoices = invoices.filter((inv) => !selectedInvoices.has(inv.id));
+    saveInvoices(updatedInvoices);
+    
+    setSelectedInvoices(new Set());
+    setBulkDeleteDialogOpen(false);
+    setDeletionReason("");
+    setFormErrors({});
+  };
+
+  const handleBulkStatusChange = () => {
+    setShowBulkStatusDialog(true);
+  };
+
+  const confirmBulkStatusChange = () => {
+    const updatedInvoices = invoices.map((inv) =>
+      selectedInvoices.has(inv.id)
+        ? { ...inv, status: bulkStatusValue }
+        : inv
+    );
     saveInvoices(updatedInvoices);
     setSelectedInvoices(new Set());
+    setShowBulkStatusDialog(false);
+    setBulkStatusValue("Sent");
   };
 
   const filteredInvoices = invoices.filter((invoice) => {
@@ -453,14 +493,13 @@ export default function Invoices() {
     return <Badge variant={config.variant} className={config.className}>{status}</Badge>;
   };
 
-  // Calculate invoice amounts based on team monthly fee and active months
   const calculateInvoiceAmounts = (
     monthlyFee: number,
     monthExemptions: MonthExemption[]
   ) => {
     const activeMonths = monthExemptions.filter((m) => !m.exempt).length;
     const baseAmount = monthlyFee * activeMonths;
-    const taxAmount = baseAmount * 0.1; // 10% government tax ADDED ON TOP
+    const taxAmount = baseAmount * 0.1;
     const totalAmount = baseAmount + taxAmount;
 
     return { baseAmount, taxAmount, totalAmount };
@@ -596,7 +635,6 @@ export default function Invoices() {
     const isAnnual = bulkFormData.billingPeriod.includes("Annual");
 
     const newInvoices = teamMembers.map((member) => {
-      // Determine which monthly fee to use based on member's fee tier
       let monthlyFee = team.monthlyFee;
       if (member.feeTier === "Reduced" && team.reducedMonthlyFee) {
         monthlyFee = team.reducedMonthlyFee;
@@ -656,7 +694,6 @@ export default function Invoices() {
       />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
           <div className="mb-8">
             <Button
               variant="ghost"
@@ -696,7 +733,6 @@ export default function Invoices() {
             </div>
           </div>
 
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="border-l-4 border-l-green-600">
               <CardHeader className="pb-3">
@@ -742,7 +778,6 @@ export default function Invoices() {
             </Card>
           </div>
 
-          {/* Filters */}
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row gap-4">
@@ -784,7 +819,6 @@ export default function Invoices() {
             </CardContent>
           </Card>
 
-          {/* Invoice List */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -796,17 +830,23 @@ export default function Invoices() {
                   </span>
                 </CardTitle>
                 {selectedInvoices.size > 0 && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete ${selectedInvoices.size} invoice(s)?`)) {
-                        handleBulkDelete(selectedInvoices);
-                      }
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Selected ({selectedInvoices.size})
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleBulkStatusChange}
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Update Status ({selectedInvoices.size})
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleBulkDelete}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Selected ({selectedInvoices.size})
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
@@ -1004,7 +1044,6 @@ export default function Invoices() {
               </div>
             </div>
 
-            {/* Month Exemptions */}
             {formData.monthExemptions && formData.monthExemptions.length > 0 && (
               <div className="border rounded-lg p-4 bg-gray-50">
                 <Label className="text-base font-semibold mb-3 block">Monthly Billing</Label>
@@ -1079,7 +1118,6 @@ export default function Invoices() {
               </div>
             </div>
 
-            {/* Amount Breakdown */}
             {formData.amount > 0 && (
               <div className="space-y-2">
                 <Label>Invoice Breakdown</Label>
@@ -1286,7 +1324,59 @@ export default function Invoices() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Bulk Status Change Dialog */}
+      <Dialog open={showBulkStatusDialog} onOpenChange={setShowBulkStatusDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Invoice Status</DialogTitle>
+            <DialogDescription>
+              Change the status of {selectedInvoices.size} selected invoice{selectedInvoices.size !== 1 ? "s" : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>New Status *</Label>
+              <Select
+                value={bulkStatusValue}
+                onValueChange={(value) => setBulkStatusValue(value as Invoice["status"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Draft">
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">Draft</Badge>
+                  </SelectItem>
+                  <SelectItem value="Sent">
+                    <Badge className="bg-blue-100 text-blue-700">Sent</Badge>
+                  </SelectItem>
+                  <SelectItem value="Paid">
+                    <Badge className="bg-green-100 text-green-700">Paid</Badge>
+                  </SelectItem>
+                  <SelectItem value="Overdue">
+                    <Badge variant="destructive" className="bg-red-100 text-red-700">Overdue</Badge>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-900">
+                This will update the status of <strong>{selectedInvoices.size}</strong> selected invoice{selectedInvoices.size !== 1 ? "s" : ""} to <strong>{bulkStatusValue}</strong>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkStatusDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmBulkStatusChange} className="bg-blue-600 hover:bg-blue-700">
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1331,6 +1421,60 @@ export default function Invoices() {
               onClick={confirmDelete}
             >
               Delete Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Multiple Invoices</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for deleting these {selectedInvoices.size} invoices. This action cannot be undone, but the deletion will be recorded for audit purposes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+              <p className="text-sm text-red-900 font-medium">
+                ⚠️ You are about to delete {selectedInvoices.size} invoice{selectedInvoices.size !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <div>
+              <Label>Reason for Bulk Deletion *</Label>
+              <Input
+                placeholder="e.g., Incorrect billing period, Team restructure, Data cleanup..."
+                value={deletionReason}
+                onChange={(e) => {
+                  setDeletionReason(e.target.value);
+                  if (formErrors.deletionReason) {
+                    setFormErrors({ ...formErrors, deletionReason: "" });
+                  }
+                }}
+                className={formErrors.deletionReason ? "border-red-500" : ""}
+              />
+              {formErrors.deletionReason && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.deletionReason}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBulkDeleteDialogOpen(false);
+                setDeletionReason("");
+                setFormErrors({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmBulkDelete}
+            >
+              Delete {selectedInvoices.size} Invoice{selectedInvoices.size !== 1 ? "s" : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
