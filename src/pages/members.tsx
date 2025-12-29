@@ -651,7 +651,7 @@ export default function MembersPage() {
                                 });
                               }
                             }}
-                            className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+                            className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full cursor-pointer"
                           >
                             <Avatar>
                               <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
@@ -794,7 +794,7 @@ export default function MembersPage() {
               <DialogTitle>{editingMember ? "Edit Member" : "Add New Member"}</DialogTitle>
             </DialogHeader>
             
-            <div className="grid gap-6 py-4">
+            <form onSubmit={handleSubmit} className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label>Profile Photo</Label>
                 <div className="flex items-center gap-4">
@@ -837,61 +837,141 @@ export default function MembersPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>First Name *</Label>
-                <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>First Name *</Label>
+                  <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Name *</Label>
+                  <Input value={formData.lastName || ""} onChange={e => setFormData({...formData, lastName: e.target.value})} required />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Last Name *</Label>
-                <Input value={formData.lastName || ""} onChange={e => setFormData({...formData, lastName: e.target.value})} required />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date of Birth</Label>
+                  <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nationality</Label>
+                  <Input value={formData.nationality || ""} onChange={e => setFormData({...formData, nationality: e.target.value})} placeholder="e.g., Indonesian" />
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(v: any) => setFormData({...formData, category: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="Junior">Junior</SelectItem><SelectItem value="Youth">Youth</SelectItem><SelectItem value="Adult">Adult</SelectItem></SelectContent>
-                </Select>
+                <Label>Address (Area of Bali)</Label>
+                <Input value={formData.address || ""} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="e.g., Canggu, Seminyak, Ubud" />
               </div>
-              <div className="space-y-2">
-                <Label>Team</Label>
-                <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
-                  <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
-                  <SelectContent>
-                    {(TEAMS_BY_CATEGORY[formData.category as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Contact Number</Label>
+                  <Input value={formData.contactNumber || ""} onChange={e => setFormData({...formData, contactNumber: e.target.value})} placeholder="+62..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={formData.email || ""} onChange={e => setFormData({...formData, email: e.target.value})} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={formData.category} onValueChange={(v: any) => setFormData({...formData, category: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="Junior">Junior</SelectItem><SelectItem value="Youth">Youth</SelectItem><SelectItem value="Adult">Adult</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Team</Label>
+                  <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
+                    <SelectContent>
+                      {(TEAMS_BY_CATEGORY[formData.category as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Shirt Number</Label>
+                  <Input type="number" value={formData.shirtNumber || ""} onChange={e => setFormData({...formData, shirtNumber: e.target.value})} placeholder="e.g., 10" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Membership Category</Label>
-                <Select value={formData.type} onValueChange={(v: "Member" | "Sponsored" | "Scholarship") => setFormData({...formData, type: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Member">Member</SelectItem>
-                    <SelectItem value="Sponsored">Sponsored</SelectItem>
-                    <SelectItem value="Scholarship">Scholarship</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Membership Category</Label>
+                  <Select value={formData.type} onValueChange={(v: "Member" | "Sponsored" | "Scholarship") => setFormData({...formData, type: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Member">Member</SelectItem>
+                      <SelectItem value="Sponsored">Sponsored</SelectItem>
+                      <SelectItem value="Scholarship">Scholarship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label>Contact Number</Label>
-                <Input value={formData.contactNumber || ""} onChange={e => setFormData({...formData, contactNumber: e.target.value})} />
+                <Label>Joining Date</Label>
+                <Input type="date" value={formData.joiningDate || ""} onChange={e => setFormData({...formData, joiningDate: e.target.value})} />
               </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input type="email" value={formData.email || ""} onChange={e => setFormData({...formData, email: e.target.value})} />
+
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold mb-3">Emergency Contacts</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Primary Contact Name</Label>
+                    <Input value={formData.primaryContact || ""} onChange={e => setFormData({...formData, primaryContact: e.target.value})} placeholder="Parent/Guardian name" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Primary Contact Number</Label>
+                    <Input value={formData.primaryContactNumber || ""} onChange={e => setFormData({...formData, primaryContactNumber: e.target.value})} placeholder="+62..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secondary Contact Name</Label>
+                    <Input value={formData.secondaryContact || ""} onChange={e => setFormData({...formData, secondaryContact: e.target.value})} placeholder="Optional" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secondary Contact Number</Label>
+                    <Input value={formData.secondaryContactNumber || ""} onChange={e => setFormData({...formData, secondaryContactNumber: e.target.value})} placeholder="Optional" />
+                  </div>
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label>Date of Birth</Label>
-                <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
+                <Label>Medical Notes</Label>
+                <Textarea 
+                  value={formData.medicalNotes || ""} 
+                  onChange={e => setFormData({...formData, medicalNotes: e.target.value})} 
+                  placeholder="Known allergies, medical conditions, medications..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Important medical information for coaches and staff
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Coaching Credits</Label>
+                <Input 
+                  type="number" 
+                  value={formData.coachingCredits || 0} 
+                  onChange={e => setFormData({...formData, coachingCredits: parseInt(e.target.value) || 0})} 
+                  min="0"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Number of prepaid private coaching sessions
+                </p>
               </div>
 
               {(() => {
@@ -928,10 +1008,10 @@ export default function MembersPage() {
               })()}
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button onClick={(e) => handleSubmit(e)}>Save Member</Button>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Member</Button>
               </DialogFooter>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
 
