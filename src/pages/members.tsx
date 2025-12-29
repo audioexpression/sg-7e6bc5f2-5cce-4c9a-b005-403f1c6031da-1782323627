@@ -642,12 +642,24 @@ export default function MembersPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          <Avatar>
-                            <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
-                            <AvatarFallback>
-                              {member.firstName[0]}{member.lastName[0]}
-                            </AvatarFallback>
-                          </Avatar>
+                          <button
+                            onClick={() => {
+                              if (member.profileImage) {
+                                setSelectedImage({
+                                  url: member.profileImage,
+                                  name: `${member.firstName} ${member.lastName}`
+                                });
+                              }
+                            }}
+                            className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
+                          >
+                            <Avatar>
+                              <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
+                              <AvatarFallback>
+                                {member.firstName[0]}{member.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                          </button>
                         </TableCell>
                         <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                         <TableCell>{member.teamAssignment || "-"}</TableCell>
