@@ -77,6 +77,23 @@ export default function MembersPage() {
     role: "Player",
     coachingCredits: 0,
     teamAssignment: "",
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    nationality: "",
+    address: "",
+    email: "",
+    shirtNumber: "",
+    joiningDate: "",
+    contactNumber: "",
+    profileImage: "",
+    whatsappLink: "",
+    primaryContact: "",
+    primaryContactNumber: "",
+    secondaryContact: "",
+    secondaryContactNumber: "",
+    medicalNotes: "",
+    feeTier: "",
   });
 
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
