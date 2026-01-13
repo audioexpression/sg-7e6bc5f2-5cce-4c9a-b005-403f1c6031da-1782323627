@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone, AlertTriangle, Mail, AlertCircle } from "lucide-react";
+import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone, AlertTriangle, Mail, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { ImageModal } from "@/components/ImageModal";
 import { useRouter } from "next/router";
@@ -433,6 +433,12 @@ export default function MembersPage() {
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [currentDuplicateIndex, setCurrentDuplicateIndex] = useState(0);
   const [duplicateResolutions, setDuplicateResolutions] = useState<Record<number, "skip" | "overwrite" | "create">>({});
+  const [importResults, setImportResults] = useState<{
+    successes: Array<{ row: number; name: string; team: string }>;
+    errors: Array<{ row: number; field: string; message: string; data?: any }>;
+    warnings: Array<{ row: number; message: string }>;
+  } | null>(null);
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
@@ -541,6 +547,7 @@ export default function MembersPage() {
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
     const data: Partial<Member>[] = [];
     const warnings: string[] = [];
+    const errors: Array<{ row: number; field: string; message: string }> = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map(v => v.trim());
@@ -559,7 +566,13 @@ export default function MembersPage() {
 
         if (header.includes("first") || header === "firstname") member.firstName = value;
         else if (header.includes("last") || header === "lastname" || header === "surname") member.lastName = value;
-        else if (header.includes("email")) member.email = value;
+        else if (header.includes("email")) {
+          if (value.includes("@")) {
+            member.email = value;
+          } else {
+            errors.push({ row: i + 1, field: "email", message: `Invalid email format: "${value}"` });
+          }
+        }
         else if (header.includes("phone") || header.includes("contact")) member.contactNumber = value;
         else if (header.includes("shirt") || header.includes("number")) member.shirtNumber = value;
         else if (header.includes("team")) {
@@ -567,7 +580,7 @@ export default function MembersPage() {
           if (normalizedTeam && teamOptions.includes(normalizedTeam)) {
             member.teamAssignment = normalizedTeam;
           } else {
-            warnings.push(`Row ${i + 1}: Team "${value}" not recognized, skipped`);
+            warnings.push(`Row ${i + 1}: Team "${value}" not recognized, mapped to "${normalizedTeam || 'None'}"`);
           }
         }
         else if (header.includes("category")) {
@@ -575,25 +588,47 @@ export default function MembersPage() {
           if (cat.includes("junior")) member.category = "Junior";
           else if (cat.includes("youth")) member.category = "Youth";
           else if (cat.includes("adult")) member.category = "Adult";
+          else {
+            errors.push({ row: i + 1, field: "category", message: `Invalid category: "${value}"` });
+          }
         }
-        else if (header.includes("role")) member.role = value;
+        else if (header.includes("role")) {
+          if (ROLES.includes(value)) {
+            member.role = value;
+          } else {
+            warnings.push(`Row ${i + 1}: Role "${value}" not recognized, defaulted to "Player"`);
+          }
+        }
         else if (header.includes("dob") || header.includes("birth")) {
-          // Convert various date formats to DD/MM/YYYY
           const converted = convertFromInputDate(value);
           member.dateOfBirth = converted;
         }
-        else if (header.includes("nationality")) member.nationality = value;
+        else if (header.includes("nationality")) {
+          if (COUNTRIES.includes(value)) {
+            member.nationality = value;
+          } else {
+            warnings.push(`Row ${i + 1}: Nationality "${value}" not in standard list`);
+            member.nationality = value;
+          }
+        }
         else if (header.includes("address")) member.address = value;
       });
 
-      if (member.firstName && member.lastName) {
+      if (!member.firstName || !member.lastName) {
+        errors.push({ 
+          row: i + 1, 
+          field: "name", 
+          message: "Missing first name or last name", 
+          data: { firstName: member.firstName, lastName: member.lastName } 
+        });
+      } else {
         data.push(member);
       }
     }
 
-    if (warnings.length > 0) {
-      console.warn("Import warnings:", warnings);
-    }
+    // Store warnings and errors for later use
+    (data as any).importWarnings = warnings;
+    (data as any).importErrors = errors;
 
     return data;
   };
@@ -608,22 +643,28 @@ export default function MembersPage() {
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
           const warnings: string[] = [];
+          const errors: Array<{ row: number; field: string; message: string }> = [];
 
           const members: Partial<Member>[] = jsonData.map((row: any, index: number) => {
             const teamValue = row["Team"] || row["team"] || "";
             const normalizedTeam = normalizeTeamName(teamValue);
             
             if (teamValue && !teamOptions.includes(normalizedTeam)) {
-              warnings.push(`Row ${index + 2}: Team "${teamValue}" not recognized, skipped`);
+              warnings.push(`Row ${index + 2}: Team "${teamValue}" not recognized, mapped to "${normalizedTeam}"`);
             }
 
             const dobValue = row["Date of Birth"] || row["DOB"] || row["date_of_birth"] || "";
             const convertedDob = dobValue ? convertFromInputDate(String(dobValue)) : "";
 
-            return {
+            const email = row["Email"] || row["email"] || "";
+            if (email && !email.includes("@")) {
+              errors.push({ row: index + 2, field: "email", message: `Invalid email format: "${email}"` });
+            }
+
+            const member: Partial<Member> = {
               firstName: row["First Name"] || row["FirstName"] || row["first_name"] || "",
               lastName: row["Last Name"] || row["LastName"] || row["Surname"] || row["last_name"] || "",
-              email: row["Email"] || row["email"] || "",
+              email: email.includes("@") ? email : "",
               contactNumber: row["Contact Number"] || row["Phone"] || row["contact_number"] || "",
               shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt_number"] || "",
               teamAssignment: teamOptions.includes(normalizedTeam) ? normalizedTeam : "",
@@ -636,11 +677,22 @@ export default function MembersPage() {
               coachingCredits: 0,
               joiningDate: new Date().toISOString().split("T")[0],
             };
+
+            if (!member.firstName || !member.lastName) {
+              errors.push({ 
+                row: index + 2, 
+                field: "name", 
+                message: "Missing first name or last name",
+                data: { firstName: member.firstName, lastName: member.lastName }
+              });
+            }
+
+            return member;
           }).filter((m: any) => m.firstName && m.lastName);
 
-          if (warnings.length > 0) {
-            alert(`Import completed with warnings:\n\n${warnings.join("\n")}`);
-          }
+          // Store warnings and errors
+          (members as any).importWarnings = warnings;
+          (members as any).importErrors = errors;
 
           resolve(members);
         } catch (error) {
@@ -737,6 +789,14 @@ export default function MembersPage() {
     let imported = 0;
     let skipped = 0;
     let overwritten = 0;
+    
+    const successes: Array<{ row: number; name: string; team: string }> = [];
+    const errors: Array<{ row: number; field: string; message: string; data?: any }> = (data as any).importErrors || [];
+    const warnings: Array<{ row: number; message: string }> = ((data as any).importWarnings || []).map((w: string) => {
+      const match = w.match(/Row (\d+): (.+)/);
+      return match ? { row: parseInt(match[1]), message: match[2] } : { row: 0, message: w };
+    });
+    const duplicateActions: Array<{ row: number; name: string; action: string }> = [];
 
     data.forEach((item, index) => {
       const duplicate = duplicates.find(d => d.index === index);
@@ -746,6 +806,11 @@ export default function MembersPage() {
         
         if (resolution === "skip") {
           skipped++;
+          duplicateActions.push({ 
+            row: index + 2, 
+            name: `${item.firstName} ${item.lastName}`, 
+            action: "Skipped" 
+          });
           return;
         } else if (resolution === "overwrite") {
           updatedMembers = updatedMembers.map(m => 
@@ -754,6 +819,16 @@ export default function MembersPage() {
               : m
           );
           overwritten++;
+          duplicateActions.push({ 
+            row: index + 2, 
+            name: `${item.firstName} ${item.lastName}`, 
+            action: "Updated existing record" 
+          });
+          successes.push({ 
+            row: index + 2, 
+            name: `${item.firstName} ${item.lastName}`, 
+            team: item.teamAssignment || "No team" 
+          });
           return;
         }
       }
@@ -779,17 +854,46 @@ export default function MembersPage() {
 
       updatedMembers.push(newMember);
       imported++;
+      successes.push({ 
+        row: index + 2, 
+        name: `${newMember.firstName} ${newMember.lastName}`, 
+        team: newMember.teamAssignment || "No team" 
+      });
     });
 
     setMembers(updatedMembers);
     localStorage.setItem("members", JSON.stringify(updatedMembers));
 
-    let message = `Import complete!\n\n`;
-    if (imported > 0) message += `✅ Imported: ${imported} members\n`;
-    if (overwritten > 0) message += `🔄 Updated: ${overwritten} members\n`;
-    if (skipped > 0) message += `⏭️ Skipped: ${skipped} duplicates`;
+    // Create import log
+    const importLog = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      fileName: importFile?.name || "unknown",
+      totalRows: data.length,
+      successCount: imported + overwritten,
+      errorCount: errors.length,
+      warningCount: warnings.length,
+      duplicatesResolved: duplicateActions.length,
+      details: {
+        successes,
+        errors,
+        warnings,
+        duplicates: duplicateActions,
+      },
+    };
 
-    alert(message);
+    // Save to import logs
+    const existingLogs = JSON.parse(localStorage.getItem("importLogs") || "[]");
+    existingLogs.unshift(importLog);
+    localStorage.setItem("importLogs", JSON.stringify(existingLogs.slice(0, 50))); // Keep last 50 logs
+
+    // Show results
+    setImportResults({
+      successes,
+      errors,
+      warnings,
+    });
+    setShowResultsDialog(true);
     
     setIsImportOpen(false);
     setImportData([]);
@@ -1334,22 +1438,6 @@ export default function MembersPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Address (Area of Bali)</Label>
-                <Input value={formData.address || ""} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="e.g., Canggu, Seminyak, Ubud" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Contact Number</Label>
-                  <Input value={formData.contactNumber || ""} onChange={e => setFormData({...formData, contactNumber: e.target.value})} placeholder="+62..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={formData.email || ""} onChange={e => setFormData({...formData, email: e.target.value})} />
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Category</Label>
@@ -1408,41 +1496,6 @@ export default function MembersPage() {
                     Format: {formatDateDisplay(formData.joiningDate)}
                   </p>
                 )}
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-3">Emergency Contacts</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Primary Contact Name</Label>
-                    <Input value={formData.primaryContact || ""} onChange={e => setFormData({...formData, primaryContact: e.target.value})} placeholder="Parent/Guardian name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Primary Contact Number</Label>
-                    <Input value={formData.primaryContactNumber || ""} onChange={e => setFormData({...formData, primaryContactNumber: e.target.value})} placeholder="+62..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Secondary Contact Name</Label>
-                    <Input value={formData.secondaryContact || ""} onChange={e => setFormData({...formData, secondaryContact: e.target.value})} placeholder="Optional" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Secondary Contact Number</Label>
-                    <Input value={formData.secondaryContactNumber || ""} onChange={e => setFormData({...formData, secondaryContactNumber: e.target.value})} placeholder="Optional" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Medical Notes</Label>
-                <Textarea 
-                  value={formData.medicalNotes || ""} 
-                  onChange={e => setFormData({...formData, medicalNotes: e.target.value})} 
-                  placeholder="Known allergies, medical conditions, medications..."
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Important medical information for coaches and staff
-                </p>
               </div>
 
               <DialogFooter>
@@ -1530,6 +1583,134 @@ export default function MembersPage() {
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
               >
                 Create Duplicate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {importResults && importResults.errors.length === 0 ? (
+                  <>
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                    Import Successful!
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-6 w-6 text-yellow-600" />
+                    Import Completed with Issues
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                Review the import results below
+              </DialogDescription>
+            </DialogHeader>
+
+            {importResults && (
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg text-center border border-green-200">
+                    <div className="text-3xl font-bold text-green-700">{importResults.successes.length}</div>
+                    <div className="text-sm text-green-600 mt-1">Successfully Imported</div>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg text-center border border-red-200">
+                    <div className="text-3xl font-bold text-red-700">{importResults.errors.length}</div>
+                    <div className="text-sm text-red-600 mt-1">Errors</div>
+                  </div>
+                  <div className="bg-yellow-50 p-4 rounded-lg text-center border border-yellow-200">
+                    <div className="text-3xl font-bold text-yellow-700">{importResults.warnings.length}</div>
+                    <div className="text-sm text-yellow-600 mt-1">Warnings</div>
+                  </div>
+                </div>
+
+                {importResults.errors.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-red-700 flex items-center gap-2">
+                      <XCircle className="w-5 h-5" />
+                      Errors ({importResults.errors.length})
+                    </h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {importResults.errors.map((error, idx) => (
+                        <div key={idx} className="bg-red-50 p-3 rounded border border-red-200">
+                          <div className="font-medium text-red-900">
+                            <span className="font-mono text-sm">Row {error.row}:</span> {error.message}
+                          </div>
+                          {error.field && (
+                            <div className="text-sm text-red-700 mt-1">
+                              Field: <span className="font-mono">{error.field}</span>
+                            </div>
+                          )}
+                          {error.data && (
+                            <div className="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded">
+                              {JSON.stringify(error.data)}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {importResults.warnings.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-yellow-700 flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5" />
+                      Warnings ({importResults.warnings.length})
+                    </h3>
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {importResults.warnings.map((warning, idx) => (
+                        <div key={idx} className="bg-yellow-50 p-2 rounded border border-yellow-200 text-sm">
+                          <span className="font-mono text-yellow-700">Row {warning.row}:</span>{" "}
+                          <span className="text-yellow-900">{warning.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {importResults.successes.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-green-700 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      Successfully Imported ({importResults.successes.length})
+                    </h3>
+                    <div className="max-h-60 overflow-y-auto">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {importResults.successes.map((item, idx) => (
+                          <div key={idx} className="bg-green-50 p-2 rounded border border-green-200 text-sm">
+                            <span className="font-mono text-xs text-green-700">Row {item.row}:</span>{" "}
+                            <span className="font-medium">{item.name}</span>
+                            {item.team && <span className="text-green-700"> → {item.team}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    📋 A detailed log of this import has been saved. View all import history in{" "}
+                    <button
+                      onClick={() => {
+                        setShowResultsDialog(false);
+                        window.location.href = "/import-logs";
+                      }}
+                      className="font-semibold underline hover:text-blue-700"
+                    >
+                      Import Logs
+                    </button>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button onClick={() => setShowResultsDialog(false)}>
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
