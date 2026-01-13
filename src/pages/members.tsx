@@ -547,7 +547,7 @@ export default function MembersPage() {
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
     const data: Partial<Member>[] = [];
     const warnings: string[] = [];
-    const errors: Array<{ row: number; field: string; message: string }> = [];
+    const errors: Array<{ row: number; field: string; message: string; data?: any }> = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map(v => v.trim());
@@ -643,7 +643,7 @@ export default function MembersPage() {
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
           const warnings: string[] = [];
-          const errors: Array<{ row: number; field: string; message: string }> = [];
+          const errors: Array<{ row: number; field: string; message: string; data?: any }> = [];
 
           const members: Partial<Member>[] = jsonData.map((row: any, index: number) => {
             const teamValue = row["Team"] || row["team"] || "";
