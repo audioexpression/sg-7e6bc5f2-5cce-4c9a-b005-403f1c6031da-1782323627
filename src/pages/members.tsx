@@ -24,172 +24,32 @@ const TEAMS_BY_CATEGORY = {
 const ROLES = ["Admin", "Coach", "Player-Coach", "Player"];
 
 const COUNTRIES = [
-  "Afghanistan",
-  "Albania",
-  "Algeria",
-  "Andorra",
-  "Angola",
-  "Antigua and Barbuda",
-  "Argentina",
-  "Armenia",
-  "Australia",
-  "Austria",
-  "Azerbaijan",
-  "Bahamas",
-  "Bahrain",
-  "Bangladesh",
-  "Barbados",
-  "Belarus",
-  "Belgium",
-  "Belize",
-  "Benin",
-  "Bhutan",
-  "Bolivia",
-  "Bosnia and Herzegovina",
-  "Botswana",
-  "Brazil",
-  "Brunei",
-  "Bulgaria",
-  "Burkina Faso",
-  "Burundi",
-  "Cambodia",
-  "Cameroon",
-  "Canada",
-  "Cape Verde",
-  "Central African Republic",
-  "Chad",
-  "Chile",
-  "China",
-  "Colombia",
-  "Comoros",
-  "Congo (Brazzaville)",
-  "Congo (Kinshasa)",
-  "Costa Rica",
-  "Croatia",
-  "Cuba",
-  "Cyprus",
-  "Czech Republic",
-  "Denmark",
-  "Djibouti",
-  "Dominica",
-  "Dominican Republic",
-  "Ecuador",
-  "Egypt",
-  "El Salvador",
-  "Equatorial Guinea",
-  "Eritrea",
-  "Estonia",
-  "Eswatini",
-  "Ethiopia",
-  "Fiji",
-  "Finland",
-  "France",
-  "Gabon",
-  "Gambia",
-  "Germany",
-  "Ghana",
-  "Greece",
-  "Guatemala",
-  "Haiti",
-  "Honduras",
-  "Hungary",
-  "Iceland",
-  "India",
-  "Indonesia",
-  "Iran",
-  "Iraq",
-  "Ireland",
-  "Israel",
-  "Italy",
-  "Jamaica",
-  "Japan",
-  "Jordan",
-  "Kazakhstan",
-  "Kenya",
-  "Kiribati",
-  "Kuwait",
-  "Latvia",
-  "Lebanon",
-  "Madagascar",
-  "Malawi",
-  "Malaysia",
-  "Mali",
-  "Mauritania",
-  "Mexico",
-  "Moldova",
-  "Mongolia",
-  "Morocco",
-  "Mozambique",
-  "Myanmar",
-  "Namibia",
-  "Nepal",
-  "Netherlands",
-  "New Zealand",
-  "Nigeria",
-  "North Korea",
-  "North Macedonia",
-  "Norway",
-  "Oman",
-  "Pakistan",
-  "Philippines",
-  "Poland",
-  "Portugal",
-  "Romania",
-  "Russia",
-  "Rwanda",
-  "Saint Kitts and Nevis",
-  "Saint Lucia",
-  "Saint Vincent and the Grenadines",
-  "Samoa",
-  "Senegal",
-  "Serbia",
-  "Seychelles",
-  "Sierra Leone",
-  "Singapore",
-  "Slovakia",
-  "Slovenia",
-  "South Africa",
-  "South Korea",
-  "Spain",
-  "Sudan",
-  "Sweden",
-  "Switzerland",
-  "Tajikistan",
-  "Tanzania",
-  "Thailand",
-  "Togo",
-  "Tunisia",
-  "Turkey",
-  "Uganda",
-  "Ukraine",
-  "United Arab Emirates",
-  "United Kingdom",
-  "England",
-  "Scotland",
-  "Wales",
-  "Northern Ireland",
-  "United States",
-  "Uruguay",
-  "Venezuela",
-  "Vietnam",
-  "Yemen",
-  "Zambia",
-  "Zimbabwe",
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
+  "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon",
+  "Canada", "Cape Verde", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)", "Congo (Kinshasa)",
+  "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador",
+  "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Germany", "Ghana", "Greece", "Guatemala", "Haiti", "Honduras", "Hungary", "Iceland",
+  "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan",
+  "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Latvia", "Lebanon", "Madagascar", "Malawi", "Malaysia", "Mali",
+  "Mauritania", "Mexico", "Moldova", "Mongolia", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nepal", "Netherlands",
+  "New Zealand", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Philippines", "Poland", "Portugal",
+  "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "Senegal", "Serbia", "Seychelles",
+  "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "South Africa", "South Korea", "Spain", "Sudan", "Sweden", "Switzerland",
+  "Tajikistan", "Tanzania", "Thailand", "Togo", "Tunisia", "Turkey", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom",
+  "England", "Scotland", "Wales", "Northern Ireland", "United States", "Uruguay", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
 ];
 
 const teamOptions = [...TEAMS_BY_CATEGORY.Junior, ...TEAMS_BY_CATEGORY.Youth, ...TEAMS_BY_CATEGORY.Adult];
 
-// Team name mapping for import validation
 const TEAM_NAME_MAPPINGS: Record<string, string> = {
-  // Exact matches (normalized)
   "toddler": "Toddler",
   "kindy/u6 1": "Kindy/U6 1",
   "kindy 1": "Kindy/U6 1",
   "kindy/u6 2": "Kindy/U6 2",
   "kindy 2": "Kindy/U6 2",
   "u6": "Kindy/U6 1",
-  
-  // U8 variations
   "u8 dev": "U8 Dev",
   "u8 development": "U8 Dev",
   "u8dev": "U8 Dev",
@@ -200,8 +60,6 @@ const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "u8adv": "U8 Adv",
   "under 8 adv": "U8 Adv",
   "under 8 advanced": "U8 Adv",
-  
-  // U10 variations
   "u10 dev": "U10 Dev",
   "u10 development": "U10 Dev",
   "u10dev": "U10 Dev",
@@ -212,8 +70,6 @@ const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "u10adv": "U10 Adv",
   "under 10 adv": "U10 Adv",
   "under 10 advanced": "U10 Adv",
-  
-  // U12 variations
   "u12 dev": "U12 Dev",
   "u12 development": "U12 Dev",
   "u12dev": "U12 Dev",
@@ -227,8 +83,6 @@ const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "u12 girls": "U12 Girls",
   "u12girls": "U12 Girls",
   "under 12 girls": "U12 Girls",
-  
-  // Youth variations
   "u14": "U14",
   "under 14": "U14",
   "u14 girls": "U14 Girls",
@@ -241,8 +95,6 @@ const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "u18 girls": "U18 Girls",
   "u18girls": "U18 Girls",
   "under 18 girls": "U18 Girls",
-  
-  // Adult variations
   "1st team": "1st Team",
   "first team": "1st Team",
   "1st": "1st Team",
@@ -259,94 +111,67 @@ const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "masters 45": "Masters 45+",
 };
 
-// Normalize and map team names
 const normalizeTeamName = (teamName: string): string => {
   if (!teamName) return "";
-  
   const normalized = teamName.toLowerCase().trim();
-  
-  // Check for exact match in mappings
   if (TEAM_NAME_MAPPINGS[normalized]) {
     return TEAM_NAME_MAPPINGS[normalized];
   }
-  
-  // Check if it's already a valid team name
   if (teamOptions.includes(teamName)) {
     return teamName;
   }
-  
-  // Check case-insensitive match with valid teams
   const match = teamOptions.find(t => t.toLowerCase() === normalized);
   if (match) {
     return match;
   }
-  
-  // Return original if no match found
   return teamName;
 };
 
-// Format date to DD/MM/YYYY
 const formatDateDisplay = (dateString?: string): string => {
   if (!dateString) return "—";
-  
-  // Handle various date formats
   let date: Date;
-  
-  // Check if it's already in DD/MM/YYYY format
   if (dateString.includes("/")) {
     const parts = dateString.split("/");
     if (parts.length === 3) {
-      // Assume DD/MM/YYYY
       date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
     } else {
       date = new Date(dateString);
     }
   } else {
-    // ISO format (YYYY-MM-DD)
     date = new Date(dateString);
   }
-  
   if (isNaN(date.getTime())) return "—";
-  
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
-  
   return `${day}/${month}/${year}`;
 };
 
-// Convert DD/MM/YYYY to YYYY-MM-DD for input
 const convertToInputDate = (dateString?: string): string => {
   if (!dateString) return "";
-  
   if (dateString.includes("/")) {
     const parts = dateString.split("/");
     if (parts.length === 3) {
-      // DD/MM/YYYY to YYYY-MM-DD
       return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
     }
   }
-  
   return dateString;
 };
 
-// Convert YYYY-MM-DD to DD/MM/YYYY for storage
 const convertFromInputDate = (dateString: string): string => {
   if (!dateString) return "";
-  
   if (dateString.includes("-")) {
     const parts = dateString.split("-");
     if (parts.length === 3) {
-      // YYYY-MM-DD to DD/MM/YYYY
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
   }
-  
   return dateString;
 };
 
 interface Member {
   id: string;
+  membershipId: string;
   firstName: string;
   lastName: string;
   dateOfBirth?: string;
@@ -372,6 +197,56 @@ interface Member {
   feeTier?: string;
 }
 
+interface ImportMessage {
+  row: number;
+  field?: string;
+  message: string;
+  data?: any;
+}
+
+interface ImportResult {
+  successes: Array<{ row: number; name: string; team: string }>;
+  errors: Array<{ row: number; field?: string; message: string; data?: any }>;
+  warnings: Array<{ row: number; message: string }>;
+}
+
+const generateMembershipId = (members: Member[], joiningYear?: string): string => {
+  const year = joiningYear ? new Date(joiningYear).getFullYear() : new Date().getFullYear();
+  const yearPrefix = `BBFC-${year}-`;
+  const yearMembers = members.filter(m => m.membershipId?.startsWith(yearPrefix));
+  if (yearMembers.length === 0) {
+    return `${yearPrefix}0001`;
+  }
+  const numbers = yearMembers
+    .map(m => {
+      const match = m.membershipId.match(/BBFC-\d{4}-(\d{4})/);
+      return match ? parseInt(match[1]) : 0;
+    })
+    .filter(n => !isNaN(n));
+  const maxNumber = Math.max(...numbers, 0);
+  const nextNumber = (maxNumber + 1).toString().padStart(4, "0");
+  return `${yearPrefix}${nextNumber}`;
+};
+
+const batchAssignMembershipIds = (members: Member[]): Member[] => {
+  const membersWithoutIds = members.filter(m => !m.membershipId);
+  if (membersWithoutIds.length === 0) return members;
+  membersWithoutIds.sort((a, b) => {
+    const dateA = a.joiningDate ? new Date(a.joiningDate).getTime() : 0;
+    const dateB = b.joiningDate ? new Date(b.joiningDate).getTime() : 0;
+    return dateA - dateB;
+  });
+  const updatedMembers = [...members];
+  membersWithoutIds.forEach(member => {
+    const index = updatedMembers.findIndex(m => m.id === member.id);
+    if (index !== -1) {
+      const newId = generateMembershipId(updatedMembers, member.joiningDate);
+      updatedMembers[index] = { ...updatedMembers[index], membershipId: newId };
+    }
+  });
+  return updatedMembers;
+};
+
 export default function MembersPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
@@ -388,7 +263,7 @@ export default function MembersPage() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterTeam, setFilterTeam] = useState("all");
   const [filterRole, setFilterRole] = useState("");
-  const [filterMembershipCategory, setFilterMembershipCategory] = useState("");
+  const [filterMembershipCategory, setFilterMembershipCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [formData, setFormData] = useState<Partial<Member>>({
@@ -423,21 +298,17 @@ export default function MembersPage() {
   const [bulkRole, setBulkRole] = useState("");
   const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
   const [bulkNationality, setBulkNationality] = useState("");
-
   const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
   const [teamsData, setTeamsData] = useState<any[]>([]);
-
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importData, setImportData] = useState<Partial<Member>[]>([]);
   const [duplicates, setDuplicates] = useState<Array<{ imported: Partial<Member>; existing: Member; index: number }>>([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [currentDuplicateIndex, setCurrentDuplicateIndex] = useState(0);
   const [duplicateResolutions, setDuplicateResolutions] = useState<Record<number, "skip" | "overwrite" | "create">>({});
-  const [importResults, setImportResults] = useState<{
-    successes: Array<{ row: number; name: string; team: string }>;
-    errors: Array<{ row: number; field: string; message: string; data?: any }>;
-    warnings: Array<{ row: number; message: string }>;
-  } | null>(null);
+  const [importResultsOpen, setImportResultsOpen] = useState(false);
+  const [importResults, setImportResults] = useState<ImportResult | null>(null);
+  const [batchAssignDialogOpen, setBatchAssignDialogOpen] = useState(false);
   const [showResultsDialog, setShowResultsDialog] = useState(false);
 
   useEffect(() => {
@@ -470,6 +341,23 @@ export default function MembersPage() {
       role: "Player",
       coachingCredits: 0,
       teamAssignment: "",
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      nationality: "",
+      address: "",
+      email: "",
+      shirtNumber: "",
+      joiningDate: "",
+      contactNumber: "",
+      profileImage: "",
+      whatsappLink: "",
+      primaryContact: "",
+      primaryContactNumber: "",
+      secondaryContact: "",
+      secondaryContactNumber: "",
+      medicalNotes: "",
+      feeTier: "",
     });
     setValidationErrors({});
     setEditingMember(null);
@@ -520,6 +408,7 @@ export default function MembersPage() {
       const newMember = {
         ...formData,
         id: crypto.randomUUID(),
+        membershipId: generateMembershipId(members, formData.joiningDate),
         joiningDate: formData.joiningDate || new Date().toISOString().split("T")[0],
       } as Member;
       updatedMembers = [...members, newMember];
@@ -547,7 +436,7 @@ export default function MembersPage() {
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
     const data: Partial<Member>[] = [];
     const warnings: string[] = [];
-    const errors: Array<{ row: number; field: string; message: string; data?: any }> = [];
+    const errors: Array<{ row: number; field?: string; message: string; data?: any }> = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map(v => v.trim());
@@ -558,13 +447,15 @@ export default function MembersPage() {
         coachingCredits: 0,
         teamAssignment: "",
         joiningDate: new Date().toISOString().split("T")[0],
+        membershipId: "",
       };
 
       headers.forEach((header, index) => {
         const value = values[index];
         if (!value) return;
 
-        if (header.includes("first") || header === "firstname") member.firstName = value;
+        if (header.includes("membership") && header.includes("id")) member.membershipId = value;
+        else if (header.includes("first") || header === "firstname") member.firstName = value;
         else if (header.includes("last") || header === "lastname" || header === "surname") member.lastName = value;
         else if (header.includes("email")) {
           if (value.includes("@")) {
@@ -626,7 +517,6 @@ export default function MembersPage() {
       }
     }
 
-    // Store warnings and errors for later use
     (data as any).importWarnings = warnings;
     (data as any).importErrors = errors;
 
@@ -643,30 +533,22 @@ export default function MembersPage() {
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
           const warnings: string[] = [];
-          const errors: Array<{ row: number; field: string; message: string; data?: any }> = [];
+          const errors: Array<{ row: number; field?: string; message: string; data?: any }> = [];
 
           const members: Partial<Member>[] = jsonData.map((row: any, index: number) => {
             const teamValue = row["Team"] || row["team"] || "";
             const normalizedTeam = normalizeTeamName(teamValue);
-            
-            if (teamValue && !teamOptions.includes(normalizedTeam)) {
-              warnings.push(`Row ${index + 2}: Team "${teamValue}" not recognized, mapped to "${normalizedTeam}"`);
-            }
-
-            const dobValue = row["Date of Birth"] || row["DOB"] || row["date_of_birth"] || "";
-            const convertedDob = dobValue ? convertFromInputDate(String(dobValue)) : "";
-
-            const email = row["Email"] || row["email"] || "";
-            if (email && !email.includes("@")) {
-              errors.push({ row: index + 2, field: "email", message: `Invalid email format: "${email}"` });
-            }
+            const dobValue = row["Date of Birth"] || row["DOB"] || row["dob"] || "";
+            const convertedDob = convertFromInputDate(dobValue);
 
             const member: Partial<Member> = {
-              firstName: row["First Name"] || row["FirstName"] || row["first_name"] || "",
-              lastName: row["Last Name"] || row["LastName"] || row["Surname"] || row["last_name"] || "",
-              email: email.includes("@") ? email : "",
-              contactNumber: row["Contact Number"] || row["Phone"] || row["contact_number"] || "",
-              shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt_number"] || "",
+              id: Date.now().toString() + index,
+              membershipId: row["Membership ID"] || row["MembershipID"] || row["membership id"] || "",
+              firstName: row["First Name"] || row["FirstName"] || row["first name"] || "",
+              lastName: row["Last Name"] || row["LastName"] || row["last name"] || row["surname"] || "",
+              email: row["Email"] || row["email"] || "",
+              contactNumber: row["Contact Number"] || row["Phone"] || row["contact number"] || "",
+              shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt number"] || "",
               teamAssignment: teamOptions.includes(normalizedTeam) ? normalizedTeam : "",
               category: (row["Category"] || row["category"] || "Junior") as any,
               role: row["Role"] || row["role"] || "Player",
@@ -690,7 +572,6 @@ export default function MembersPage() {
             return member;
           }).filter((m: any) => m.firstName && m.lastName);
 
-          // Store warnings and errors
           (members as any).importWarnings = warnings;
           (members as any).importErrors = errors;
 
@@ -791,7 +672,7 @@ export default function MembersPage() {
     let overwritten = 0;
     
     const successes: Array<{ row: number; name: string; team: string }> = [];
-    const errors: Array<{ row: number; field: string; message: string; data?: any }> = (data as any).importErrors || [];
+    const errors: Array<{ row: number; field?: string; message: string; data?: any }> = (data as any).importErrors || [];
     const warnings: Array<{ row: number; message: string }> = ((data as any).importWarnings || []).map((w: string) => {
       const match = w.match(/Row (\d+): (.+)/);
       return match ? { row: parseInt(match[1]), message: match[2] } : { row: 0, message: w };
@@ -836,6 +717,7 @@ export default function MembersPage() {
       const newMember = {
         ...item,
         id: crypto.randomUUID(),
+        membershipId: item.membershipId || generateMembershipId(updatedMembers, item.joiningDate),
         firstName: item.firstName || "",
         lastName: item.lastName || "",
         shirtNumber: item.shirtNumber || "",
@@ -864,7 +746,6 @@ export default function MembersPage() {
     setMembers(updatedMembers);
     localStorage.setItem("members", JSON.stringify(updatedMembers));
 
-    // Create import log
     const importLog = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
@@ -882,12 +763,10 @@ export default function MembersPage() {
       },
     };
 
-    // Save to import logs
     const existingLogs = JSON.parse(localStorage.getItem("importLogs") || "[]");
     existingLogs.unshift(importLog);
-    localStorage.setItem("importLogs", JSON.stringify(existingLogs.slice(0, 50))); // Keep last 50 logs
+    localStorage.setItem("importLogs", JSON.stringify(existingLogs.slice(0, 50)));
 
-    // Show results
     setImportResults({
       successes,
       errors,
@@ -924,11 +803,11 @@ export default function MembersPage() {
       if (selectedMembers.includes(member.id)) {
         return {
           ...member,
-          ...(bulkTeam && { teamAssignment: bulkTeam }),
-          ...(bulkCategory && { category: bulkCategory as "Junior" | "Youth" | "Adult" }),
-          ...(bulkRole && { role: bulkRole }),
-          ...(bulkMembershipCategory && { type: bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship" }),
-          ...(bulkNationality && { nationality: bulkNationality })
+          ...(bulkTeam && bulkTeam !== "keep_current" && { teamAssignment: bulkTeam }),
+          ...(bulkCategory && bulkCategory !== "keep_current" && { category: bulkCategory as "Junior" | "Youth" | "Adult" }),
+          ...(bulkRole && bulkRole !== "keep_current" && { role: bulkRole }),
+          ...(bulkMembershipCategory && bulkMembershipCategory !== "keep_current" && { type: bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship" }),
+          ...(bulkNationality && bulkNationality !== "keep_current" && { nationality: bulkNationality })
         };
       }
       return member;
@@ -952,12 +831,24 @@ export default function MembersPage() {
     setSelectedMembers([]);
   };
 
+  const handleBatchAssignIds = () => {
+    const updatedMembers = batchAssignMembershipIds(members);
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+    setBatchAssignDialogOpen(false);
+  };
+
   const filteredAndSortedMembers = members.filter((member) => {
-    const matchesSearch = searchTerm === "" || member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || member.email?.toLowerCase().includes(searchTerm.toLowerCase()) || member.contactNumber?.includes(searchTerm);
+    const matchesSearch = searchTerm === "" || 
+      member.membershipId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      member.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      member.contactNumber?.includes(searchTerm);
     const matchesCategory = filterCategory === "all" || member.category === filterCategory;
     const matchesTeam = filterTeam === "all" || member.teamAssignment === filterTeam;
     const matchesRole = filterRole === "" || member.role === filterRole;
-    const matchesMembershipStatus = filterMembershipCategory === "" || member.type === filterMembershipCategory;
+    const matchesMembershipStatus = filterMembershipCategory === "all" || member.type === filterMembershipCategory;
     return matchesSearch && matchesCategory && matchesTeam && matchesRole && matchesMembershipStatus;
   }).sort((a, b) => a.firstName.localeCompare(b.firstName));
 
@@ -997,12 +888,33 @@ export default function MembersPage() {
               <h1 className="text-2xl font-bold text-gray-900">Member Database</h1>
               <p className="text-sm text-gray-500">Manage all club registrations</p>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={() => setIsImportOpen(true)} variant="outline" size="sm">
-                <Upload className="w-4 h-4 mr-2" />Import Data
+            <div className="flex gap-3">
+              {members.some(m => !m.membershipId) && (
+                <Button
+                  onClick={() => setBatchAssignDialogOpen(true)}
+                  variant="outline"
+                  className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400"
+                >
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Assign IDs ({members.filter(m => !m.membershipId).length})
+                </Button>
+              )}
+              <Button
+                onClick={() => setIsImportOpen(true)}
+                variant="outline"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import Data
               </Button>
-              <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} size="sm" className="bg-blue-600">
-                <UserPlus className="w-4 h-4 mr-2" />Add Member
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsDialogOpen(true);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Member
               </Button>
             </div>
           </div>
@@ -1022,12 +934,21 @@ export default function MembersPage() {
                     Clear Selection
                   </Button>
                 </div>
-                <Button
-                  onClick={() => setIsBulkActionsOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Bulk Update
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setIsBulkActionsOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Bulk Update
+                  </Button>
+                  <Button
+                    onClick={handleDeleteMembers}
+                    variant="destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Selected
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1036,7 +957,7 @@ export default function MembersPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
               <div className="lg:col-span-2 relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search name, email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+                <Input placeholder="Search name, email, membership ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
               </div>
               <Select value={filterCategory} onValueChange={setFilterCategory}>
                 <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
@@ -1063,189 +984,192 @@ export default function MembersPage() {
                   <SelectItem value="Scholarship">Scholarship</SelectItem>
                 </SelectContent>
               </Select>
-              {(searchTerm || filterTeam !== "all" || filterCategory !== "all") && (
-                <Button variant="ghost" onClick={handleClearFilters} className="text-red-600">
-                  <X className="w-4 h-4 mr-1" />Clear
-                </Button>
-              )}
             </div>
 
+            {(searchTerm || filterTeam !== "all" || filterCategory !== "all" || filterMembershipCategory) && (
+              <Button variant="ghost" onClick={handleClearFilters} className="text-red-600 mb-3">
+                <X className="w-4 h-4 mr-1" />Clear Filters
+              </Button>
+            )}
+
             <div className="w-full overflow-x-auto border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12 sticky left-0 bg-white z-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedMembers.length === currentMembers.length && currentMembers.length > 0}
-                        onChange={handleSelectAll}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                    </TableHead>
-                    <TableHead className="w-[60px] sticky left-12 bg-white z-10">Photo</TableHead>
-                    <TableHead className="sticky left-[108px] bg-white z-10 min-w-[150px]">Name</TableHead>
-                    <TableHead className="min-w-[120px]">Team</TableHead>
-                    <TableHead className="min-w-[80px]">Category</TableHead>
-                    <TableHead className="min-w-[100px]">Role</TableHead>
-                    <TableHead className="min-w-[110px]">Membership</TableHead>
-                    <TableHead className="min-w-[80px]">Shirt #</TableHead>
-                    <TableHead className="min-w-[100px]">DOB</TableHead>
-                    <TableHead className="min-w-[130px]">Nationality</TableHead>
-                    <TableHead className="min-w-[150px]">Address</TableHead>
-                    <TableHead className="min-w-[180px]">Email</TableHead>
-                    <TableHead className="min-w-[140px]">Contact</TableHead>
-                    <TableHead className="min-w-[100px]">Joined</TableHead>
-                    <TableHead className="min-w-[180px]">Primary Contact</TableHead>
-                    <TableHead className="min-w-[180px]">Secondary Contact</TableHead>
-                    <TableHead className="min-w-[200px]">Medical Notes</TableHead>
-                    <TableHead className="text-right sticky right-0 bg-white z-10 min-w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentMembers.length === 0 ? (
+              <div style={{ minWidth: "1200px" }}>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={18} className="text-center py-8 text-gray-500">
-                        No members found. Try adjusting filters or adding a new member.
-                      </TableCell>
+                      <TableHead className="w-12 sticky left-0 bg-white z-10">
+                        <Checkbox
+                          checked={selectedMembers.length === currentMembers.length && currentMembers.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead className="text-left font-bold">Photo</TableHead>
+                      <TableHead className="text-left font-bold">Membership ID</TableHead>
+                      <TableHead className="text-left font-bold">Name</TableHead>
+                      <TableHead className="min-w-[120px]">Team</TableHead>
+                      <TableHead className="min-w-[80px]">Category</TableHead>
+                      <TableHead className="min-w-[100px]">Role</TableHead>
+                      <TableHead className="min-w-[110px]">Membership</TableHead>
+                      <TableHead className="min-w-[80px]">Shirt #</TableHead>
+                      <TableHead className="min-w-[100px]">DOB</TableHead>
+                      <TableHead className="min-w-[130px]">Nationality</TableHead>
+                      <TableHead className="min-w-[150px]">Address</TableHead>
+                      <TableHead className="min-w-[180px]">Email</TableHead>
+                      <TableHead className="min-w-[140px]">Contact</TableHead>
+                      <TableHead className="min-w-[100px]">Joined</TableHead>
+                      <TableHead className="min-w-[180px]">Primary Contact</TableHead>
+                      <TableHead className="min-w-[180px]">Secondary Contact</TableHead>
+                      <TableHead className="min-w-[200px]">Medical Notes</TableHead>
+                      <TableHead className="text-right sticky right-0 bg-white z-10 min-w-[100px]">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    currentMembers.map((member) => (
-                      <TableRow key={member.id} className="hover:bg-muted/50">
-                        <TableCell className="sticky left-0 bg-white">
-                          <input
-                            type="checkbox"
-                            checked={selectedMembers.includes(member.id)}
-                            onChange={() => handleSelectMember(member.id)}
-                            className="w-4 h-4 cursor-pointer"
-                          />
-                        </TableCell>
-                        <TableCell className="sticky left-12 bg-white">
-                          <button
-                            onClick={() => {
-                              if (member.profileImage) {
-                                setSelectedImage({
-                                  url: member.profileImage,
-                                  name: `${member.firstName} ${member.lastName}`
-                                });
-                              }
-                            }}
-                            className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full cursor-pointer"
-                          >
-                            <Avatar>
-                              <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
-                              <AvatarFallback>
-                                {member.firstName[0]}{member.lastName[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                          </button>
-                        </TableCell>
-                        <TableCell className="font-medium sticky left-[108px] bg-white">{member.firstName} {member.lastName}</TableCell>
-                        <TableCell>{member.teamAssignment || "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
-                        <TableCell>{member.role}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getMembershipBadgeColor(member.type)}>
-                            {member.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{member.shirtNumber || "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDateDisplay(member.dateOfBirth)}
-                        </TableCell>
-                        <TableCell>{member.nationality || "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {member.address || "—"}
-                        </TableCell>
-                        <TableCell>
-                          {member.email ? (
-                            <a
-                              href={`mailto:${member.email}`}
-                              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline text-sm"
-                            >
-                              <Mail className="h-3 w-3" />
-                              {member.email}
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {member.contactNumber ? (
-                            <a
-                              href={`https://wa.me/${member.contactNumber.replace(/[^0-9]/g, '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-green-600 hover:text-green-700 hover:underline"
-                            >
-                              <Phone className="h-4 w-4" />
-                              {member.contactNumber}
-                            </a>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(member.joiningDate)}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {member.primaryContact ? (
-                            <div>
-                              <div className="font-medium">{member.primaryContact}</div>
-                              {member.primaryContactNumber && (
-                                <a
-                                  href={`tel:${member.primaryContactNumber}`}
-                                  className="text-blue-600 hover:underline text-xs"
-                                >
-                                  {member.primaryContactNumber}
-                                </a>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {member.secondaryContact ? (
-                            <div>
-                              <div className="font-medium">{member.secondaryContact}</div>
-                              {member.secondaryContactNumber && (
-                                <a
-                                  href={`tel:${member.secondaryContactNumber}`}
-                                  className="text-blue-600 hover:underline text-xs"
-                                >
-                                  {member.secondaryContactNumber}
-                                </a>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {member.medicalNotes ? (
-                            <div className="flex items-start gap-2">
-                              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                              <span className="text-sm text-muted-foreground" title={member.medicalNotes}>
-                                {member.medicalNotes.length > 50 
-                                  ? `${member.medicalNotes.substring(0, 50)}...` 
-                                  : member.medicalNotes}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right sticky right-0 bg-white">
-                          <div className="flex justify-end gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => handleEdit(member)} className="h-8 w-8 p-0"><Pencil className="w-4 h-4" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-4 h-4" /></Button>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {currentMembers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={19} className="text-center py-8 text-gray-500">
+                          No members found. Try adjusting filters or adding a new member.
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      currentMembers.map((member) => (
+                        <TableRow key={member.id} className="hover:bg-muted/50">
+                          <TableCell className="sticky left-0 bg-white z-10">
+                            <Checkbox
+                              checked={selectedMembers.includes(member.id)}
+                              onCheckedChange={() => handleSelectMember(member.id)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              onClick={() => {
+                                if (member.profileImage) {
+                                  setSelectedImage({
+                                    url: member.profileImage,
+                                    name: `${member.firstName} ${member.lastName}`
+                                  });
+                                }
+                              }}
+                              className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full cursor-pointer"
+                            >
+                              <Avatar>
+                                <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
+                                <AvatarFallback>
+                                  {member.firstName[0]}{member.lastName[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-sm font-mono text-muted-foreground">
+                            {member.membershipId || "—"}
+                          </TableCell>
+                          <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
+                          <TableCell>{member.teamAssignment || "—"}</TableCell>
+                          <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
+                          <TableCell>{member.role}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={getMembershipBadgeColor(member.type)}>
+                              {member.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{member.shirtNumber || "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDateDisplay(member.dateOfBirth)}
+                          </TableCell>
+                          <TableCell>{member.nationality || "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {member.address || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {member.email ? (
+                              <a
+                                href={`mailto:${member.email}`}
+                                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline text-sm"
+                              >
+                                <Mail className="h-3 w-3" />
+                                {member.email}
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {member.contactNumber ? (
+                              <a
+                                href={`https://wa.me/${member.contactNumber.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-green-600 hover:text-green-700 hover:underline"
+                              >
+                                <Phone className="h-4 w-4" />
+                                {member.contactNumber}
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(member.joiningDate)}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {member.primaryContact ? (
+                              <div>
+                                <div className="font-medium">{member.primaryContact}</div>
+                                {member.primaryContactNumber && (
+                                  <a
+                                    href={`tel:${member.primaryContactNumber}`}
+                                    className="text-blue-600 hover:underline text-xs"
+                                  >
+                                    {member.primaryContactNumber}
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {member.secondaryContact ? (
+                              <div>
+                                <div className="font-medium">{member.secondaryContact}</div>
+                                {member.secondaryContactNumber && (
+                                  <a
+                                    href={`tel:${member.secondaryContactNumber}`}
+                                    className="text-blue-600 hover:underline text-xs"
+                                  >
+                                    {member.secondaryContactNumber}
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {member.medicalNotes ? (
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm text-muted-foreground" title={member.medicalNotes}>
+                                  {member.medicalNotes.length > 50 
+                                    ? `${member.medicalNotes.substring(0, 50)}...` 
+                                    : member.medicalNotes}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right sticky right-0 bg-white z-10">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => handleEdit(member)} className="h-8 w-8 p-0"><Pencil className="w-4 h-4" /></Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
@@ -1262,240 +1186,315 @@ export default function MembersPage() {
           </div>
         </main>
 
-        {isBulkActionsOpen && (
-          <Dialog open={isBulkActionsOpen} onOpenChange={setIsBulkActionsOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Bulk Update Members</DialogTitle>
-                <DialogDescription>
-                  Update {selectedMembers.length} selected member{selectedMembers.length !== 1 ? "s" : ""}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Change Team</label>
-                  <select
-                    value={bulkTeam}
-                    onChange={(e) => setBulkTeam(e.target.value)}
-                    className="w-full border rounded-lg p-2"
-                  >
-                    <option value="">Keep Current</option>
+        <Dialog open={isBulkActionsOpen} onOpenChange={setIsBulkActionsOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Bulk Update Members</DialogTitle>
+              <DialogDescription>
+                Update {selectedMembers.length} selected member{selectedMembers.length !== 1 ? "s" : ""}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Change Team</label>
+                <Select value={bulkTeam} onValueChange={setBulkTeam}>
+                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep_current">Keep Current</SelectItem>
                     {teamOptions.map((team) => (
-                      <option key={team} value={team}>{team}</option>
+                      <SelectItem key={team} value={team}>{team}</SelectItem>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Change Category</label>
-                  <select
-                    value={bulkCategory}
-                    onChange={(e) => setBulkCategory(e.target.value)}
-                    className="w-full border rounded-lg p-2"
-                  >
-                    <option value="">Keep Current</option>
-                    <option value="Junior">Junior</option>
-                    <option value="Youth">Youth</option>
-                    <option value="Adult">Adult</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Change Role</label>
-                  <select
-                    value={bulkRole}
-                    onChange={(e) => setBulkRole(e.target.value)}
-                    className="w-full border rounded-lg p-2"
-                  >
-                    <option value="">Keep Current</option>
-                    <option value="Player">Player</option>
-                    <option value="Coach">Coach</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Player-Coach">Player-Coach</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Change Membership</label>
-                  <select
-                    value={bulkMembershipCategory}
-                    onChange={(e) => setBulkMembershipCategory(e.target.value)}
-                    className="w-full border rounded-lg p-2"
-                  >
-                    <option value="">Keep Current</option>
-                    <option value="Member">Member</option>
-                    <option value="Sponsored">Sponsored</option>
-                    <option value="Scholarship">Scholarship</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Change Nationality</label>
-                  <select
-                    value={bulkNationality}
-                    onChange={(e) => setBulkNationality(e.target.value)}
-                    className="w-full border rounded-lg p-2 max-h-[200px]"
-                  >
-                    <option value="">Keep Current</option>
-                    {COUNTRIES.map((country) => (
-                      <option key={country} value={country}>{country}</option>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Change Category</label>
+                <Select value={bulkCategory} onValueChange={setBulkCategory}>
+                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep_current">Keep Current</SelectItem>
+                    <SelectItem value="Junior">Junior</SelectItem>
+                    <SelectItem value="Youth">Youth</SelectItem>
+                    <SelectItem value="Adult">Adult</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Change Role</label>
+                <Select value={bulkRole} onValueChange={setBulkRole}>
+                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep_current">Keep Current</SelectItem>
+                    {ROLES.map(role => (
+                      <SelectItem key={role} value={role}>{role}</SelectItem>
                     ))}
-                  </select>
-                </div>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={() => setIsBulkActionsOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleBulkUpdate} className="bg-blue-600 hover:bg-blue-700">
-                  Update {selectedMembers.length} Member{selectedMembers.length !== 1 ? "s" : ""}
-                </Button>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Change Membership</label>
+                <Select value={bulkMembershipCategory} onValueChange={setBulkMembershipCategory}>
+                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="keep_current">Keep Current</SelectItem>
+                    <SelectItem value="Member">Member</SelectItem>
+                    <SelectItem value="Sponsored">Sponsored</SelectItem>
+                    <SelectItem value="Scholarship">Scholarship</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Change Nationality</label>
+                <Select value={bulkNationality} onValueChange={setBulkNationality}>
+                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    <SelectItem value="keep_current">Keep Current</SelectItem>
+                    {COUNTRIES.map(country => (
+                      <SelectItem key={country} value={country}>{country}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setIsBulkActionsOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleBulkUpdate} className="bg-blue-600 hover:bg-blue-700">
+                Update {selectedMembers.length} Member{selectedMembers.length !== 1 ? "s" : ""}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingMember ? "Edit Member" : "Add New Member"}</DialogTitle>
+              <DialogTitle className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {editingMember ? "Edit Member" : "Add New Member"}
+              </DialogTitle>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6 py-4">
-              <div className="space-y-2">
-                <Label>Profile Photo</Label>
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage src={formData.profileImage} alt="Profile" />
-                      <AvatarFallback className="text-2xl">
-                        {formData.firstName?.[0]}{formData.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    {formData.profileImage && (
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, profileImage: "" })}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+              {editingMember && editingMember.membershipId && (
+                <div className="rounded-lg border-2 border-blue-500/30 bg-blue-500/5 p-4">
+                  <Label className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    Membership ID (Permanent)
+                  </Label>
+                  <p className="mt-1 font-mono text-lg font-bold text-blue-700 dark:text-blue-300">
+                    {editingMember.membershipId}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This ID is unique and permanent. It will never change.
+                  </p>
+                </div>
+              )}
+              {!editingMember && (
+                <div className="rounded-lg border-2 border-green-500/30 bg-green-500/5 p-4">
+                  <Label className="text-sm font-semibold text-green-600 dark:text-green-400">
+                    Membership ID
+                  </Label>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    A unique membership ID will be automatically assigned when you create this member.
+                  </p>
+                  <p className="mt-2 font-mono text-sm font-semibold text-green-700 dark:text-green-300">
+                    Format: BBFC-{new Date(formData.joiningDate || Date.now()).getFullYear()}-####
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Profile Photo</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <Avatar className="h-24 w-24">
+                        <AvatarImage src={formData.profileImage} alt="Profile" />
+                        <AvatarFallback className="text-2xl">
+                          {formData.firstName?.[0]}{formData.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {formData.profileImage && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, profileImage: "" })}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData({ ...formData, profileImage: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload a profile photo (JPG, PNG, GIF)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>First Name *</Label>
+                    <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name *</Label>
+                    <Input value={formData.lastName || ""} onChange={e => setFormData({...formData, lastName: e.target.value})} required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date of Birth</Label>
+                    <Input 
+                      type="date" 
+                      value={convertToInputDate(formData.dateOfBirth)} 
+                      onChange={e => setFormData({...formData, dateOfBirth: convertFromInputDate(e.target.value)})} 
+                    />
+                    {formData.dateOfBirth && (
+                      <p className="text-xs text-muted-foreground">
+                        Format: {formatDateDisplay(formData.dateOfBirth)}
+                      </p>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setFormData({ ...formData, profileImage: reader.result as string });
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Upload a profile photo (JPG, PNG, GIF)
-                    </p>
+                  <div className="space-y-2">
+                    <Label>Nationality</Label>
+                    <Select value={formData.nationality || ""} onValueChange={(v: string) => setFormData({...formData, nationality: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select nationality" /></SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map(country => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>First Name *</Label>
-                  <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+                  <Label>Address</Label>
+                  <Input value={formData.address || ""} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Full address" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Last Name *</Label>
-                  <Input value={formData.lastName || ""} onChange={e => setFormData({...formData, lastName: e.target.value})} required />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" value={formData.email || ""} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="member@example.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contact Number</Label>
+                    <Input value={formData.contactNumber || ""} onChange={e => setFormData({...formData, contactNumber: e.target.value})} placeholder="+62..." />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select value={formData.category} onValueChange={(v: any) => setFormData({...formData, category: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Junior">Junior</SelectItem>
+                        <SelectItem value="Youth">Youth</SelectItem>
+                        <SelectItem value="Adult">Adult</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Team</Label>
+                    <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
+                      <SelectContent>
+                        {(TEAMS_BY_CATEGORY[formData.category as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Shirt Number</Label>
+                    <Input type="number" value={formData.shirtNumber || ""} onChange={e => setFormData({...formData, shirtNumber: e.target.value})} placeholder="e.g., 10" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Membership Category</Label>
+                    <Select value={formData.type} onValueChange={(v: "Member" | "Sponsored" | "Scholarship") => setFormData({...formData, type: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Member">Member</SelectItem>
+                        <SelectItem value="Sponsored">Sponsored</SelectItem>
+                        <SelectItem value="Scholarship">Scholarship</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label>Date of Birth</Label>
+                  <Label>Joining Date</Label>
                   <Input 
                     type="date" 
-                    value={convertToInputDate(formData.dateOfBirth)} 
-                    onChange={e => setFormData({...formData, dateOfBirth: convertFromInputDate(e.target.value)})} 
+                    value={convertToInputDate(formData.joiningDate)} 
+                    onChange={e => setFormData({...formData, joiningDate: convertFromInputDate(e.target.value)})} 
                   />
-                  {formData.dateOfBirth && (
+                  {formData.joiningDate && (
                     <p className="text-xs text-muted-foreground">
-                      Format: {formatDateDisplay(formData.dateOfBirth)}
+                      Format: {formatDateDisplay(formData.joiningDate)}
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label>Nationality</Label>
-                  <Select value={formData.nationality || ""} onValueChange={(v: string) => setFormData({...formData, nationality: v})}>
-                    <SelectTrigger><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                    <SelectContent>
-                      {COUNTRIES.map(country => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={formData.category} onValueChange={(v: any) => setFormData({...formData, category: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Junior">Junior</SelectItem><SelectItem value="Youth">Youth</SelectItem><SelectItem value="Adult">Adult</SelectItem></SelectContent>
-                  </Select>
+                  <Label>Primary Contact</Label>
+                  <Input value={formData.primaryContact || ""} onChange={e => setFormData({...formData, primaryContact: e.target.value})} placeholder="Parent/Guardian name" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Team</Label>
-                  <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
-                    <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
-                    <SelectContent>
-                      {(TEAMS_BY_CATEGORY[formData.category as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Shirt Number</Label>
-                  <Input type="number" value={formData.shirtNumber || ""} onChange={e => setFormData({...formData, shirtNumber: e.target.value})} placeholder="e.g., 10" />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Label>Primary Contact Number</Label>
+                  <Input value={formData.primaryContactNumber || ""} onChange={e => setFormData({...formData, primaryContactNumber: e.target.value})} placeholder="+62..." />
                 </div>
-                <div className="space-y-2">
-                  <Label>Membership Category</Label>
-                  <Select value={formData.type} onValueChange={(v: "Member" | "Sponsored" | "Scholarship") => setFormData({...formData, type: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Member">Member</SelectItem>
-                      <SelectItem value="Sponsored">Sponsored</SelectItem>
-                      <SelectItem value="Scholarship">Scholarship</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Joining Date</Label>
-                <Input 
-                  type="date" 
-                  value={convertToInputDate(formData.joiningDate)} 
-                  onChange={e => setFormData({...formData, joiningDate: convertFromInputDate(e.target.value)})} 
-                />
-                {formData.joiningDate && (
-                  <p className="text-xs text-muted-foreground">
-                    Format: {formatDateDisplay(formData.joiningDate)}
-                  </p>
-                )}
+                <div className="space-y-2">
+                  <Label>Secondary Contact</Label>
+                  <Input value={formData.secondaryContact || ""} onChange={e => setFormData({...formData, secondaryContact: e.target.value})} placeholder="Emergency contact name" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Secondary Contact Number</Label>
+                  <Input value={formData.secondaryContactNumber || ""} onChange={e => setFormData({...formData, secondaryContactNumber: e.target.value})} placeholder="+62..." />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Medical Notes</Label>
+                  <Textarea 
+                    value={formData.medicalNotes || ""} 
+                    onChange={e => setFormData({...formData, medicalNotes: e.target.value})} 
+                    placeholder="Any medical conditions, allergies, or special needs"
+                    rows={3}
+                  />
+                </div>
               </div>
 
               <DialogFooter>
@@ -1531,18 +1530,18 @@ export default function MembersPage() {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <AlertTriangle className="h-6 w-6 text-yellow-500" />
                 Duplicate Member Found
               </DialogTitle>
               <DialogDescription>
                 Member {currentDuplicateIndex + 1} of {duplicates.length} duplicates
               </DialogDescription>
             </DialogHeader>
-            
+
             {currentDuplicate && (
               <div className="space-y-4">
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="font-semibold text-sm mb-2">Importing:</p>
+                  <p className="font-semibold text-lg mb-3">Importing:</p>
                   <p className="text-sm">
                     <strong>{currentDuplicate.imported.firstName} {currentDuplicate.imported.lastName}</strong>
                     {currentDuplicate.imported.email && <span className="block text-gray-600">{currentDuplicate.imported.email}</span>}
@@ -1551,7 +1550,7 @@ export default function MembersPage() {
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="font-semibold text-sm mb-2">Already exists in database:</p>
+                  <p className="font-semibold text-lg mb-3">Already exists in database:</p>
                   <p className="text-sm">
                     <strong>{currentDuplicate.existing.firstName} {currentDuplicate.existing.lastName}</strong>
                     {currentDuplicate.existing.email && <span className="block text-gray-600">{currentDuplicate.existing.email}</span>}
@@ -1711,6 +1710,67 @@ export default function MembersPage() {
             <DialogFooter>
               <Button onClick={() => setShowResultsDialog(false)}>
                 Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={batchAssignDialogOpen} onOpenChange={setBatchAssignDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                Assign Membership IDs
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                  <div>
+                    <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-300">
+                      {members.filter(m => !m.membershipId).length} members need IDs
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      This will assign unique membership IDs to all existing members who don't have one.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">ID Format</Label>
+                <div className="rounded-md border bg-muted/50 p-3">
+                  <p className="font-mono text-sm font-semibold">BBFC-YYYY-####</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    BBFC = Bali Bulldogs FC<br/>
+                    YYYY = Year joined<br/>
+                    #### = Sequential number (0001, 0002, etc.)
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                  These IDs are permanent
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Once assigned, membership IDs never change, even if the member moves teams or changes details.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setBatchAssignDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBatchAssignIds}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Assign IDs
               </Button>
             </DialogFooter>
           </DialogContent>
