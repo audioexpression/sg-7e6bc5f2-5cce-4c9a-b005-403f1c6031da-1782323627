@@ -17,6 +17,7 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/teams", label: "Teams", icon: Shield },
     { href: "/invoices", label: "IDR", icon: null, isText: true },
     { href: "/coaching", label: "Coaching", icon: Target },
+    { href: "/import-logs", label: "Import Logs", icon: null, isText: true },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
