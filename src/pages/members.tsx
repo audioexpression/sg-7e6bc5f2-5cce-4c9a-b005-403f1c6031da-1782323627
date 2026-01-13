@@ -174,27 +174,28 @@ interface Member {
   membershipId: string;
   firstName: string;
   lastName: string;
-  dateOfBirth?: string;
-  nationality?: string;
-  address?: string;
-  email?: string;
+  dateOfBirth: string;
+  nationality: string;
+  address: string;
+  email: string;
   shirtNumber: string;
   category: "Junior" | "Youth" | "Adult";
   type: "Member" | "Sponsored" | "Scholarship";
-  role: string;
+  role: "Player" | "Coach" | "Admin" | "Player-Coach";
   teamAssignment: string;
   joiningDate: string;
-  contactNumber?: string;
-  profileImage?: string;
-  whatsappLink?: string;
+  contactNumber: string;
   primaryContact: string;
   primaryContactNumber: string;
   secondaryContact: string;
   secondaryContactNumber: string;
   medicalNotes: string;
   coachingCredits: number;
-  photoUrl?: string;
-  feeTier?: string;
+  profileImage?: string;
+  isArchived: boolean;
+  archiveReason?: "Joined Another Team" | "Left Bali" | "Retired from playing" | "Longterm Injury" | "Other";
+  archiveReasonDetails?: string;
+  archiveDate?: string;
 }
 
 interface ImportMessage {
@@ -267,28 +268,22 @@ export default function MembersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [formData, setFormData] = useState<Partial<Member>>({
-    category: "Junior",
-    type: "Member",
-    role: "Player",
-    coachingCredits: 0,
-    teamAssignment: "",
     firstName: "",
     lastName: "",
-    dateOfBirth: "",
+    email: "",
+    contactNumber: "",
+    shirtNumber: "",
+    category: "Junior",
+    role: "Player",
+    teamAssignment: "",
     nationality: "",
     address: "",
-    email: "",
-    shirtNumber: "",
-    joiningDate: "",
-    contactNumber: "",
-    profileImage: "",
-    whatsappLink: "",
-    primaryContact: "",
-    primaryContactNumber: "",
-    secondaryContact: "",
-    secondaryContactNumber: "",
+    type: "Member",
+    joiningDate: new Date().toISOString().split('T')[0],
     medicalNotes: "",
-    feeTier: "",
+    coachingCredits: 0,
+    profileImage: "",
+    isArchived: false
   });
 
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -310,6 +305,11 @@ export default function MembersPage() {
   const [importResults, setImportResults] = useState<ImportResult | null>(null);
   const [batchAssignDialogOpen, setBatchAssignDialogOpen] = useState(false);
   const [showResultsDialog, setShowResultsDialog] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [memberToArchive, setMemberToArchive] = useState<Member | null>(null);
+  const [archiveReason, setArchiveReason] = useState<string>("");
+  const [archiveReasonDetails, setArchiveReasonDetails] = useState<string>("");
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
@@ -336,28 +336,22 @@ export default function MembersPage() {
 
   const resetForm = () => {
     setFormData({
-      category: "Junior",
-      type: "Member",
-      role: "Player",
-      coachingCredits: 0,
-      teamAssignment: "",
       firstName: "",
       lastName: "",
-      dateOfBirth: "",
+      email: "",
+      contactNumber: "",
+      shirtNumber: "",
+      category: "Junior",
+      role: "Player",
+      teamAssignment: "",
       nationality: "",
       address: "",
-      email: "",
-      shirtNumber: "",
-      joiningDate: "",
-      contactNumber: "",
-      profileImage: "",
-      whatsappLink: "",
-      primaryContact: "",
-      primaryContactNumber: "",
-      secondaryContact: "",
-      secondaryContactNumber: "",
+      type: "Member",
+      joiningDate: new Date().toISOString().split('T')[0],
       medicalNotes: "",
-      feeTier: "",
+      coachingCredits: 0,
+      profileImage: "",
+      isArchived: false
     });
     setValidationErrors({});
     setEditingMember(null);
@@ -385,7 +379,7 @@ export default function MembersPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({ ...formData, photoUrl: reader.result as string });
+        setFormData({ ...formData, profileImage: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
@@ -485,7 +479,7 @@ export default function MembersPage() {
         }
         else if (header.includes("role")) {
           if (ROLES.includes(value)) {
-            member.role = value;
+            member.role = value as "Player" | "Coach" | "Admin" | "Player-Coach";
           } else {
             warnings.push(`Row ${i + 1}: Role "${value}" not recognized, defaulted to "Player"`);
           }
@@ -550,16 +544,20 @@ export default function MembersPage() {
               contactNumber: row["Contact Number"] || row["Phone"] || row["contact number"] || "",
               shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt number"] || "",
               teamAssignment: teamOptions.includes(normalizedTeam) ? normalizedTeam : "",
-              category: (row["Category"] || row["category"] || "Junior") as any,
-              role: row["Role"] || row["role"] || "Player",
+              category: (row["Category"] || row["category"] || "Junior") as "Junior" | "Youth" | "Adult",
+              role: (row["Role"] || row["role"] || "Player") as "Player" | "Coach" | "Admin" | "Player-Coach",
               dateOfBirth: convertedDob,
               nationality: row["Nationality"] || row["nationality"] || "",
               address: row["Address"] || row["address"] || "",
               type: "Member",
-              coachingCredits: 0,
               joiningDate: new Date().toISOString().split("T")[0],
+              medicalNotes: row["Medical Notes"] || row["MedicalNotes"] || row["medical notes"] || "",
+              coachingCredits: parseInt(row["Coaching Credits"] || row["CoachingCredits"] || row["coaching credits"] || "0") || 0,
+              profileImage: row["Photo URL"] || row["PhotoURL"] || row["Photo"] || row["photo url"] || "",
+              isArchived: false
             };
 
+            // Validate required fields
             if (!member.firstName || !member.lastName) {
               errors.push({ 
                 row: index + 2, 
@@ -723,7 +721,7 @@ export default function MembersPage() {
         shirtNumber: item.shirtNumber || "",
         category: item.category || "Junior",
         type: item.type || "Member",
-        role: item.role || "Player",
+        role: (item.role || "Player") as "Player" | "Coach" | "Admin" | "Player-Coach",
         teamAssignment: item.teamAssignment || "",
         joiningDate: item.joiningDate || new Date().toISOString().split("T")[0],
         primaryContact: "",
@@ -801,14 +799,13 @@ export default function MembersPage() {
 
     const updatedMembers = members.map(member => {
       if (selectedMembers.includes(member.id)) {
-        return {
-          ...member,
-          ...(bulkTeam && bulkTeam !== "keep_current" && { teamAssignment: bulkTeam }),
-          ...(bulkCategory && bulkCategory !== "keep_current" && { category: bulkCategory as "Junior" | "Youth" | "Adult" }),
-          ...(bulkRole && bulkRole !== "keep_current" && { role: bulkRole }),
-          ...(bulkMembershipCategory && bulkMembershipCategory !== "keep_current" && { type: bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship" }),
-          ...(bulkNationality && bulkNationality !== "keep_current" && { nationality: bulkNationality })
-        };
+        const updates: Partial<Member> = {};
+        if (bulkTeam && bulkTeam !== "keep_current") updates.teamAssignment = bulkTeam;
+        if (bulkCategory && bulkCategory !== "keep_current") updates.category = bulkCategory as "Junior" | "Youth" | "Adult";
+        if (bulkRole && bulkRole !== "keep_current") updates.role = bulkRole as "Player" | "Coach" | "Admin" | "Player-Coach";
+        if (bulkMembershipCategory && bulkMembershipCategory !== "keep_current") updates.type = bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship";
+        if (bulkNationality && bulkNationality !== "keep_current") updates.nationality = bulkNationality;
+        return { ...member, ...updates };
       }
       return member;
     });
@@ -838,17 +835,66 @@ export default function MembersPage() {
     setBatchAssignDialogOpen(false);
   };
 
+  const handleArchiveMember = () => {
+    if (!memberToArchive) return;
+
+    const updatedMembers = members.map(m => 
+      m.id === memberToArchive.id 
+        ? { 
+            ...m, 
+            isArchived: true, 
+            archiveReason: archiveReason as Member["archiveReason"],
+            archiveReasonDetails: archiveReason === "Other" ? archiveReasonDetails : undefined,
+            archiveDate: new Date().toISOString()
+          } 
+        : m
+    );
+
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+    setArchiveDialogOpen(false);
+    setMemberToArchive(null);
+    setArchiveReason("");
+    setArchiveReasonDetails("");
+  };
+
+  const handleReactivateMember = (memberId: string) => {
+    const updatedMembers = members.map(m =>
+      m.id === memberId
+        ? {
+            ...m,
+            isArchived: false,
+            archiveReason: undefined,
+            archiveReasonDetails: undefined,
+            archiveDate: undefined
+          }
+        : m
+    );
+
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+  };
+
+  const openArchiveDialog = (member: Member) => {
+    setMemberToArchive(member);
+    setArchiveDialogOpen(true);
+  };
+
   const filteredAndSortedMembers = members.filter((member) => {
-    const matchesSearch = searchTerm === "" || 
-      member.membershipId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      member.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      member.contactNumber?.includes(searchTerm);
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      member.membershipId?.toLowerCase().includes(searchLower) ||
+      member.firstName.toLowerCase().includes(searchLower) ||
+      member.lastName.toLowerCase().includes(searchLower) ||
+      member.email.toLowerCase().includes(searchLower) ||
+      member.contactNumber.includes(searchLower);
+
     const matchesCategory = filterCategory === "all" || member.category === filterCategory;
     const matchesTeam = filterTeam === "all" || member.teamAssignment === filterTeam;
     const matchesRole = filterRole === "" || member.role === filterRole;
-    const matchesMembershipStatus = filterMembershipCategory === "all" || member.type === filterMembershipCategory;
+    const matchesMembershipStatus = 
+      filterMembershipCategory === "all" || member.type === filterMembershipCategory;
+
     return matchesSearch && matchesCategory && matchesTeam && matchesRole && matchesMembershipStatus;
   }).sort((a, b) => a.firstName.localeCompare(b.firstName));
 
@@ -877,6 +923,20 @@ export default function MembersPage() {
     return formatDateDisplay(dateString);
   };
 
+  const stats = {
+    total: members.filter(m => !m.isArchived).length,
+    newThisMonth: members.filter(m => {
+      if (m.isArchived) return false;
+      const joiningDate = new Date(m.joiningDate);
+      const now = new Date();
+      return joiningDate.getMonth() === now.getMonth() && 
+             joiningDate.getFullYear() === now.getFullYear();
+    }).length,
+    juniors: members.filter(m => !m.isArchived && m.category === "Junior").length,
+    youth: members.filter(m => !m.isArchived && m.category === "Youth").length,
+    adults: members.filter(m => !m.isArchived && m.category === "Adult").length
+  };
+
   return (
     <>
       <SEO title="Members - Bali Bulldogs" description="Club Member Management" />
@@ -884,10 +944,28 @@ export default function MembersPage() {
       <div className="min-h-screen bg-gray-50">
         <main className="max-w-7xl mx-auto w-full px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Member Database</h1>
-              <p className="text-sm text-gray-500">Manage all club registrations</p>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="showArchived"
+                    checked={showArchived}
+                    onChange={(e) => setShowArchived(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <label htmlFor="showArchived" className="text-sm font-medium">
+                    Show Archived Members
+                  </label>
+                </div>
+              </div>
+              
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                <Input placeholder="Search name, email, membership ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+              </div>
             </div>
+            
             <div className="flex gap-3">
               {members.some(m => !m.membershipId) && (
                 <Button
@@ -1060,7 +1138,16 @@ export default function MembersPage() {
                             </button>
                           </TableCell>
                           <TableCell className="text-sm font-mono text-muted-foreground">
-                            {member.membershipId || "—"}
+                            <TableCell className="text-sm font-medium">
+                              <span className="inline-flex items-center gap-2">
+                                {member.membershipId}
+                                {member.isArchived && (
+                                  <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded">
+                                    ARCHIVED
+                                  </span>
+                                )}
+                              </span>
+                            </TableCell>
                           </TableCell>
                           <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                           <TableCell>{member.teamAssignment || "—"}</TableCell>
@@ -1158,10 +1245,39 @@ export default function MembersPage() {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right sticky right-0 bg-white z-10">
-                            <div className="flex justify-end gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => handleEdit(member)} className="h-8 w-8 p-0"><Pencil className="w-4 h-4" /></Button>
-                              <Button size="sm" variant="ghost" onClick={() => handleDelete(member.id)} className="h-8 w-8 p-0 text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              {member.isArchived ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleReactivateMember(member.id)}
+                                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                                >
+                                  Reactivate
+                                </Button>
+                              ) : (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingMember(member);
+                                      setIsDialogOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openArchiveDialog(member)}
+                                    className="text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1775,14 +1891,94 @@ export default function MembersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
 
-      <ImageModal
-        imageUrl={selectedImage?.url || ""}
-        name={selectedImage?.name || ""}
-        isOpen={!!selectedImage}
-        onClose={() => setSelectedImage(null)}
-      />
+        {/* Archive Member Dialog */}
+        <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Archive Member</DialogTitle>
+              <DialogDescription>
+                {memberToArchive && (
+                  <>
+                    Archive <strong>{memberToArchive.firstName} {memberToArchive.lastName}</strong>
+                    <br />
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      Member ID: {memberToArchive.membershipId}
+                    </span>
+                  </>
+                )}
+                <br />
+                This will remove them from active rosters but preserve their record for future reactivation.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Reason for Archiving *</label>
+                <Select value={archiveReason} onValueChange={setArchiveReason}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select reason..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Joined Another Team">Joined Another Team</SelectItem>
+                    <SelectItem value="Left Bali">Left Bali</SelectItem>
+                    <SelectItem value="Retired from playing">Retired from playing</SelectItem>
+                    <SelectItem value="Longterm Injury">Longterm Injury</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {archiveReason === "Other" && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Please specify *</label>
+                  <textarea
+                    value={archiveReasonDetails}
+                    onChange={(e) => setArchiveReasonDetails(e.target.value)}
+                    placeholder="Enter reason for archiving..."
+                    className="w-full px-3 py-2 border rounded-md min-h-[80px]"
+                  />
+                </div>
+              )}
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> You can reactivate this member later if they return to the club. 
+                  Their membership ID and all information will be preserved.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setArchiveDialogOpen(false);
+                  setMemberToArchive(null);
+                  setArchiveReason("");
+                  setArchiveReasonDetails("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleArchiveMember}
+                disabled={!archiveReason || (archiveReason === "Other" && !archiveReasonDetails.trim())}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Archive Member
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <ImageModal
+          imageUrl={selectedImage?.url || ""}
+          name={selectedImage?.name || ""}
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      </div>
     </>
   );
 }
