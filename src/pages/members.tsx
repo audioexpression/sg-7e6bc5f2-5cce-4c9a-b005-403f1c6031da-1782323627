@@ -179,6 +179,172 @@ const COUNTRIES = [
 
 const teamOptions = [...TEAMS_BY_CATEGORY.Junior, ...TEAMS_BY_CATEGORY.Youth, ...TEAMS_BY_CATEGORY.Adult];
 
+// Team name mapping for import validation
+const TEAM_NAME_MAPPINGS: Record<string, string> = {
+  // Exact matches (normalized)
+  "toddler": "Toddler",
+  "kindy/u6 1": "Kindy/U6 1",
+  "kindy 1": "Kindy/U6 1",
+  "kindy/u6 2": "Kindy/U6 2",
+  "kindy 2": "Kindy/U6 2",
+  "u6": "Kindy/U6 1",
+  
+  // U8 variations
+  "u8 dev": "U8 Dev",
+  "u8 development": "U8 Dev",
+  "u8dev": "U8 Dev",
+  "under 8 dev": "U8 Dev",
+  "under 8 development": "U8 Dev",
+  "u8 adv": "U8 Adv",
+  "u8 advanced": "U8 Adv",
+  "u8adv": "U8 Adv",
+  "under 8 adv": "U8 Adv",
+  "under 8 advanced": "U8 Adv",
+  
+  // U10 variations
+  "u10 dev": "U10 Dev",
+  "u10 development": "U10 Dev",
+  "u10dev": "U10 Dev",
+  "under 10 dev": "U10 Dev",
+  "under 10 development": "U10 Dev",
+  "u10 adv": "U10 Adv",
+  "u10 advanced": "U10 Adv",
+  "u10adv": "U10 Adv",
+  "under 10 adv": "U10 Adv",
+  "under 10 advanced": "U10 Adv",
+  
+  // U12 variations
+  "u12 dev": "U12 Dev",
+  "u12 development": "U12 Dev",
+  "u12dev": "U12 Dev",
+  "under 12 dev": "U12 Dev",
+  "under 12 development": "U12 Dev",
+  "u12 adv": "U12 Adv",
+  "u12 advanced": "U12 Adv",
+  "u12adv": "U12 Adv",
+  "under 12 adv": "U12 Adv",
+  "under 12 advanced": "U12 Adv",
+  "u12 girls": "U12 Girls",
+  "u12girls": "U12 Girls",
+  "under 12 girls": "U12 Girls",
+  
+  // Youth variations
+  "u14": "U14",
+  "under 14": "U14",
+  "u14 girls": "U14 Girls",
+  "u14girls": "U14 Girls",
+  "under 14 girls": "U14 Girls",
+  "u16": "U16",
+  "under 16": "U16",
+  "u18": "U18",
+  "under 18": "U18",
+  "u18 girls": "U18 Girls",
+  "u18girls": "U18 Girls",
+  "under 18 girls": "U18 Girls",
+  
+  // Adult variations
+  "1st team": "1st Team",
+  "first team": "1st Team",
+  "1st": "1st Team",
+  "women": "Women",
+  "womens": "Women",
+  "women's": "Women",
+  "social team": "Social Team",
+  "social": "Social Team",
+  "legends 35+": "Legends 35+",
+  "legends": "Legends 35+",
+  "legends 35": "Legends 35+",
+  "masters 45+": "Masters 45+",
+  "masters": "Masters 45+",
+  "masters 45": "Masters 45+",
+};
+
+// Normalize and map team names
+const normalizeTeamName = (teamName: string): string => {
+  if (!teamName) return "";
+  
+  const normalized = teamName.toLowerCase().trim();
+  
+  // Check for exact match in mappings
+  if (TEAM_NAME_MAPPINGS[normalized]) {
+    return TEAM_NAME_MAPPINGS[normalized];
+  }
+  
+  // Check if it's already a valid team name
+  if (teamOptions.includes(teamName)) {
+    return teamName;
+  }
+  
+  // Check case-insensitive match with valid teams
+  const match = teamOptions.find(t => t.toLowerCase() === normalized);
+  if (match) {
+    return match;
+  }
+  
+  // Return original if no match found
+  return teamName;
+};
+
+// Format date to DD/MM/YYYY
+const formatDateDisplay = (dateString?: string): string => {
+  if (!dateString) return "—";
+  
+  // Handle various date formats
+  let date: Date;
+  
+  // Check if it's already in DD/MM/YYYY format
+  if (dateString.includes("/")) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      // Assume DD/MM/YYYY
+      date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    } else {
+      date = new Date(dateString);
+    }
+  } else {
+    // ISO format (YYYY-MM-DD)
+    date = new Date(dateString);
+  }
+  
+  if (isNaN(date.getTime())) return "—";
+  
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
+
+// Convert DD/MM/YYYY to YYYY-MM-DD for input
+const convertToInputDate = (dateString?: string): string => {
+  if (!dateString) return "";
+  
+  if (dateString.includes("/")) {
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      // DD/MM/YYYY to YYYY-MM-DD
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+  }
+  
+  return dateString;
+};
+
+// Convert YYYY-MM-DD to DD/MM/YYYY for storage
+const convertFromInputDate = (dateString: string): string => {
+  if (!dateString) return "";
+  
+  if (dateString.includes("-")) {
+    const parts = dateString.split("-");
+    if (parts.length === 3) {
+      // YYYY-MM-DD to DD/MM/YYYY
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  
+  return dateString;
+};
+
 interface Member {
   id: string;
   firstName: string;
@@ -374,6 +540,7 @@ export default function MembersPage() {
 
     const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
     const data: Partial<Member>[] = [];
+    const warnings: string[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map(v => v.trim());
@@ -395,10 +562,26 @@ export default function MembersPage() {
         else if (header.includes("email")) member.email = value;
         else if (header.includes("phone") || header.includes("contact")) member.contactNumber = value;
         else if (header.includes("shirt") || header.includes("number")) member.shirtNumber = value;
-        else if (header.includes("team")) member.teamAssignment = value;
-        else if (header.includes("category")) member.category = value as any;
+        else if (header.includes("team")) {
+          const normalizedTeam = normalizeTeamName(value);
+          if (normalizedTeam && teamOptions.includes(normalizedTeam)) {
+            member.teamAssignment = normalizedTeam;
+          } else {
+            warnings.push(`Row ${i + 1}: Team "${value}" not recognized, skipped`);
+          }
+        }
+        else if (header.includes("category")) {
+          const cat = value.toLowerCase();
+          if (cat.includes("junior")) member.category = "Junior";
+          else if (cat.includes("youth")) member.category = "Youth";
+          else if (cat.includes("adult")) member.category = "Adult";
+        }
         else if (header.includes("role")) member.role = value;
-        else if (header.includes("dob") || header.includes("birth")) member.dateOfBirth = value;
+        else if (header.includes("dob") || header.includes("birth")) {
+          // Convert various date formats to DD/MM/YYYY
+          const converted = convertFromInputDate(value);
+          member.dateOfBirth = converted;
+        }
         else if (header.includes("nationality")) member.nationality = value;
         else if (header.includes("address")) member.address = value;
       });
@@ -406,6 +589,10 @@ export default function MembersPage() {
       if (member.firstName && member.lastName) {
         data.push(member);
       }
+    }
+
+    if (warnings.length > 0) {
+      console.warn("Import warnings:", warnings);
     }
 
     return data;
@@ -420,23 +607,40 @@ export default function MembersPage() {
           const workbook = (window as any).XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
+          const warnings: string[] = [];
 
-          const members: Partial<Member>[] = jsonData.map((row: any) => ({
-            firstName: row["First Name"] || row["FirstName"] || row["first_name"] || "",
-            lastName: row["Last Name"] || row["LastName"] || row["Surname"] || row["last_name"] || "",
-            email: row["Email"] || row["email"] || "",
-            contactNumber: row["Contact Number"] || row["Phone"] || row["contact_number"] || "",
-            shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt_number"] || "",
-            teamAssignment: row["Team"] || row["team"] || "",
-            category: (row["Category"] || row["category"] || "Junior") as any,
-            role: row["Role"] || row["role"] || "Player",
-            dateOfBirth: row["Date of Birth"] || row["DOB"] || row["date_of_birth"] || "",
-            nationality: row["Nationality"] || row["nationality"] || "",
-            address: row["Address"] || row["address"] || "",
-            type: "Member",
-            coachingCredits: 0,
-            joiningDate: new Date().toISOString().split("T")[0],
-          })).filter((m: any) => m.firstName && m.lastName);
+          const members: Partial<Member>[] = jsonData.map((row: any, index: number) => {
+            const teamValue = row["Team"] || row["team"] || "";
+            const normalizedTeam = normalizeTeamName(teamValue);
+            
+            if (teamValue && !teamOptions.includes(normalizedTeam)) {
+              warnings.push(`Row ${index + 2}: Team "${teamValue}" not recognized, skipped`);
+            }
+
+            const dobValue = row["Date of Birth"] || row["DOB"] || row["date_of_birth"] || "";
+            const convertedDob = dobValue ? convertFromInputDate(String(dobValue)) : "";
+
+            return {
+              firstName: row["First Name"] || row["FirstName"] || row["first_name"] || "",
+              lastName: row["Last Name"] || row["LastName"] || row["Surname"] || row["last_name"] || "",
+              email: row["Email"] || row["email"] || "",
+              contactNumber: row["Contact Number"] || row["Phone"] || row["contact_number"] || "",
+              shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt_number"] || "",
+              teamAssignment: teamOptions.includes(normalizedTeam) ? normalizedTeam : "",
+              category: (row["Category"] || row["category"] || "Junior") as any,
+              role: row["Role"] || row["role"] || "Player",
+              dateOfBirth: convertedDob,
+              nationality: row["Nationality"] || row["nationality"] || "",
+              address: row["Address"] || row["address"] || "",
+              type: "Member",
+              coachingCredits: 0,
+              joiningDate: new Date().toISOString().split("T")[0],
+            };
+          }).filter((m: any) => m.firstName && m.lastName);
+
+          if (warnings.length > 0) {
+            alert(`Import completed with warnings:\n\n${warnings.join("\n")}`);
+          }
 
           resolve(members);
         } catch (error) {
@@ -675,8 +879,7 @@ export default function MembersPage() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "—";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    return formatDateDisplay(dateString);
   };
 
   return (
@@ -843,7 +1046,7 @@ export default function MembersPage() {
                         </TableCell>
                         <TableCell>{member.shirtNumber || "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {member.dateOfBirth || "—"}
+                          {formatDateDisplay(member.dateOfBirth)}
                         </TableCell>
                         <TableCell>{member.nationality || "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -1107,7 +1310,16 @@ export default function MembersPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Date of Birth</Label>
-                  <Input type="date" value={formData.dateOfBirth || ""} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
+                  <Input 
+                    type="date" 
+                    value={convertToInputDate(formData.dateOfBirth)} 
+                    onChange={e => setFormData({...formData, dateOfBirth: convertFromInputDate(e.target.value)})} 
+                  />
+                  {formData.dateOfBirth && (
+                    <p className="text-xs text-muted-foreground">
+                      Format: {formatDateDisplay(formData.dateOfBirth)}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Nationality</Label>
@@ -1186,7 +1398,16 @@ export default function MembersPage() {
 
               <div className="space-y-2">
                 <Label>Joining Date</Label>
-                <Input type="date" value={formData.joiningDate || ""} onChange={e => setFormData({...formData, joiningDate: e.target.value})} />
+                <Input 
+                  type="date" 
+                  value={convertToInputDate(formData.joiningDate)} 
+                  onChange={e => setFormData({...formData, joiningDate: convertFromInputDate(e.target.value)})} 
+                />
+                {formData.joiningDate && (
+                  <p className="text-xs text-muted-foreground">
+                    Format: {formatDateDisplay(formData.joiningDate)}
+                  </p>
+                )}
               </div>
 
               <div className="border-t pt-4">
