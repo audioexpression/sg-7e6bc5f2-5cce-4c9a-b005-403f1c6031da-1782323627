@@ -15,12 +15,6 @@ import Link from "next/link";
 import { ImageModal } from "@/components/ImageModal";
 import { useRouter } from "next/router";
 
-const TEAMS_BY_CATEGORY = {
-  Junior: ["Toddler", "Kindy/U6 1", "Kindy/U6 2", "U8 Dev", "U8 Adv", "U10 Dev", "U10 Adv", "U12 Girls", "U12 Dev", "U12 Adv"],
-  Youth: ["U14", "U14 Girls", "U16", "U18 Girls", "U18"],
-  Adult: ["1st Team", "Women", "Social Team", "Legends 35+", "Masters 45+"],
-};
-
 const ROLES = ["Admin", "Coach", "Player-Coach", "Player"];
 
 const COUNTRIES = [
@@ -41,15 +35,30 @@ const COUNTRIES = [
   "England", "Scotland", "Wales", "Northern Ireland", "United States", "Uruguay", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
 ];
 
-const teamOptions = [...TEAMS_BY_CATEGORY.Junior, ...TEAMS_BY_CATEGORY.Youth, ...TEAMS_BY_CATEGORY.Adult];
+const DELETE_REASONS = [
+  "Test Account / Duplicate",
+  "Left Club",
+  "Moving Away",
+  "Injury",
+  "Financial",
+  "Other"
+];
 
 const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "toddler": "Toddler",
   "kindy/u6 1": "Kindy/U6 1",
   "kindy 1": "Kindy/U6 1",
+  "kindy1": "Kindy/U6 1",
+  "kindy/u61": "Kindy/U6 1",
+  "kindy u6 1": "Kindy/U6 1",
+  "u6 1": "Kindy/U6 1",
   "kindy/u6 2": "Kindy/U6 2",
   "kindy 2": "Kindy/U6 2",
-  "u6": "Kindy/U6 1",
+  "kindy2": "Kindy/U6 2",
+  "kindy/u62": "Kindy/U6 2",
+  "kindy u6 2": "Kindy/U6 2",
+  "u6 2": "Kindy/U6 2",
+  "u6": "U6",
   "u8 dev": "U8 Dev",
   "u8 development": "U8 Dev",
   "u8dev": "U8 Dev",
@@ -111,20 +120,35 @@ const TEAM_NAME_MAPPINGS: Record<string, string> = {
   "masters 45": "Masters 45+",
 };
 
-const normalizeTeamName = (teamName: string): string => {
+const normalizeTeamName = (teamName: string, availableTeams: string[]): string => {
   if (!teamName) return "";
   const normalized = teamName.toLowerCase().trim();
+  
+  // Direct match
+  if (availableTeams.some(t => t.toLowerCase() === normalized)) {
+    return availableTeams.find(t => t.toLowerCase() === normalized) || teamName;
+  }
+  
+  // Check mappings
   if (TEAM_NAME_MAPPINGS[normalized]) {
-    return TEAM_NAME_MAPPINGS[normalized];
+    const mapped = TEAM_NAME_MAPPINGS[normalized];
+    // Verify mapped name exists in available teams
+    if (availableTeams.includes(mapped)) {
+      return mapped;
+    }
   }
-  if (teamOptions.includes(teamName)) {
-    return teamName;
-  }
-  const match = teamOptions.find(t => t.toLowerCase() === normalized);
-  if (match) {
-    return match;
-  }
-  return teamName;
+  
+  // Partial match (e.g., "u6" matches "U6")
+  const partialMatch = availableTeams.find(t => 
+    t.toLowerCase().includes(normalized) || normalized.includes(t.toLowerCase())
+  );
+  
+  return partialMatch || teamName;
+};
+
+const getCategoryForTeam = (teamName: string, teams: any[]): "Junior" | "Youth" | "Adult" | undefined => {
+  const team = teams.find(t => t.name === teamName);
+  return team?.category;
 };
 
 const formatDateDisplay = (dateString?: string): string => {
@@ -198,6 +222,13 @@ interface Member {
   archiveDate?: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  category: "Junior" | "Youth" | "Adult";
+  monthlyFee: number;
+}
+
 interface ImportMessage {
   row: number;
   field?: string;
@@ -251,6 +282,7 @@ const batchAssignMembershipIds = (members: Member[]): Member[] => {
 export default function MembersPage() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTeam, setSelectedTeam] = useState("all");
@@ -310,6 +342,12 @@ export default function MembersPage() {
   const [archiveReason, setArchiveReason] = useState<string>("");
   const [archiveReasonDetails, setArchiveReasonDetails] = useState<string>("");
   const [showArchived, setShowArchived] = useState(false);
+  const [importTargetTeam, setImportTargetTeam] = useState<string>("auto");
+  
+  // Delete Dialog State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
@@ -318,7 +356,9 @@ export default function MembersPage() {
     }
     const savedTeams = localStorage.getItem("teams");
     if (savedTeams) {
-      setTeamsData(JSON.parse(savedTeams));
+      const parsedTeams = JSON.parse(savedTeams);
+      setTeams(parsedTeams);
+      setTeamsData(parsedTeams);
     }
   }, []);
 
@@ -333,6 +373,14 @@ export default function MembersPage() {
       }
     }
   }, [router.query, members]);
+
+  const teamOptions = teams.map(t => t.name);
+  
+  const teamsByCategory = {
+    Junior: teams.filter(t => t.category === "Junior").map(t => t.name),
+    Youth: teams.filter(t => t.category === "Youth").map(t => t.name),
+    Adult: teams.filter(t => t.category === "Adult").map(t => t.name),
+  };
 
   const resetForm = () => {
     setFormData({
@@ -366,11 +414,32 @@ export default function MembersPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this member?")) {
-      const updated = members.filter((m) => m.id !== id);
+  const initiateDelete = (member: Member) => {
+    setMemberToDelete(member);
+    setDeleteReason("");
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!memberToDelete) return;
+    
+    console.log(`Deleting member ${memberToDelete.firstName} ${memberToDelete.lastName}. Reason: ${deleteReason}`);
+    
+    const updated = members.filter((m) => m.id !== memberToDelete.id);
+    setMembers(updated);
+    localStorage.setItem("members", JSON.stringify(updated));
+    
+    setDeleteDialogOpen(false);
+    setMemberToDelete(null);
+    setDeleteReason("");
+  };
+
+  const handleDeleteMembers = () => {
+    if (confirm(`Are you sure you want to delete ${selectedMembers.length} members? This action cannot be undone.`)) {
+      const updated = members.filter(m => !selectedMembers.includes(m.id));
       setMembers(updated);
       localStorage.setItem("members", JSON.stringify(updated));
+      setSelectedMembers([]);
     }
   };
 
@@ -461,7 +530,7 @@ export default function MembersPage() {
         else if (header.includes("phone") || header.includes("contact")) member.contactNumber = value;
         else if (header.includes("shirt") || header.includes("number")) member.shirtNumber = value;
         else if (header.includes("team")) {
-          const normalizedTeam = normalizeTeamName(value);
+          const normalizedTeam = normalizeTeamName(value, teamOptions);
           if (normalizedTeam && teamOptions.includes(normalizedTeam)) {
             member.teamAssignment = normalizedTeam;
           } else {
@@ -478,10 +547,12 @@ export default function MembersPage() {
           }
         }
         else if (header.includes("role")) {
-          if (ROLES.includes(value)) {
-            member.role = value as "Player" | "Coach" | "Admin" | "Player-Coach";
+          const roleValue = value as string;
+          if (ROLES.includes(roleValue)) {
+            member.role = roleValue as "Admin" | "Coach" | "Player-Coach" | "Player";
           } else {
             warnings.push(`Row ${i + 1}: Role "${value}" not recognized, defaulted to "Player"`);
+            member.role = "Player";
           }
         }
         else if (header.includes("dob") || header.includes("birth")) {
@@ -531,9 +602,15 @@ export default function MembersPage() {
 
           const members: Partial<Member>[] = jsonData.map((row: any, index: number) => {
             const teamValue = row["Team"] || row["team"] || "";
-            const normalizedTeam = normalizeTeamName(teamValue);
+            const normalizedTeam = normalizeTeamName(teamValue, teamOptions);
             const dobValue = row["Date of Birth"] || row["DOB"] || row["dob"] || "";
             const convertedDob = convertFromInputDate(dobValue);
+
+            const rawRole = row["Role"] || row["role"] || "Player";
+            let role: "Admin" | "Coach" | "Player-Coach" | "Player" = "Player";
+            if (rawRole === "Admin" || rawRole === "Coach" || rawRole === "Player-Coach" || rawRole === "Player") {
+              role = rawRole;
+            }
 
             const member: Partial<Member> = {
               id: Date.now().toString() + index,
@@ -543,9 +620,9 @@ export default function MembersPage() {
               email: row["Email"] || row["email"] || "",
               contactNumber: row["Contact Number"] || row["Phone"] || row["contact number"] || "",
               shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt number"] || "",
-              teamAssignment: teamOptions.includes(normalizedTeam) ? normalizedTeam : "",
+              role: role,
+              teamAssignment: normalizedTeam,
               category: (row["Category"] || row["category"] || "Junior") as "Junior" | "Youth" | "Adult",
-              role: (row["Role"] || row["role"] || "Player") as "Player" | "Coach" | "Admin" | "Player-Coach",
               dateOfBirth: convertedDob,
               nationality: row["Nationality"] || row["nationality"] || "",
               address: row["Address"] || row["address"] || "",
@@ -557,7 +634,6 @@ export default function MembersPage() {
               isArchived: false
             };
 
-            // Validate required fields
             if (!member.firstName || !member.lastName) {
               errors.push({ 
                 row: index + 2, 
@@ -638,6 +714,17 @@ export default function MembersPage() {
       return;
     }
 
+    // Apply default team if selected and not set to "auto"
+    if (importTargetTeam && importTargetTeam !== "auto") {
+      const detectedCategory = getCategoryForTeam(importTargetTeam, teams);
+      
+      parsed = parsed.map(member => ({
+        ...member,
+        teamAssignment: importTargetTeam,
+        category: detectedCategory || member.category
+      }));
+    }
+
     setImportData(parsed);
     const dupes = findDuplicates(parsed);
 
@@ -712,25 +799,31 @@ export default function MembersPage() {
         }
       }
 
-      const newMember = {
-        ...item,
+      const newMember: Member = {
         id: crypto.randomUUID(),
         membershipId: item.membershipId || generateMembershipId(updatedMembers, item.joiningDate),
         firstName: item.firstName || "",
         lastName: item.lastName || "",
+        dateOfBirth: item.dateOfBirth || "",
+        nationality: item.nationality || "",
+        address: item.address || "",
+        email: item.email || "",
         shirtNumber: item.shirtNumber || "",
         category: item.category || "Junior",
         type: item.type || "Member",
-        role: (item.role || "Player") as "Player" | "Coach" | "Admin" | "Player-Coach",
+        role: item.role || "Player",
         teamAssignment: item.teamAssignment || "",
         joiningDate: item.joiningDate || new Date().toISOString().split("T")[0],
-        primaryContact: "",
-        primaryContactNumber: "",
-        secondaryContact: "",
-        secondaryContactNumber: "",
-        medicalNotes: "",
-        coachingCredits: 0,
-      } as Member;
+        contactNumber: item.contactNumber || "",
+        primaryContact: item.primaryContact || "",
+        primaryContactNumber: item.primaryContactNumber || "",
+        secondaryContact: item.secondaryContact || "",
+        secondaryContactNumber: item.secondaryContactNumber || "",
+        medicalNotes: item.medicalNotes || "",
+        coachingCredits: item.coachingCredits || 0,
+        profileImage: item.profileImage,
+        isArchived: false,
+      };
 
       updatedMembers.push(newMember);
       imported++;
@@ -778,6 +871,7 @@ export default function MembersPage() {
     setDuplicateResolutions({});
     setCurrentDuplicateIndex(0);
     setImportFile(null);
+    setImportTargetTeam("auto");
   };
 
   const handleSelectAll = () => {
@@ -819,13 +913,6 @@ export default function MembersPage() {
     setBulkRole("");
     setBulkMembershipCategory("");
     setBulkNationality("");
-  };
-
-  const handleDeleteMembers = () => {
-    const updated = members.filter(m => !selectedMembers.includes(m.id));
-    setMembers(updated);
-    localStorage.setItem("members", JSON.stringify(updated));
-    setSelectedMembers([]);
   };
 
   const handleBatchAssignIds = () => {
@@ -881,6 +968,8 @@ export default function MembersPage() {
   };
 
   const filteredAndSortedMembers = members.filter((member) => {
+    if (!showArchived && member.isArchived) return false;
+
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
       member.membershipId?.toLowerCase().includes(searchLower) ||
@@ -944,7 +1033,7 @@ export default function MembersPage() {
       <div className="min-h-screen bg-gray-50">
         <main className="max-w-7xl mx-auto w-full px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between w-full">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <input
@@ -960,40 +1049,35 @@ export default function MembersPage() {
                 </div>
               </div>
               
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search name, email, membership ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              {members.some(m => !m.membershipId) && (
+              <div className="flex gap-3">
+                {members.some(m => !m.membershipId) && (
+                  <Button
+                    onClick={() => setBatchAssignDialogOpen(true)}
+                    variant="outline"
+                    className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400"
+                  >
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Assign IDs ({members.filter(m => !m.membershipId).length})
+                  </Button>
+                )}
                 <Button
-                  onClick={() => setBatchAssignDialogOpen(true)}
+                  onClick={() => setIsImportOpen(true)}
                   variant="outline"
-                  className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400"
                 >
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Assign IDs ({members.filter(m => !m.membershipId).length})
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Data
                 </Button>
-              )}
-              <Button
-                onClick={() => setIsImportOpen(true)}
-                variant="outline"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Import Data
-              </Button>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setIsDialogOpen(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Member
-              </Button>
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setIsDialogOpen(true);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Add Member
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -1050,7 +1134,7 @@ export default function MembersPage() {
                 <SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Teams</SelectItem>
-                  {filterCategory === "all" ? teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>) : (TEAMS_BY_CATEGORY[filterCategory as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {filterCategory === "all" ? teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>) : (teamsByCategory[filterCategory as keyof typeof teamsByCategory] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filterMembershipCategory} onValueChange={setFilterMembershipCategory}>
@@ -1138,16 +1222,14 @@ export default function MembersPage() {
                             </button>
                           </TableCell>
                           <TableCell className="text-sm font-mono text-muted-foreground">
-                            <TableCell className="text-sm font-medium">
-                              <span className="inline-flex items-center gap-2">
-                                {member.membershipId}
-                                {member.isArchived && (
-                                  <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded">
-                                    ARCHIVED
-                                  </span>
-                                )}
-                              </span>
-                            </TableCell>
+                            <span className="inline-flex items-center gap-2">
+                              {member.membershipId}
+                              {member.isArchived && (
+                                <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded">
+                                  ARCHIVED
+                                </span>
+                              )}
+                            </span>
                           </TableCell>
                           <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                           <TableCell>{member.teamAssignment || "—"}</TableCell>
@@ -1245,7 +1327,7 @@ export default function MembersPage() {
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right sticky right-0 bg-white z-10">
                             <div className="flex justify-end gap-2">
                               {member.isArchived ? (
                                 <Button
@@ -1261,17 +1343,14 @@ export default function MembersPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
-                                      setEditingMember(member);
-                                      setIsDialogOpen(true);
-                                    }}
+                                    onClick={() => handleEdit(member)}
                                   >
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => openArchiveDialog(member)}
+                                    onClick={() => initiateDelete(member)}
                                     className="text-red-600 hover:bg-red-50"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -1533,7 +1612,7 @@ export default function MembersPage() {
                     <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
                       <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
                       <SelectContent>
-                        {(TEAMS_BY_CATEGORY[formData.category as keyof typeof TEAMS_BY_CATEGORY] || []).map(t => (
+                        {(teamsByCategory[formData.category as keyof typeof teamsByCategory] || []).map(t => (
                           <SelectItem key={t} value={t}>{t}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1548,7 +1627,7 @@ export default function MembersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Role</Label>
-                    <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v})}>
+                    <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v as any})}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -1629,15 +1708,38 @@ export default function MembersPage() {
                 Upload a CSV or Excel file (.csv, .xlsx, .xls) with member information
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Input 
-                type="file" 
-                accept=".csv,.xlsx,.xls" 
-                onChange={handleFileSelect}
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                Expected columns: First Name, Last Name, Email, Contact Number, Team, Category, Role, etc.
-              </p>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label>Default Team (Optional)</Label>
+                <Select value={importTargetTeam} onValueChange={setImportTargetTeam}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Auto-detect from file" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto-detect from file</SelectItem>
+                    {teamOptions.map((team) => (
+                      <SelectItem key={team} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  If selected, ALL members in this file will be assigned to this team.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Upload File</Label>
+                <Input 
+                  type="file" 
+                  accept=".csv,.xlsx,.xls" 
+                  onChange={handleFileSelect}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Expected columns: First Name, Last Name, Email, Contact Number, Team, Category, Role, etc.
+                </p>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -1892,7 +1994,6 @@ export default function MembersPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Archive Member Dialog */}
         <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -1967,6 +2068,75 @@ export default function MembersPage() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Archive Member
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                Delete Member
+              </DialogTitle>
+              <DialogDescription>
+                {memberToDelete && (
+                  <>
+                    Are you sure you want to permanently delete <strong>{memberToDelete.firstName} {memberToDelete.lastName}</strong>?
+                    <br />
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      Member ID: {memberToDelete.membershipId}
+                    </span>
+                  </>
+                )}
+                <br />
+                <span className="font-semibold text-red-600">This action cannot be undone.</span> All data for this member will be lost.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="delete-reason">Reason for deletion *</Label>
+                <Select value={deleteReason} onValueChange={setDeleteReason}>
+                  <SelectTrigger id="delete-reason">
+                    <SelectValue placeholder="Select a reason..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DELETE_REASONS.map((reason) => (
+                      <SelectItem key={reason} value={reason}>
+                        {reason}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {deleteReason === "Other" && (
+                <div className="space-y-2">
+                  <Label>Please specify details (Optional)</Label>
+                  <Input placeholder="Additional details..." />
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setMemberToDelete(null);
+                  setDeleteReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                disabled={!deleteReason}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Permanently Delete
               </Button>
             </DialogFooter>
           </DialogContent>

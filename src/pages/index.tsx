@@ -111,10 +111,12 @@ export default function Dashboard() {
     const loadedInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
     const loadedSessions = JSON.parse(localStorage.getItem("privateCoachingSessions") || "[]");
     const loadedCoaches = JSON.parse(localStorage.getItem("coaches") || "[]");
+    const loadedTeams = JSON.parse(localStorage.getItem("teams") || "[]");
     setMembers(loadedMembers);
     setInvoices(loadedInvoices);
     setSessions(loadedSessions);
     setCoaches(loadedCoaches);
+    setTeams(loadedTeams);
   }, []);
 
   // --- Calculations ---
@@ -250,6 +252,21 @@ export default function Dashboard() {
   const completedSessions = sessions.filter(s => s.status === "Completed").length;
   const upcomingSessions = sessions.filter(s => s.status === "Scheduled").length;
   const membersWithCredits = members.filter(m => m.coachingCredits > 0);
+  
+  // 4. Coaching Revenue (Calculated here for Financials tab usage)
+  const totalCoachingRevenue = sessions
+    .filter(s => s.status === "Completed" || s.status === "Scheduled") 
+    .reduce((sum, s) => sum + s.cost, 0);
+
+  // 5. Scholarship & Sponsorship Value (Opportunity Cost)
+  // Calculate how much revenue is "sponsored" per quarter based on team fees
+  const scholarshipValueQuarterly = members
+    .filter(m => m.type === "Scholarship" || m.type === "Sponsored")
+    .reduce((sum, m) => {
+      const team = teams.find(t => t.name === m.teamAssignment);
+      // Default to 0 if team not found, monthly fee * 3 for quarter
+      return sum + ((team?.monthlyFee || 0) * 3);
+    }, 0);
 
   // Revenue Trends (Mock simulation based on existing invoices if periods matched, or simplified grouping)
   // Grouping paid invoices by billing period for trend
@@ -701,23 +718,24 @@ export default function Dashboard() {
 
             {/* --- FINANCIALS TAB --- */}
             <TabsContent value="financials" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-gradient-to-br from-white to-gray-50">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-500">Collection Rate</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <span className="text-4xl font-bold text-gray-900">{paymentRate.toFixed(1)}%</span>
+                      <span className="text-2xl font-bold text-gray-900">{paymentRate.toFixed(1)}%</span>
                       <div className={`p-2 rounded-full ${paymentRate > 80 ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>
-                        <Percent className="h-5 w-5" />
+                        <Percent className="h-4 w-4" />
                       </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-                      <div className={`h-2 rounded-full transition-all duration-1000 ${paymentRate > 80 ? 'bg-green-600' : 'bg-yellow-500'}`} style={{ width: `${paymentRate}%` }}></div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-3">
+                      <div className={`h-1.5 rounded-full transition-all duration-1000 ${paymentRate > 80 ? 'bg-green-600' : 'bg-yellow-500'}`} style={{ width: `${paymentRate}%` }}></div>
                     </div>
                   </CardContent>
                 </Card>
+                
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-500">Avg. Revenue / Member</CardTitle>
@@ -726,24 +744,40 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-gray-900">{formatCurrency(avgRevenuePerMember)}</span>
                       <div className="p-2 rounded-full bg-blue-100 text-blue-600">
-                         <Users className="h-5 w-5" />
+                         <Users className="h-4 w-4" />
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">Lifetime value per paid member</p>
+                    <p className="text-xs text-gray-500 mt-1">Lifetime value</p>
                   </CardContent>
                 </Card>
+
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-500">Projected Annual Revenue</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-500">Coaching Income</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-gray-900">{formatCurrency(revenueThisQuarter * 4)}</span>
+                      <span className="text-2xl font-bold text-gray-900">{formatCurrency(totalCoachingRevenue)}</span>
                       <div className="p-2 rounded-full bg-purple-100 text-purple-600">
-                         <TrendingUp className="h-5 w-5" />
+                         <Activity className="h-4 w-4" />
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">Based on current quarter run rate</p>
+                    <p className="text-xs text-gray-500 mt-1">Total session value</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-500">Sponsorship Value (Qtr)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900">{formatCurrency(scholarshipValueQuarterly)}</span>
+                      <div className="p-2 rounded-full bg-yellow-100 text-yellow-600">
+                         <Award className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Subsidized fees</p>
                   </CardContent>
                 </Card>
               </div>

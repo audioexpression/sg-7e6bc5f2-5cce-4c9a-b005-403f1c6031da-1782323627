@@ -14,6 +14,8 @@ import {
   Edit,
   Save,
   X,
+  School,
+  GraduationCap
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -26,18 +28,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { 
   Coach, 
-  loadCoaches, 
-  saveCoaches, 
   TIER_RATES 
 } from "@/lib/coach-types";
+import { DEFAULT_SCHOOLS } from "@/lib/constants";
 
 interface Team {
   id: string;
   name: string;
   category: "Junior" | "Youth" | "Adult";
   monthlyFee: number;
-  taxRate?: number; // Tax rate as percentage (e.g., 11 for 11%)
+  taxRate?: number;
   reducedMonthlyFee?: number;
+  whatsappLink?: string;
 }
 
 interface AdminStaff {
@@ -48,36 +50,34 @@ interface AdminStaff {
   email: string;
 }
 
-interface Billing {
+interface Member {
   id: string;
-  amount: number;
-  dueDate: string;
-  status: "pending" | "paid" | "overdue";
+  firstName: string;
+  lastName: string;
+  category: "Junior" | "Youth" | "Adult";
+  teamAssignment: string;
+  feeStructure?: "Standard" | "Reduced";
+  membershipId?: string;
 }
 
 const DEFAULT_TEAMS: Team[] = [
-  // Junior Teams
-  { id: "toddler", name: "Toddler", category: "Junior", monthlyFee: 0 },
-  { id: "kindy-1", name: "Kindy 1", category: "Junior", monthlyFee: 0 },
-  { id: "kindy-2", name: "Kindy 2", category: "Junior", monthlyFee: 0 },
-  { id: "u6", name: "U6", category: "Junior", monthlyFee: 0 },
-  { id: "u8-dev", name: "U8 Dev", category: "Junior", monthlyFee: 0 },
-  { id: "u8-adv", name: "U8 Adv", category: "Junior", monthlyFee: 0 },
-  { id: "u10-dev", name: "U10 Dev", category: "Junior", monthlyFee: 0 },
-  { id: "u10-adv", name: "U10 Adv", category: "Junior", monthlyFee: 0 },
-  { id: "u12-dev", name: "U12 Dev", category: "Junior", monthlyFee: 0 },
-  { id: "u12-adv", name: "U12 Adv", category: "Junior", monthlyFee: 0 },
-  { id: "u12-girls", name: "U12 Girls", category: "Junior", monthlyFee: 0 },
-  
-  // Youth Teams
-  { id: "u14", name: "U14", category: "Youth", monthlyFee: 0 },
-  { id: "u14-girls", name: "U14 Girls", category: "Youth", monthlyFee: 0 },
-  { id: "u16", name: "U16", category: "Youth", monthlyFee: 0 },
-  { id: "u18-girls", name: "U18 Girls", category: "Youth", monthlyFee: 0 },
-  { id: "u18", name: "U18", category: "Youth", monthlyFee: 0 },
+  { id: "toddler", name: "Toddler", category: "Junior", monthlyFee: 500000 },
+  { id: "kindy-1", name: "Kindy 1", category: "Junior", monthlyFee: 850000 },
+  { id: "kindy-2", name: "Kindy 2", category: "Junior", monthlyFee: 850000 },
+  { id: "u6", name: "U6", category: "Junior", monthlyFee: 850000 },
+  { id: "u8-dev", name: "U8 Dev", category: "Junior", monthlyFee: 950000 },
+  { id: "u8-adv", name: "U8 Adv", category: "Junior", monthlyFee: 950000 },
+  { id: "u10-dev", name: "U10 Dev", category: "Junior", monthlyFee: 950000 },
+  { id: "u10-adv", name: "U10 Adv", category: "Junior", monthlyFee: 950000 },
+  { id: "u12-dev", name: "U12 Dev", category: "Junior", monthlyFee: 950000 },
+  { id: "u12-adv", name: "U12 Adv", category: "Junior", monthlyFee: 950000 },
+  { id: "u12-girls", name: "U12 Girls", category: "Junior", monthlyFee: 500000 },
+  { id: "u14", name: "U14", category: "Youth", monthlyFee: 950000 },
+  { id: "u14-girls", name: "U14 Girls", category: "Youth", monthlyFee: 950000 },
+  { id: "u16", name: "U16", category: "Youth", monthlyFee: 950000 },
+  { id: "u18-girls", name: "U18 Girls", category: "Youth", monthlyFee: 500000 },
+  { id: "u18", name: "U18", category: "Youth", monthlyFee: 500000 },
   { id: "u20", name: "U20", category: "Youth", monthlyFee: 0 },
-  
-  // Adult Teams
   { id: "women", name: "Women", category: "Adult", monthlyFee: 0, taxRate: 10 },
   { id: "masters-45", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
   { id: "legends", name: "Legends", category: "Adult", monthlyFee: 0 },
@@ -85,21 +85,20 @@ const DEFAULT_TEAMS: Team[] = [
   { id: "first-team", name: "1st Team", category: "Adult", monthlyFee: 0 },
 ];
 
-// Calculate quarterly fee with tax
-const calculateQuarterlyFee = (monthlyFee: number, taxRate: number = 11): number => {
-  const quarterlyBase = monthlyFee * 3;
-  const taxAmount = (quarterlyBase * taxRate) / 100;
-  return quarterlyBase + taxAmount;
+const calculateQuarterlyFee = (monthlyFee: number): number => {
+  return monthlyFee * 3;
 };
 
 export default function Settings() {
   const router = useRouter();
 
-  // Initialize state with empty arrays - will be populated from localStorage
   const [teams, setTeams] = useState<Team[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [adminStaff, setAdminStaff] = useState<AdminStaff[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [schools, setSchools] = useState<string[]>([]);
   
+  // Teams State
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [newTeam, setNewTeam] = useState<{
@@ -108,52 +107,43 @@ export default function Settings() {
     monthlyFee: number;
     taxRate: number;
     reducedMonthlyFee?: number;
+    whatsappLink?: string;
   }>({ 
     name: "", 
     category: "Junior", 
     monthlyFee: 0,
     taxRate: 11,
-    reducedMonthlyFee: undefined
+    reducedMonthlyFee: undefined,
+    whatsappLink: ""
   });
   const [teamSearchTerm, setTeamSearchTerm] = useState("");
-  const [teamCategoryFilter, setTeamCategoryFilter] = useState<string>("All");
 
+  // Coaches State
   const [isAddCoachOpen, setIsAddCoachOpen] = useState(false);
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
   const [newCoach, setNewCoach] = useState({ name: "", phone: "", tier: "Assistant Coach" as Coach["tier"] });
   const [coachSearchTerm, setCoachSearchTerm] = useState("");
   const [coachTierFilter, setCoachTierFilter] = useState<string>("All");
 
+  // Admin Staff State
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminStaff | null>(null);
   const [newAdmin, setNewAdmin] = useState({ name: "", phone: "", role: "", email: "" });
   const [adminSearchTerm, setAdminSearchTerm] = useState("");
 
+  // Schools State
+  const [newSchool, setNewSchool] = useState("");
+
   const [successMessage, setSuccessMessage] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const [teamForm, setTeamForm] = useState<{
-    name: string;
-    category: "Junior" | "Youth" | "Adult";
-    monthlyFee: number;
-    taxRate: number;
-    reducedMonthlyFee?: number;
-  }>({ 
-    name: "", 
-    category: "Junior", 
-    monthlyFee: 0,
-    taxRate: 11
-  });
-
-  // Load data on mount
   useEffect(() => {
     const savedTeams = localStorage.getItem("teams");
     if (savedTeams) {
       try {
         setTeams(JSON.parse(savedTeams));
       } catch (error) {
-        console.error("Error loading teams:", error);
         setTeams(DEFAULT_TEAMS);
         localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
       }
@@ -162,52 +152,50 @@ export default function Settings() {
       localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
     }
 
-    const savedTax = localStorage.getItem("taxRate");
-    if (savedTax) setNewTeam({ ...newTeam, taxRate: parseInt(savedTax) });
-
     const savedCoaches = localStorage.getItem("coaches");
-    if (savedCoaches) {
-      setCoaches(JSON.parse(savedCoaches));
-    }
+    if (savedCoaches) setCoaches(JSON.parse(savedCoaches));
     
     const savedAdminStaff = localStorage.getItem("adminStaff");
-    if (savedAdminStaff) {
-      setAdminStaff(JSON.parse(savedAdminStaff));
-    }
+    if (savedAdminStaff) setAdminStaff(JSON.parse(savedAdminStaff));
     
-    // Mark loading as complete
+    const savedMembers = localStorage.getItem("members");
+    if (savedMembers) {
+      try {
+        setMembers(JSON.parse(savedMembers));
+      } catch (error) {
+        console.error("Error loading members:", error);
+      }
+    }
+
+    const savedSchools = localStorage.getItem("schools");
+    if (savedSchools) {
+      setSchools(JSON.parse(savedSchools));
+    } else {
+      setSchools(DEFAULT_SCHOOLS);
+      localStorage.setItem("schools", JSON.stringify(DEFAULT_SCHOOLS));
+    }
+
     setIsLoaded(true);
   }, []);
 
-  // Save functions that persist immediately
   const saveTeamsToStorage = (updatedTeams: Team[]) => {
-    try {
-      localStorage.setItem("teams", JSON.stringify(updatedTeams));
-      setTeams(updatedTeams);
-    } catch (error) {
-      console.error("Error saving teams:", error);
-      alert("Failed to save teams. Please try again.");
-    }
+    localStorage.setItem("teams", JSON.stringify(updatedTeams));
+    setTeams(updatedTeams);
   };
 
   const saveCoachesToStorage = (updatedCoaches: Coach[]) => {
-    try {
-      localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
-      setCoaches(updatedCoaches);
-    } catch (error) {
-      console.error("Error saving coaches:", error);
-      alert("Failed to save coaches. Please try again.");
-    }
+    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+    setCoaches(updatedCoaches);
   };
 
   const saveAdminToStorage = (updatedAdmin: AdminStaff[]) => {
-    try {
-      localStorage.setItem("adminStaff", JSON.stringify(updatedAdmin));
-      setAdminStaff(updatedAdmin);
-    } catch (error) {
-      console.error("Error saving admin staff:", error);
-      alert("Failed to save admin staff. Please try again.");
-    }
+    localStorage.setItem("adminStaff", JSON.stringify(updatedAdmin));
+    setAdminStaff(updatedAdmin);
+  };
+
+  const saveSchoolsToStorage = (updatedSchools: string[]) => {
+    localStorage.setItem("schools", JSON.stringify(updatedSchools));
+    setSchools(updatedSchools);
   };
 
   const showSuccess = (message: string) => {
@@ -215,19 +203,16 @@ export default function Settings() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
-  // Teams Functions
+  // Team Handlers
   const handleAddTeam = () => {
     setFormErrors({});
     const errors: Record<string, string> = {};
-
     if (!newTeam.name.trim()) errors.teamName = "Team name is required";
     if (newTeam.monthlyFee < 0) errors.monthlyFee = "Fee cannot be negative";
-
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-
     const team: Team = {
       id: Date.now().toString(),
       name: newTeam.name.trim(),
@@ -235,56 +220,41 @@ export default function Settings() {
       monthlyFee: newTeam.monthlyFee,
       taxRate: newTeam.taxRate || 11,
       reducedMonthlyFee: newTeam.reducedMonthlyFee,
+      whatsappLink: newTeam.whatsappLink?.trim()
     };
-
     const updatedTeams = [...teams, team];
     saveTeamsToStorage(updatedTeams);
-    setNewTeam({ name: "", category: "Junior", monthlyFee: 0, taxRate: 11, reducedMonthlyFee: undefined });
+    setNewTeam({ name: "", category: "Junior", monthlyFee: 0, taxRate: 11, reducedMonthlyFee: undefined, whatsappLink: "" });
     setIsAddTeamOpen(false);
-    showSuccess("Team added and saved successfully!");
+    showSuccess("Team added successfully!");
   };
 
   const handleUpdateTeam = () => {
     if (!editingTeam) return;
-
     const updatedTeams = teams.map(t => t.id === editingTeam.id ? editingTeam : t);
     saveTeamsToStorage(updatedTeams);
     setEditingTeam(null);
-    showSuccess("Team updated and saved successfully!");
+    showSuccess("Team updated successfully!");
   };
 
   const handleDeleteTeam = (id: string) => {
     if (confirm("Are you sure you want to delete this team?")) {
       const updatedTeams = teams.filter(t => t.id !== id);
       saveTeamsToStorage(updatedTeams);
-      showSuccess("Team deleted and saved successfully!");
+      showSuccess("Team deleted successfully!");
     }
   };
 
-  const handleEditClick = (team: Team) => {
-    setEditingTeam(team);
-    setTeamForm({
-      name: team.name,
-      category: team.category,
-      monthlyFee: team.monthlyFee,
-      taxRate: team.taxRate || 11,
-    });
-    setIsAddTeamOpen(true);
-  };
-
-  // Coaches Functions
+  // Coach Handlers
   const handleAddCoach = () => {
     setFormErrors({});
     const errors: Record<string, string> = {};
-
     if (!newCoach.name.trim()) errors.name = "Coach name is required";
     if (!newCoach.phone.trim()) errors.phone = "Phone number is required";
-
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-
     const coach: Coach = {
       id: Date.now().toString(),
       name: newCoach.name,
@@ -292,79 +262,45 @@ export default function Settings() {
       tier: newCoach.tier,
       hourlyRate: TIER_RATES[newCoach.tier],
     };
-
     const updatedCoaches = [...coaches, coach];
-    setCoaches(updatedCoaches);
-    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+    saveCoachesToStorage(updatedCoaches);
     setIsAddCoachOpen(false);
     setNewCoach({ name: "", phone: "", tier: "Assistant Coach" });
-    setFormErrors({});
     showSuccess("Coach added successfully!");
   };
 
   const handleEditCoach = () => {
     if (!editingCoach) return;
-    
-    setFormErrors({});
-    const errors: Record<string, string> = {};
-
-    if (!editingCoach.name.trim()) errors.name = "Coach name is required";
-    if (!editingCoach.phone.trim()) errors.phone = "Phone number is required";
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
     const updatedCoaches = coaches.map((c) =>
       c.id === editingCoach.id
-        ? {
-            ...c,
-            name: editingCoach.name,
-            phone: editingCoach.phone,
-            tier: editingCoach.tier,
-            hourlyRate: TIER_RATES[editingCoach.tier],
-          }
+        ? { ...c, ...editingCoach, hourlyRate: TIER_RATES[editingCoach.tier] }
         : c
     );
-
-    setCoaches(updatedCoaches);
-    localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
-    setIsAddCoachOpen(false);
+    saveCoachesToStorage(updatedCoaches);
     setEditingCoach(null);
-    setNewCoach({ name: "", phone: "", tier: "Assistant Coach" });
-    setFormErrors({});
     showSuccess("Coach updated successfully!");
   };
 
   const handleDeleteCoach = (id: string) => {
     if (confirm("Are you sure you want to delete this coach?")) {
       const updatedCoaches = coaches.filter((c) => c.id !== id);
-      setCoaches(updatedCoaches);
-      localStorage.setItem("coaches", JSON.stringify(updatedCoaches));
+      saveCoachesToStorage(updatedCoaches);
       showSuccess("Coach deleted successfully!");
     }
   };
 
-  // Admin Staff Functions
+  // Admin Handlers
   const handleAddAdmin = () => {
     setFormErrors({});
     const errors: Record<string, string> = {};
-
     if (!newAdmin.name.trim()) errors.adminName = "Name is required";
     if (!newAdmin.phone.trim()) errors.adminPhone = "Phone is required";
     if (!newAdmin.email.trim()) errors.adminEmail = "Email is required";
     if (!newAdmin.role.trim()) errors.adminRole = "Role is required";
-
-    if (newAdmin.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newAdmin.email)) {
-      errors.adminEmail = "Invalid email format";
-    }
-
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-
     const admin: AdminStaff = {
       id: Date.now().toString(),
       name: newAdmin.name.trim(),
@@ -372,42 +308,76 @@ export default function Settings() {
       role: newAdmin.role.trim(),
       email: newAdmin.email.trim(),
     };
-
     const updatedAdmin = [...adminStaff, admin];
     saveAdminToStorage(updatedAdmin);
     setNewAdmin({ name: "", phone: "", role: "", email: "" });
     setIsAddAdminOpen(false);
-    showSuccess("Admin staff added and saved successfully!");
+    showSuccess("Admin staff added successfully!");
   };
 
   const handleUpdateAdmin = () => {
     if (!editingAdmin) return;
-
     const updatedAdmin = adminStaff.map(a => a.id === editingAdmin.id ? editingAdmin : a);
     saveAdminToStorage(updatedAdmin);
     setEditingAdmin(null);
-    showSuccess("Admin staff updated and saved successfully!");
+    showSuccess("Admin staff updated successfully!");
   };
 
   const handleDeleteAdmin = (id: string) => {
     if (confirm("Are you sure you want to delete this staff member?")) {
       const updatedAdmin = adminStaff.filter(a => a.id !== id);
       saveAdminToStorage(updatedAdmin);
-      showSuccess("Admin staff deleted and saved successfully!");
+      showSuccess("Admin staff deleted successfully!");
     }
   };
 
-  // Filter functions
-  const filteredTeams = teams.filter(team => {
-    const matchesSearch = team.name.toLowerCase().includes(teamSearchTerm.toLowerCase());
-    const matchesCategory = teamCategoryFilter === "All" || team.category === teamCategoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  // School Handlers
+  const handleAddSchool = () => {
+    if (!newSchool.trim()) return;
+    if (schools.includes(newSchool.trim())) {
+      alert("School already exists");
+      return;
+    }
+    const updatedSchools = [...schools, newSchool.trim()].sort();
+    saveSchoolsToStorage(updatedSchools);
+    setNewSchool("");
+    showSuccess("School added successfully!");
+  };
+
+  const handleDeleteSchool = (schoolName: string) => {
+    if (confirm(`Remove "${schoolName}" from the list?`)) {
+      const updatedSchools = schools.filter(s => s !== schoolName);
+      saveSchoolsToStorage(updatedSchools);
+      showSuccess("School removed successfully!");
+    }
+  };
+
+  const handleUpdateMemberFee = (memberId: string, structure: "Standard" | "Reduced") => {
+    const updatedMembers = members.map(m => 
+      m.id === memberId ? { ...m, feeStructure: structure } : m
+    );
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+    showSuccess(`Fee structure updated to ${structure}`);
+  };
+
+  // Helpers
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const teamsByCategory = {
+    Junior: teams.filter(t => t.category === "Junior").filter(t => t.name.toLowerCase().includes(teamSearchTerm.toLowerCase())),
+    Youth: teams.filter(t => t.category === "Youth").filter(t => t.name.toLowerCase().includes(teamSearchTerm.toLowerCase())),
+    Adult: teams.filter(t => t.category === "Adult").filter(t => t.name.toLowerCase().includes(teamSearchTerm.toLowerCase())),
+  };
 
   const filteredCoaches = coaches.filter(coach => {
-    const matchesSearch = 
-      coach.name.toLowerCase().includes(coachSearchTerm.toLowerCase()) ||
-      coach.phone.includes(coachSearchTerm);
+    const matchesSearch = coach.name.toLowerCase().includes(coachSearchTerm.toLowerCase()) || coach.phone.includes(coachSearchTerm);
     const matchesTier = coachTierFilter === "All" || coach.tier === coachTierFilter;
     return matchesSearch && matchesTier;
   });
@@ -418,85 +388,25 @@ export default function Settings() {
     admin.role.toLowerCase().includes(adminSearchTerm.toLowerCase())
   );
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "Junior": return "bg-green-100 text-green-800";
-      case "Youth": return "bg-blue-100 text-blue-800";
-      case "Adult": return "bg-purple-100 text-purple-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case "Head Coach": return "bg-yellow-100 text-yellow-800";
-      case "Goalkeeper Coach": return "bg-orange-100 text-orange-800";
-      case "Senior Coach": return "bg-blue-100 text-blue-800";
-      case "Assistant Coach": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const teamsByCategory = {
-    Junior: filteredTeams.filter(t => t.category === "Junior"),
-    Youth: filteredTeams.filter(t => t.category === "Youth"),
-    Adult: filteredTeams.filter(t => t.category === "Adult"),
-  };
-
-  // Don't render until data is loaded
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!isLoaded) return <div className="min-h-screen flex items-center justify-center">Loading settings...</div>;
 
   return (
     <>
-      <SEO 
-        title="Settings - Bali Bulldogs Club Manager"
-        description="Manage teams, coaches, and admin staff"
-      />
+      <SEO title="Settings - Bali Bulldogs Club Manager" description="Manage teams, coaches, and admin staff" />
       
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-4xl font-bold text-blue-900 mb-2">Settings</h1>
               <p className="text-gray-600">Manage your club configuration</p>
             </div>
-            <div className="flex gap-3">
-              <Button onClick={() => router.push("/")} variant="outline">
-                <Home className="h-4 w-4 mr-2" />
-                Dashboard
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => router.push("/")} variant="outline" size="sm">
+                <Home className="h-4 w-4 mr-2" /> Dashboard
               </Button>
-              <Button onClick={() => router.push("/members")} variant="outline">
-                <Users className="h-4 w-4 mr-2" />
-                Members
-              </Button>
-              <Button onClick={() => router.push("/teams")} variant="outline">
-                <Users className="h-4 w-4 mr-2" />
-                Teams
-              </Button>
-              <Button onClick={() => router.push("/invoices")} variant="outline">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Invoices
-              </Button>
-              <Button onClick={() => router.push("/coaching")} variant="outline">
-                <Calendar className="h-4 w-4 mr-2" />
-                Coaching
+              <Button onClick={() => router.push("/members")} variant="outline" size="sm">
+                <Users className="h-4 w-4 mr-2" /> Members
               </Button>
             </div>
           </div>
@@ -507,759 +417,531 @@ export default function Settings() {
             </Alert>
           )}
 
-          {/* Teams Management */}
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <CardTitle>Teams Management</CardTitle>
-                    <CardDescription>Add, edit, or remove teams and set monthly fees</CardDescription>
-                  </div>
-                </div>
-                <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Team
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Team</DialogTitle>
-                      <DialogDescription>Create a new team with monthly membership fee</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column: Teams & Fee Structures */}
+            <div className="space-y-8">
+              {/* Teams Management */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-6 w-6 text-blue-600" />
                       <div>
-                        <Label htmlFor="teamName">Team Name *</Label>
-                        <Input
-                          id="teamName"
-                          value={newTeam.name}
-                          onChange={(e) => {
-                            setNewTeam({ ...newTeam, name: e.target.value });
-                            if (formErrors.teamName) setFormErrors({ ...formErrors, teamName: "" });
-                          }}
-                          placeholder="e.g., U12 Dev"
-                          className={formErrors.teamName ? "border-red-500" : ""}
-                        />
-                        {formErrors.teamName && <p className="text-red-500 text-sm mt-1">{formErrors.teamName}</p>}
+                        <CardTitle>Teams</CardTitle>
+                        <CardDescription>Manage teams and fees</CardDescription>
                       </div>
-                      <div>
-                        <Label htmlFor="teamCategory">Category *</Label>
-                        <Select
-                          value={newTeam.category}
-                          onValueChange={(value) => setNewTeam({ ...newTeam, category: value as Team["category"] })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Junior">Junior</SelectItem>
-                            <SelectItem value="Youth">Youth</SelectItem>
-                            <SelectItem value="Adult">Adult</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="monthlyFee">Monthly Fee (Rp)</Label>
-                        <Input
-                          id="monthlyFee"
-                          type="number"
-                          value={newTeam.monthlyFee}
-                          onChange={(e) => {
-                            setNewTeam({ ...newTeam, monthlyFee: parseInt(e.target.value) || 0 });
-                            if (formErrors.monthlyFee) setFormErrors({ ...formErrors, monthlyFee: "" });
-                          }}
-                          placeholder="850000"
-                          className={formErrors.monthlyFee ? "border-red-500" : ""}
-                        />
-                        {formErrors.monthlyFee && <p className="text-red-500 text-sm mt-1">{formErrors.monthlyFee}</p>}
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                        <Input
-                          id="taxRate"
-                          type="number"
-                          value={newTeam.taxRate || 11}
-                          onChange={(e) => setNewTeam({ ...newTeam, taxRate: parseInt(e.target.value) || 11 })}
-                          placeholder="11"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Default: 11% (Indonesian VAT)
-                        </p>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="reducedMonthlyFee">Reduced Monthly Fee (Rp) - Optional</Label>
-                        <Input
-                          id="reducedMonthlyFee"
-                          type="number"
-                          value={newTeam.reducedMonthlyFee || ""}
-                          onChange={(e) => setNewTeam({ ...newTeam, reducedMonthlyFee: parseInt(e.target.value) || undefined })}
-                          placeholder="500000"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Lower rate for local players with limited funds
-                        </p>
-                      </div>
-
-                      <div className="p-4 bg-muted rounded-lg space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Monthly Fee:</span>
-                          <span className="font-medium">{formatCurrency(newTeam.monthlyFee)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Quarterly (3 months):</span>
-                          <span className="font-medium">{formatCurrency(newTeam.monthlyFee * 3)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Tax ({newTeam.taxRate || 11}%):</span>
-                          <span className="font-medium">{formatCurrency((newTeam.monthlyFee * 3 * (newTeam.taxRate || 11)) / 100)}</span>
-                        </div>
-                        <div className="border-t pt-2 mt-2">
-                          <div className="flex justify-between font-semibold text-green-600">
-                            <span>Quarter Fee (inc Tax):</span>
-                            <span>{formatCurrency(calculateQuarterlyFee(newTeam.monthlyFee, newTeam.taxRate || 11))}</span>
+                    </div>
+                    <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                          <Plus className="h-4 w-4 mr-2" /> Add Team
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Team</DialogTitle>
+                          <DialogDescription>Create a new team with monthly membership fee</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="teamName">Team Name *</Label>
+                            <Input
+                              id="teamName"
+                              value={newTeam.name}
+                              onChange={(e) => {
+                                setNewTeam({ ...newTeam, name: e.target.value });
+                                if (formErrors.teamName) setFormErrors({ ...formErrors, teamName: "" });
+                              }}
+                              placeholder="e.g., U12 Dev"
+                              className={formErrors.teamName ? "border-red-500" : ""}
+                            />
+                            {formErrors.teamName && <p className="text-red-500 text-sm mt-1">{formErrors.teamName}</p>}
+                          </div>
+                          <div>
+                            <Label htmlFor="teamCategory">Category *</Label>
+                            <Select
+                              value={newTeam.category}
+                              onValueChange={(value) => setNewTeam({ ...newTeam, category: value as Team["category"] })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Junior">Junior</SelectItem>
+                                <SelectItem value="Youth">Youth</SelectItem>
+                                <SelectItem value="Adult">Adult</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="monthlyFee">Monthly Fee (Rp)</Label>
+                            <Input
+                              id="monthlyFee"
+                              type="number"
+                              value={newTeam.monthlyFee}
+                              onChange={(e) => {
+                                setNewTeam({ ...newTeam, monthlyFee: parseInt(e.target.value) || 0 });
+                                if (formErrors.monthlyFee) setFormErrors({ ...formErrors, monthlyFee: "" });
+                              }}
+                              placeholder="850000"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="taxRate">Tax Rate (%)</Label>
+                            <Input
+                              id="taxRate"
+                              type="number"
+                              value={newTeam.taxRate || 11}
+                              onChange={(e) => setNewTeam({ ...newTeam, taxRate: parseInt(e.target.value) || 11 })}
+                              placeholder="11"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="reducedMonthlyFee">Reduced Fee (Optional)</Label>
+                            <Input
+                              id="reducedMonthlyFee"
+                              type="number"
+                              value={newTeam.reducedMonthlyFee || ""}
+                              onChange={(e) => setNewTeam({ ...newTeam, reducedMonthlyFee: parseInt(e.target.value) || undefined })}
+                              placeholder="500000"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatsappLink">WhatsApp Link</Label>
+                            <Input
+                              id="whatsappLink"
+                              value={newTeam.whatsappLink || ""}
+                              onChange={(e) => setNewTeam({ ...newTeam, whatsappLink: e.target.value })}
+                              placeholder="https://chat.whatsapp..."
+                            />
                           </div>
                         </div>
-                        
-                        {newTeam.reducedMonthlyFee && newTeam.reducedMonthlyFee > 0 && (
-                          <>
-                            <div className="border-t pt-2 mt-3">
-                              <p className="text-xs font-semibold text-muted-foreground mb-2">REDUCED RATE:</p>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Reduced Monthly:</span>
-                                <span className="font-medium">{formatCurrency(newTeam.reducedMonthlyFee)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Reduced Quarterly:</span>
-                                <span className="font-medium">{formatCurrency(newTeam.reducedMonthlyFee * 3)}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Tax ({newTeam.taxRate || 11}%):</span>
-                                <span className="font-medium">{formatCurrency((newTeam.reducedMonthlyFee * 3 * (newTeam.taxRate || 11)) / 100)}</span>
-                              </div>
-                              <div className="border-t pt-2 mt-2">
-                                <div className="flex justify-between font-semibold text-orange-600">
-                                  <span>Reduced Quarter Fee:</span>
-                                  <span>{formatCurrency(calculateQuarterlyFee(newTeam.reducedMonthlyFee, newTeam.taxRate || 11))}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsAddTeamOpen(false)}>Cancel</Button>
+                          <Button onClick={handleAddTeam} className="bg-blue-600">Add Team</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search teams..."
+                        value={teamSearchTerm}
+                        onChange={(e) => setTeamSearchTerm(e.target.value)}
+                        className="pl-8 h-9"
+                      />
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddTeamOpen(false)}>Cancel</Button>
-                      <Button onClick={handleAddTeam} className="bg-blue-600 hover:bg-blue-700">Add Team</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search and Filter */}
-              <div className="flex gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search teams by name..."
-                    value={teamSearchTerm}
-                    onChange={(e) => setTeamSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={teamCategoryFilter} onValueChange={setTeamCategoryFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Categories</SelectItem>
-                    <SelectItem value="Junior">Junior</SelectItem>
-                    <SelectItem value="Youth">Youth</SelectItem>
-                    <SelectItem value="Adult">Adult</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
 
-              {Object.entries(teamsByCategory).map(([category, categoryTeams]) => {
-                if (categoryTeams.length === 0 && teamCategoryFilter !== "All" && teamCategoryFilter !== category) {
-                  return null;
-                }
-                
-                return (
-                  <div key={category} className="mb-6 last:mb-0">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge className={getCategoryColor(category)}>{category}</Badge>
-                      <span className="text-sm text-gray-500">({categoryTeams.length} teams)</span>
+                  <div className="space-y-6">
+                    {Object.entries(teamsByCategory).map(([category, categoryTeams]) => (
+                      <div key={category}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className="bg-gray-50">{category}</Badge>
+                        </div>
+                        <div className="border rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-50/50">
+                                <TableHead className="w-[30%]">Name</TableHead>
+                                <TableHead className="w-[20%]">Fee (M)</TableHead>
+                                <TableHead className="w-[20%]">Fee (Q)</TableHead>
+                                <TableHead className="w-[20%]">Reduced (M)</TableHead>
+                                <TableHead className="text-right w-[10%]">Action</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {categoryTeams.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center text-xs text-gray-400 py-4">No teams</TableCell>
+                                </TableRow>
+                              ) : (
+                                categoryTeams.map((team) => (
+                                  <TableRow key={team.id}>
+                                    <TableCell className="font-medium">
+                                      {editingTeam?.id === team.id ? (
+                                        <Input
+                                          value={editingTeam.name}
+                                          onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                          className="h-7"
+                                        />
+                                      ) : (
+                                        <div>
+                                          {team.name}
+                                          {team.whatsappLink && <a href={team.whatsappLink} target="_blank" className="block text-[10px] text-green-600 hover:underline">WhatsApp</a>}
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {editingTeam?.id === team.id ? (
+                                        <Input
+                                          type="number"
+                                          value={editingTeam.monthlyFee}
+                                          onChange={(e) => setEditingTeam({ ...editingTeam, monthlyFee: parseInt(e.target.value) || 0 })}
+                                          className="h-7"
+                                        />
+                                      ) : (
+                                        formatCurrency(team.monthlyFee)
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                      {formatCurrency(calculateQuarterlyFee(team.monthlyFee))}
+                                    </TableCell>
+                                    <TableCell>
+                                       {editingTeam?.id === team.id ? (
+                                        <Input
+                                          type="number"
+                                          value={editingTeam.reducedMonthlyFee || ""}
+                                          onChange={(e) => setEditingTeam({ ...editingTeam, reducedMonthlyFee: parseInt(e.target.value) || undefined })}
+                                          className="h-7"
+                                          placeholder="Optional"
+                                        />
+                                      ) : (
+                                        team.reducedMonthlyFee ? formatCurrency(team.reducedMonthlyFee) : "-"
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      {editingTeam?.id === team.id ? (
+                                        <div className="flex justify-end gap-1">
+                                          <Button size="icon" className="h-6 w-6" onClick={handleUpdateTeam}><Save className="h-3 w-3" /></Button>
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingTeam(null)}><X className="h-3 w-3" /></Button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex justify-end gap-1">
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingTeam(team)}><Edit className="h-3 w-3" /></Button>
+                                          <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500 hover:text-red-600" onClick={() => handleDeleteTeam(team.id)}><Trash2 className="h-3 w-3" /></Button>
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Member Fee Assignments (Reduced/Standard) */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <CardTitle>Fee Assignments</CardTitle>
+                      <CardDescription>Adult member rates</CardDescription>
                     </div>
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Team Name</TableHead>
-                            <TableHead>Standard Monthly</TableHead>
-                            <TableHead>Standard Quarter</TableHead>
-                            <TableHead>Reduced Monthly</TableHead>
-                            <TableHead>Reduced Quarter</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {categoryTeams.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center text-gray-500">
-                                {teamSearchTerm ? "No teams match your search" : "No teams in this category"}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                   <div className="border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Member</TableHead>
+                          <TableHead>Rate</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {members.filter(m => m.category === "Adult").slice(0, 10).map(member => {
+                          const isReduced = member.feeStructure === "Reduced";
+                          return (
+                            <TableRow key={member.id}>
+                              <TableCell className="text-sm font-medium">{member.firstName} {member.lastName}</TableCell>
+                              <TableCell>
+                                <Badge variant={isReduced ? "secondary" : "outline"} className={isReduced ? "bg-orange-100 text-orange-800" : ""}>
+                                  {isReduced ? "Reduced" : "Std"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  size="sm" variant="ghost" className="h-6 text-xs"
+                                  onClick={() => handleUpdateMemberFee(member.id, isReduced ? "Standard" : "Reduced")}
+                                >
+                                  Switch
+                                </Button>
                               </TableCell>
                             </TableRow>
-                          ) : (
-                            categoryTeams.map((team) => (
-                              <TableRow key={team.id}>
-                                <TableCell>
-                                  {editingTeam?.id === team.id ? (
-                                    <Input
-                                      value={editingTeam.name}
-                                      onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
-                                    />
-                                  ) : (
-                                    team.name
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {editingTeam?.id === team.id ? (
-                                    <Input
-                                      type="number"
-                                      value={editingTeam.monthlyFee}
-                                      onChange={(e) => setEditingTeam({ ...editingTeam, monthlyFee: parseInt(e.target.value) || 0 })}
-                                    />
-                                  ) : (
-                                    formatCurrency(team.monthlyFee)
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {editingTeam?.id === team.id ? (
-                                    <span className="text-sm text-muted-foreground">
-                                      {formatCurrency(calculateQuarterlyFee(editingTeam.monthlyFee, editingTeam.taxRate || 11))}
-                                    </span>
-                                  ) : (
-                                    formatCurrency(calculateQuarterlyFee(team.monthlyFee, team.taxRate || 11))
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {editingTeam?.id === team.id ? (
-                                    <Input
-                                      type="number"
-                                      value={editingTeam.reducedMonthlyFee || ""}
-                                      onChange={(e) => setEditingTeam({ ...editingTeam, reducedMonthlyFee: parseInt(e.target.value) || undefined })}
-                                      placeholder="Optional"
-                                    />
-                                  ) : (
-                                    team.reducedMonthlyFee ? formatCurrency(team.reducedMonthlyFee) : <span className="text-muted-foreground">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {editingTeam?.id === team.id ? (
-                                    editingTeam.reducedMonthlyFee ? (
-                                      <span className="text-sm text-muted-foreground">
-                                        {formatCurrency(calculateQuarterlyFee(editingTeam.reducedMonthlyFee, editingTeam.taxRate || 11))}
-                                      </span>
-                                    ) : (
-                                      <span className="text-muted-foreground">—</span>
-                                    )
-                                  ) : (
-                                    team.reducedMonthlyFee ? formatCurrency(calculateQuarterlyFee(team.reducedMonthlyFee, team.taxRate || 11)) : <span className="text-muted-foreground">—</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {editingTeam?.id === team.id ? (
-                                    <div className="flex justify-end gap-2">
-                                      <Button size="sm" onClick={handleUpdateTeam} className="bg-green-600 hover:bg-green-700">
-                                        <Save className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="sm" variant="outline" onClick={() => setEditingTeam(null)}>
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="flex justify-end gap-2">
-                                      <Button size="sm" variant="outline" onClick={() => setEditingTeam(team)}>
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="sm" variant="destructive" onClick={() => handleDeleteTeam(team.id)}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
+                          );
+                        })}
+                         {members.filter(m => m.category === "Adult").length === 0 && (
+                          <TableRow><TableCell colSpan={3} className="text-center text-xs py-4 text-muted-foreground">No adult members</TableCell></TableRow>
+                         )}
+                      </TableBody>
+                    </Table>
+                   </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Coaches Management */}
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <UserCog className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <CardTitle>Coaches Management</CardTitle>
-                    <CardDescription>Manage coaching staff and rates</CardDescription>
-                  </div>
-                </div>
-                <Dialog open={isAddCoachOpen} onOpenChange={setIsAddCoachOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Coach
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add New Coach</DialogTitle>
-                      <DialogDescription>Add a coach to your staff</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
+            {/* Right Column: Staff & Schools */}
+            <div className="space-y-8">
+              {/* Coaches */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCog className="h-6 w-6 text-blue-600" />
                       <div>
-                        <Label htmlFor="coachName">Name *</Label>
-                        <Input
-                          id="coachName"
-                          value={newCoach.name}
-                          onChange={(e) => {
-                            setNewCoach({ ...newCoach, name: e.target.value });
-                            if (formErrors.coachName) setFormErrors({ ...formErrors, coachName: "" });
-                          }}
-                          placeholder="Coach name"
-                          className={formErrors.coachName ? "border-red-500" : ""}
-                        />
-                        {formErrors.coachName && <p className="text-red-500 text-sm mt-1">{formErrors.coachName}</p>}
-                      </div>
-                      <div>
-                        <Label htmlFor="coachPhone">Phone Number *</Label>
-                        <Input
-                          id="coachPhone"
-                          value={newCoach.phone}
-                          onChange={(e) => {
-                            setNewCoach({ ...newCoach, phone: e.target.value });
-                            if (formErrors.coachPhone) setFormErrors({ ...formErrors, coachPhone: "" });
-                          }}
-                          placeholder="+62..."
-                          className={formErrors.coachPhone ? "border-red-500" : ""}
-                        />
-                        {formErrors.coachPhone && <p className="text-red-500 text-sm mt-1">{formErrors.coachPhone}</p>}
-                      </div>
-                      <div>
-                        <Label htmlFor="coachTier">Tier *</Label>
-                        <Select
-                          value={newCoach.tier}
-                          onValueChange={(value) => setNewCoach({ ...newCoach, tier: value as Coach["tier"] })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Head Coach">Head Coach (Rp 750,000)</SelectItem>
-                            <SelectItem value="Goalkeeper Coach">Goalkeeper Coach (Rp 600,000)</SelectItem>
-                            <SelectItem value="Senior Coach">Senior Coach (Rp 500,000)</SelectItem>
-                            <SelectItem value="Assistant Coach">Assistant Coach (Rp 400,000)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <CardTitle>Coaches</CardTitle>
+                        <CardDescription>Manage coaching staff</CardDescription>
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddCoachOpen(false)}>Cancel</Button>
-                      <Button onClick={handleAddCoach} className="bg-blue-600 hover:bg-blue-700">Add Coach</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search and Filter */}
-              <div className="flex gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search coaches by name or phone..."
-                    value={coachSearchTerm}
-                    onChange={(e) => setCoachSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={coachTierFilter} onValueChange={setCoachTierFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by tier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Tiers</SelectItem>
-                    <SelectItem value="Head Coach">Head Coach</SelectItem>
-                    <SelectItem value="Goalkeeper Coach">Goalkeeper Coach</SelectItem>
-                    <SelectItem value="Senior Coach">Senior Coach</SelectItem>
-                    <SelectItem value="Assistant Coach">Assistant Coach</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Tier</TableHead>
-                      <TableHead>Hourly Rate</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCoaches.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-gray-500">
-                          {coachSearchTerm || coachTierFilter !== "All" ? "No coaches match your filters" : "No coaches added yet"}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredCoaches.map((coach) => (
-                        <TableRow key={coach.id}>
-                          <TableCell>
-                            {editingCoach?.id === coach.id ? (
-                              <Input
-                                value={editingCoach.name}
-                                onChange={(e) => setEditingCoach({ ...editingCoach, name: e.target.value })}
-                              />
-                            ) : (
-                              coach.name
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {editingCoach?.id === coach.id ? (
-                              <Input
-                                value={editingCoach.phone}
-                                onChange={(e) => setEditingCoach({ ...editingCoach, phone: e.target.value })}
-                              />
-                            ) : (
-                              coach.phone
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {editingCoach?.id === coach.id ? (
-                              <Select
-                                value={editingCoach.tier}
-                                onValueChange={(value) => setEditingCoach({ 
-                                  ...editingCoach, 
-                                  tier: value as Coach["tier"],
-                                  hourlyRate: TIER_RATES[value as Coach["tier"]]
-                                })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Head Coach">Head Coach</SelectItem>
-                                  <SelectItem value="Goalkeeper Coach">Goalkeeper Coach</SelectItem>
-                                  <SelectItem value="Senior Coach">Senior Coach</SelectItem>
-                                  <SelectItem value="Assistant Coach">Assistant Coach</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge className={getTierColor(coach.tier)}>{coach.tier}</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>{formatCurrency(coach.hourlyRate)}</TableCell>
-                          <TableCell className="text-right">
-                            {editingCoach?.id === coach.id ? (
-                              <div className="flex justify-end gap-2">
-                                <Button size="sm" onClick={handleEditCoach} className="bg-green-600 hover:bg-green-700">
-                                  <Save className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => setEditingCoach(null)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="outline" onClick={() => setEditingCoach(coach)}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleDeleteCoach(coach.id)}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
+                    <Dialog open={isAddCoachOpen} onOpenChange={setIsAddCoachOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                          <Plus className="h-4 w-4 mr-2" /> Add Coach
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Coach</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Name *</Label>
+                            <Input value={newCoach.name} onChange={(e) => setNewCoach({ ...newCoach, name: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label>Phone *</Label>
+                            <Input value={newCoach.phone} onChange={(e) => setNewCoach({ ...newCoach, phone: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label>Tier *</Label>
+                            <Select
+                              value={newCoach.tier}
+                              onValueChange={(value) => setNewCoach({ ...newCoach, tier: value as Coach["tier"] })}
+                            >
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Head Coach">Head Coach</SelectItem>
+                                <SelectItem value="Goalkeeper Coach">Goalkeeper Coach</SelectItem>
+                                <SelectItem value="Senior Coach">Senior Coach</SelectItem>
+                                <SelectItem value="Assistant Coach">Assistant Coach</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsAddCoachOpen(false)}>Cancel</Button>
+                          <Button onClick={handleAddCoach} className="bg-blue-600">Add Coach</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead>Name</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Admin Staff Management */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <CardTitle>Admin Staff Management</CardTitle>
-                    <CardDescription>Manage administrative staff members</CardDescription>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredCoaches.length === 0 ? (
+                          <TableRow><TableCell colSpan={3} className="text-center text-xs py-4 text-muted-foreground">No coaches</TableCell></TableRow>
+                        ) : (
+                          filteredCoaches.map((coach) => (
+                            <TableRow key={coach.id}>
+                              <TableCell className="font-medium">
+                                {editingCoach?.id === coach.id ? (
+                                  <Input value={editingCoach.name} onChange={(e) => setEditingCoach({...editingCoach, name: e.target.value})} className="h-7" />
+                                ) : coach.name}
+                              </TableCell>
+                              <TableCell>
+                                {editingCoach?.id === coach.id ? (
+                                   <Select value={editingCoach.tier} onValueChange={(v) => setEditingCoach({...editingCoach, tier: v as any})}>
+                                     <SelectTrigger className="h-7"><SelectValue/></SelectTrigger>
+                                     <SelectContent>
+                                       <SelectItem value="Head Coach">Head</SelectItem>
+                                       <SelectItem value="Goalkeeper Coach">GK</SelectItem>
+                                       <SelectItem value="Senior Coach">Senior</SelectItem>
+                                       <SelectItem value="Assistant Coach">Asst</SelectItem>
+                                     </SelectContent>
+                                   </Select>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px]">{coach.tier.split(' ')[0]}</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {editingCoach?.id === coach.id ? (
+                                  <div className="flex justify-end gap-1">
+                                    <Button size="icon" className="h-6 w-6" onClick={handleEditCoach}><Save className="h-3 w-3" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingCoach(null)}><X className="h-3 w-3" /></Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-end gap-1">
+                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingCoach(coach)}><Edit className="h-3 w-3" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => handleDeleteCoach(coach.id)}><Trash2 className="h-3 w-3" /></Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
-                </div>
-                <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Admin Staff
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Admin Staff</DialogTitle>
-                      <DialogDescription>Add a new administrative staff member</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
+                </CardContent>
+              </Card>
+
+              {/* Admin Staff */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-6 w-6 text-blue-600" />
                       <div>
-                        <Label htmlFor="adminName">Name *</Label>
-                        <Input
-                          id="adminName"
-                          value={newAdmin.name}
-                          onChange={(e) => {
-                            setNewAdmin({ ...newAdmin, name: e.target.value });
-                            if (formErrors.adminName) setFormErrors({ ...formErrors, adminName: "" });
-                          }}
-                          placeholder="Staff name"
-                          className={formErrors.adminName ? "border-red-500" : ""}
-                        />
-                        {formErrors.adminName && <p className="text-red-500 text-sm mt-1">{formErrors.adminName}</p>}
-                      </div>
-                      <div>
-                        <Label htmlFor="adminPhone">Phone Number *</Label>
-                        <Input
-                          id="adminPhone"
-                          value={newAdmin.phone}
-                          onChange={(e) => {
-                            setNewAdmin({ ...newAdmin, phone: e.target.value });
-                            if (formErrors.adminPhone) setFormErrors({ ...formErrors, adminPhone: "" });
-                          }}
-                          placeholder="+62..."
-                          className={formErrors.adminPhone ? "border-red-500" : ""}
-                        />
-                        {formErrors.adminPhone && <p className="text-red-500 text-sm mt-1">{formErrors.adminPhone}</p>}
-                      </div>
-                      <div>
-                        <Label htmlFor="adminEmail">Email *</Label>
-                        <Input
-                          id="adminEmail"
-                          type="email"
-                          value={newAdmin.email}
-                          onChange={(e) => {
-                            setNewAdmin({ ...newAdmin, email: e.target.value });
-                            if (formErrors.adminEmail) setFormErrors({ ...formErrors, adminEmail: "" });
-                          }}
-                          placeholder="email@example.com"
-                          className={formErrors.adminEmail ? "border-red-500" : ""}
-                        />
-                        {formErrors.adminEmail && <p className="text-red-500 text-sm mt-1">{formErrors.adminEmail}</p>}
-                      </div>
-                      <div>
-                        <Label htmlFor="adminRole">Role *</Label>
-                        <Input
-                          id="adminRole"
-                          value={newAdmin.role}
-                          onChange={(e) => {
-                            setNewAdmin({ ...newAdmin, role: e.target.value });
-                            if (formErrors.adminRole) setFormErrors({ ...formErrors, adminRole: "" });
-                          }}
-                          placeholder="e.g., Club Manager, Secretary"
-                          className={formErrors.adminRole ? "border-red-500" : ""}
-                        />
-                        {formErrors.adminRole && <p className="text-red-500 text-sm mt-1">{formErrors.adminRole}</p>}
+                        <CardTitle>Staff</CardTitle>
+                        <CardDescription>Club administration</CardDescription>
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddAdminOpen(false)}>Cancel</Button>
-                      <Button onClick={handleAddAdmin} className="bg-blue-600 hover:bg-blue-700">Add Staff</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search staff by name, email, or role..."
-                    value={adminSearchTerm}
-                    onChange={(e) => setAdminSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAdminStaff.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-gray-500">
-                          {adminSearchTerm ? "No staff members match your search" : "No admin staff added yet"}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredAdminStaff.map((admin) => (
-                        <TableRow key={admin.id}>
-                          <TableCell>
-                            {editingAdmin?.id === admin.id ? (
-                              <Input
-                                value={editingAdmin.name}
-                                onChange={(e) => setEditingAdmin({ ...editingAdmin, name: e.target.value })}
-                              />
-                            ) : (
-                              admin.name
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {editingAdmin?.id === admin.id ? (
-                              <Input
-                                value={editingAdmin.role}
-                                onChange={(e) => setEditingAdmin({ ...editingAdmin, role: e.target.value })}
-                              />
-                            ) : (
-                              <Badge variant="outline">{admin.role}</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {editingAdmin?.id === admin.id ? (
-                              <Input
-                                value={editingAdmin.phone}
-                                onChange={(e) => setEditingAdmin({ ...editingAdmin, phone: e.target.value })}
-                              />
-                            ) : (
-                              admin.phone
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {editingAdmin?.id === admin.id ? (
-                              <Input
-                                type="email"
-                                value={editingAdmin.email}
-                                onChange={(e) => setEditingAdmin({ ...editingAdmin, email: e.target.value })}
-                              />
-                            ) : (
-                              admin.email
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {editingAdmin?.id === admin.id ? (
-                              <div className="flex justify-end gap-2">
-                                <Button size="sm" onClick={handleUpdateAdmin} className="bg-green-600 hover:bg-green-700">
-                                  <Save className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => setEditingAdmin(null)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="outline" onClick={() => setEditingAdmin(admin)}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleDeleteAdmin(admin.id)}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Member Fee Assignments */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <CardTitle>Member Fee Assignments</CardTitle>
-                    <CardDescription>Set fee structures for adult team members</CardDescription>
+                    <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                          <Plus className="h-4 w-4 mr-2" /> Add Staff
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Admin Staff</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Name *</Label>
+                            <Input value={newAdmin.name} onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label>Email *</Label>
+                            <Input value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} />
+                          </div>
+                           <div>
+                            <Label>Phone *</Label>
+                            <Input value={newAdmin.phone} onChange={(e) => setNewAdmin({ ...newAdmin, phone: e.target.value })} />
+                          </div>
+                          <div>
+                            <Label>Role *</Label>
+                            <Input value={newAdmin.role} onChange={(e) => setNewAdmin({ ...newAdmin, role: e.target.value })} />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsAddAdminOpen(false)}>Cancel</Button>
+                          <Button onClick={handleAddAdmin} className="bg-blue-600">Add Staff</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search and filters */}
-              <div className="flex gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search members by name..."
-                    value={adminSearchTerm}
-                    onChange={(e) => setAdminSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value="Adult" disabled>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Adult Teams Only" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Adult">Adult Teams Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead>Name</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                         {filteredAdminStaff.length === 0 ? (
+                          <TableRow><TableCell colSpan={3} className="text-center text-xs py-4 text-muted-foreground">No admin staff</TableCell></TableRow>
+                        ) : (
+                          filteredAdminStaff.map((admin) => (
+                            <TableRow key={admin.id}>
+                              <TableCell className="font-medium">
+                                {editingAdmin?.id === admin.id ? (
+                                  <Input value={editingAdmin.name} onChange={(e) => setEditingAdmin({...editingAdmin, name: e.target.value})} className="h-7" />
+                                ) : admin.name}
+                              </TableCell>
+                              <TableCell>
+                                {editingAdmin?.id === admin.id ? (
+                                  <Input value={editingAdmin.role} onChange={(e) => setEditingAdmin({...editingAdmin, role: e.target.value})} className="h-7" />
+                                ) : admin.role}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {editingAdmin?.id === admin.id ? (
+                                  <div className="flex justify-end gap-1">
+                                    <Button size="icon" className="h-6 w-6" onClick={handleUpdateAdmin}><Save className="h-3 w-3" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingAdmin(null)}><X className="h-3 w-3" /></Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-end gap-1">
+                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingAdmin(admin)}><Edit className="h-3 w-3" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => handleDeleteAdmin(admin.id)}><Trash2 className="h-3 w-3" /></Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Member Name</TableHead>
-                      <TableHead>Team</TableHead>
-                      <TableHead>Current Fee Structure</TableHead>
-                      <TableHead>Regular Rate</TableHead>
-                      <TableHead>Reduced Rate</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                        No adult team members found
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+              {/* Schools Management */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="h-6 w-6 text-blue-600" />
+                      <div>
+                        <CardTitle>Schools</CardTitle>
+                        <CardDescription>Manage school list for dropdowns</CardDescription>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-4">
+                    <Input 
+                      placeholder="Add new school..." 
+                      value={newSchool} 
+                      onChange={(e) => setNewSchool(e.target.value)} 
+                    />
+                    <Button onClick={handleAddSchool} className="bg-blue-600 hover:bg-blue-700">Add</Button>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden max-h-60 overflow-y-auto">
+                    <Table>
+                      <TableBody>
+                        {schools.length === 0 ? (
+                           <TableRow><TableCell className="text-center text-muted-foreground">No schools added</TableCell></TableRow>
+                        ) : (
+                          schools.map((school) => (
+                            <TableRow key={school}>
+                              <TableCell>{school}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="h-6 w-6 text-red-500 hover:text-red-600"
+                                  onClick={() => handleDeleteSchool(school)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     </>

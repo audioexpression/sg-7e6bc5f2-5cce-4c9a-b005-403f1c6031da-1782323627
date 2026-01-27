@@ -13,11 +13,13 @@ export default function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: Home },
+    { href: "/trialists", label: "Pipeline", icon: Target },
     { href: "/members", label: "Members", icon: Users },
     { href: "/teams", label: "Teams", icon: Shield },
     { href: "/invoices", label: "IDR", icon: null, isText: true },
     { href: "/coaching", label: "Coaching", icon: Target },
-    { href: "/import-logs", label: "Import Logs", icon: null, isText: true },
+    { href: "/communication", label: "Comms", icon: null, isText: true },
+    { href: "/import-logs", label: "Logs", icon: null, isText: true },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 

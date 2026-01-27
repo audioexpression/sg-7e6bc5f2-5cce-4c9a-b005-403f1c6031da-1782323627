@@ -29,19 +29,30 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign, CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign, CheckCircle, MessageCircle, Clock, FileText, Copy, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/router";
+import { useToast } from "@/hooks/use-toast";
 import { generateInvoicePDF } from "@/lib/invoice-generator";
+import { 
+  REMINDER_TEMPLATES, 
+  calculateReminderStatus, 
+  generateWhatsAppLink, 
+  type ReminderLog, 
+  type ReminderData 
+} from "@/lib/reminder-templates";
 
 interface Member {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  contactNumber?: string;
   address?: string;
   type: "Member" | "Sponsored" | "Scholarship";
   teamAssignment?: string;
   feeTier?: "Standard" | "Reduced";
+  membershipCategory?: string; // Added to support new field
 }
 
 interface Team {
@@ -75,6 +86,8 @@ interface Invoice {
   deletedAt?: string;
   deletedBy?: string;
   deletionReason?: string;
+  lastReminderSent?: string;
+  reminderCount?: number;
 }
 
 const QUARTER_MONTHS: Record<string, string[]> = {
@@ -104,8 +117,32 @@ const generateInvoiceNumber = (billingPeriod: string, teamName: string, existing
   return `${prefix}-${String(nextNumber).padStart(3, "0")}`;
 };
 
+const normalizeTeamName = (name: string) => {
+  if (!name) return "";
+  const normalized = name.toLowerCase().trim();
+
+  // Smart Matching for Imports
+  // Handles "Kindy/U61" -> "Kindy 1"
+  if (normalized.includes("kindy") && (normalized.includes("1") || normalized.includes("u61"))) return "kindy1";
+  if (normalized.includes("kindy") && (normalized.includes("2") || normalized.includes("u62"))) return "kindy2";
+  
+  return normalized
+    .replace(/\s+/g, "")
+    .replace("35+", "")
+    .replace("45+", "")
+    .replace("team", "") // Handles "Social Team" vs "Social"
+    .replace(/[^a-z0-9]/g, ""); // Remove special chars
+};
+
+const areTeamNamesMatch = (name1: string, name2: string) => {
+  const n1 = normalizeTeamName(name1);
+  const n2 = normalizeTeamName(name2);
+  return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+};
+
 export default function Invoices() {
   const router = useRouter();
+  const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -261,7 +298,7 @@ export default function Invoices() {
   const handleMemberChange = (memberId: string) => {
     const member = members.find(m => m.id === memberId);
     if (member && member.teamAssignment) {
-      const team = teams.find(t => t.name === member.teamAssignment);
+      const team = teams.find(t => areTeamNamesMatch(t.name, member.teamAssignment || ""));
       if (team && formData.billingPeriod) {
         const exemptions = initializeMonthExemptions(formData.billingPeriod);
         const isAnnual = formData.billingPeriod.includes("Annual");
@@ -283,7 +320,7 @@ export default function Invoices() {
   const handleBillingPeriodChange = (billingPeriod: string) => {
     const member = members.find(m => m.id === formData.memberId);
     if (member && member.teamAssignment) {
-      const team = teams.find(t => t.name === member.teamAssignment);
+      const team = teams.find(t => areTeamNamesMatch(t.name, member.teamAssignment || ""));
       if (team) {
         const exemptions = initializeMonthExemptions(billingPeriod);
         const isAnnual = billingPeriod.includes("Annual");
@@ -306,7 +343,7 @@ export default function Invoices() {
     const member = members.find(m => m.id === formData.memberId);
     if (!member || !member.teamAssignment || !formData.monthExemptions) return;
 
-    const team = teams.find(t => t.name === member.teamAssignment);
+    const team = teams.find(t => areTeamNamesMatch(t.name, member.teamAssignment || ""));
     if (!team) return;
 
     const updatedExemptions = [...formData.monthExemptions];
@@ -466,20 +503,20 @@ export default function Invoices() {
   const totalRevenue = invoices
     .filter((inv) => {
       const member = members.find((m) => m.id === inv.memberId);
-      return member && member.type === "Member" && inv.status === "Paid";
+      return member && (member.type === "Member" || member.type === "Sponsored") && inv.status === "Paid";
     })
     .reduce((sum, inv) => sum + inv.amount, 0);
 
   const outstandingAmount = invoices
     .filter((inv) => {
       const member = members.find((m) => m.id === inv.memberId);
-      return member && member.type === "Member" && inv.status !== "Paid";
+      return member && (member.type === "Member" || member.type === "Sponsored") && inv.status !== "Paid";
     })
     .reduce((sum, inv) => sum + inv.amount, 0);
 
   const outstandingCount = invoices.filter((inv) => {
     const member = members.find((m) => m.id === inv.memberId);
-    return member && member.type === "Member" && inv.status !== "Paid";
+    return member && (member.type === "Member" || member.type === "Sponsored") && inv.status !== "Paid";
   }).length;
 
   const getStatusBadge = (status: string) => {
@@ -517,7 +554,7 @@ export default function Invoices() {
       return;
     }
 
-    const team = teams.find(t => t.name === member.teamAssignment);
+    const team = teams.find(t => areTeamNamesMatch(t.name, member.teamAssignment || ""));
     const invoiceData = {
       invoiceNumber: invoice.invoiceNumber || "N/A",
       invoiceDate: new Date().toISOString().split("T")[0],
@@ -558,8 +595,9 @@ export default function Invoices() {
       errors.dueDate = "Due date is required";
     }
 
-    if (!formData.amount || formData.amount <= 0) {
-      errors.amount = "Amount must be greater than 0";
+    // Validation relaxed to allow 0 amount invoices (e.g. fully exempt)
+    if (formData.amount === undefined || formData.amount < 0) {
+      errors.amount = "Amount cannot be negative";
     }
 
     if (formData.paymentLink && !formData.paymentLink.match(/^https?:\/\/.+/)) {
@@ -599,6 +637,20 @@ export default function Invoices() {
     resetForm();
   };
 
+  const getEligibleMembersForTeam = (teamName: string) => {
+    return members.filter((m) => {
+      const teamMatch = areTeamNamesMatch(m.teamAssignment || "", teamName);
+      
+      // STRICT FILTER: Only "Standard" members or "Member" type get invoices.
+      // Explicitly EXCLUDE Sponsored and Scholarship from bulk generation.
+      const isStandard = m.membershipCategory === "Standard" || (!m.membershipCategory && m.type === "Member");
+      const isNotSponsored = m.membershipCategory !== "Sponsored" && m.type !== "Sponsored";
+      const isNotScholarship = m.membershipCategory !== "Scholarship" && m.type !== "Scholarship";
+
+      return teamMatch && isStandard && isNotSponsored && isNotScholarship;
+    });
+  };
+
   const handleBulkGenerate = () => {
     setFormErrors({});
     const errors: Record<string, string> = {};
@@ -624,7 +676,7 @@ export default function Invoices() {
       return;
     }
 
-    const teamMembers = members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member");
+    const teamMembers = getEligibleMembersForTeam(bulkFormData.teamName);
     
     if (teamMembers.length === 0) {
       setFormErrors({ teamName: "No paying members found in this team" });
@@ -636,7 +688,11 @@ export default function Invoices() {
 
     const newInvoices = teamMembers.map((member) => {
       let monthlyFee = team.monthlyFee;
-      if (member.feeTier === "Reduced" && team.reducedMonthlyFee) {
+      
+      // Handle different fee tiers or sponsorship
+      const isReduced = member.feeTier === "Reduced";
+      
+      if (isReduced && team.reducedMonthlyFee) {
         monthlyFee = team.reducedMonthlyFee;
       }
 
@@ -685,6 +741,130 @@ export default function Invoices() {
       setSelectedInvoices(new Set(filteredInvoices.map(inv => inv.id)));
     }
   };
+
+  // Reminder System Functions
+  const openReminderDialog = (invoice: Invoice) => {
+    setSelectedInvoiceForReminder(invoice);
+    
+    // Auto-select template based on status
+    const status = calculateReminderStatus({ 
+      dueDate: invoice.dueDate, 
+      status: invoice.status 
+    });
+    
+    if (status.suggestedTemplate) {
+      setSelectedReminderTemplate(status.suggestedTemplate);
+      
+      // Pre-fill message
+      const template = REMINDER_TEMPLATES.find(t => t.id === status.suggestedTemplate);
+      const member = members.find(m => m.id === invoice.memberId);
+      
+      if (template && member) {
+        const data: ReminderData = {
+          memberName: `${member.firstName} ${member.lastName}`,
+          invoiceNumber: invoice.invoiceNumber || "DRAFT",
+          amount: invoice.amount,
+          dueDate: invoice.dueDate,
+          billingPeriod: invoice.billingPeriod,
+          daysUntilDue: status.daysUntilDue,
+          daysOverdue: status.daysOverdue,
+          paymentLink: invoice.paymentLink
+        };
+        setCustomReminderMessage(template.message(data));
+      }
+    } else {
+      setSelectedReminderTemplate("custom");
+      setCustomReminderMessage("");
+    }
+    
+    setShowReminderDialog(true);
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedReminderTemplate(templateId);
+    
+    if (!selectedInvoiceForReminder) return;
+    
+    const template = REMINDER_TEMPLATES.find(t => t.id === templateId);
+    const member = members.find(m => m.id === selectedInvoiceForReminder.memberId);
+    
+    if (template && member) {
+      // Recalculate status data for the message
+      const status = calculateReminderStatus({ 
+        dueDate: selectedInvoiceForReminder.dueDate, 
+        status: selectedInvoiceForReminder.status 
+      });
+      
+      const data: ReminderData = {
+        memberName: `${member.firstName} ${member.lastName}`,
+        invoiceNumber: selectedInvoiceForReminder.invoiceNumber || "DRAFT",
+        amount: selectedInvoiceForReminder.amount,
+        dueDate: selectedInvoiceForReminder.dueDate,
+        billingPeriod: selectedInvoiceForReminder.billingPeriod,
+        daysUntilDue: status.daysUntilDue,
+        daysOverdue: status.daysOverdue,
+        paymentLink: selectedInvoiceForReminder.paymentLink
+      };
+      setCustomReminderMessage(template.message(data));
+    }
+  };
+
+  const sendWhatsAppReminder = () => {
+    if (!selectedInvoiceForReminder) return;
+    
+    const member = members.find(m => m.id === selectedInvoiceForReminder.memberId);
+    if (!member || !member.contactNumber) {
+      toast({
+        title: "No Contact Number",
+        description: "This member doesn't have a contact number saved.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Open WhatsApp
+    const link = generateWhatsAppLink(member.contactNumber, customReminderMessage);
+    window.open(link, '_blank');
+    
+    // Log the reminder (in a real app, save to DB)
+    const newLog: ReminderLog = {
+      id: Math.random().toString(36).substr(2, 9),
+      invoiceId: selectedInvoiceForReminder.id,
+      sentAt: new Date().toISOString(),
+      sentBy: "Admin",
+      templateUsed: selectedReminderTemplate,
+      status: "Sent"
+    };
+    
+    setReminderLogs([newLog, ...reminderLogs]);
+    
+    // Update invoice reminder status
+    setInvoices(invoices.map(inv => {
+      if (inv.id === selectedInvoiceForReminder.id) {
+        return {
+          ...inv,
+          lastReminderSent: new Date().toISOString(),
+          reminderCount: (inv.reminderCount || 0) + 1
+        };
+      }
+      return inv;
+    }));
+    
+    toast({
+      title: "Reminder Sent",
+      description: "WhatsApp opened with reminder message.",
+    });
+    
+    setShowReminderDialog(false);
+  };
+
+  // Reminder system state
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [selectedInvoiceForReminder, setSelectedInvoiceForReminder] = useState<Invoice | null>(null);
+  const [selectedReminderTemplate, setSelectedReminderTemplate] = useState("");
+  const [customReminderMessage, setCustomReminderMessage] = useState("");
+  const [showBulkReminderDialog, setShowBulkReminderDialog] = useState(false);
+  const [reminderLogs, setReminderLogs] = useState<ReminderLog[]>([]);
 
   return (
     <>
@@ -962,6 +1142,19 @@ export default function Invoices() {
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
+                                
+                                {/* Reminder Button */}
+                                {invoice.status !== "Paid" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openReminderDialog(invoice)}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1118,7 +1311,7 @@ export default function Invoices() {
               </div>
             </div>
 
-            {formData.amount > 0 && (
+            {formData.amount !== undefined && (
               <div className="space-y-2">
                 <Label>Invoice Breakdown</Label>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
@@ -1257,9 +1450,9 @@ export default function Invoices() {
               <div className="bg-blue-50 p-4 rounded-lg space-y-2">
                 <p className="text-sm text-blue-900">
                   <strong>
-                    {members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member").length}
+                    {getEligibleMembersForTeam(bulkFormData.teamName).length}
                   </strong>{" "}
-                  paying member{members.filter((m) => m.teamAssignment === bulkFormData.teamName && m.type === "Member").length !== 1 ? "s" : ""} in {bulkFormData.teamName}
+                  paying member{getEligibleMembersForTeam(bulkFormData.teamName).length !== 1 ? "s" : ""} in {bulkFormData.teamName}
                 </p>
                 {teams.find(t => t.name === bulkFormData.teamName) && (
                   <div className="text-sm text-blue-900 border-t border-blue-200 pt-2">
@@ -1475,6 +1668,74 @@ export default function Invoices() {
               onClick={confirmBulkDelete}
             >
               Delete {selectedInvoices.size} Invoice{selectedInvoices.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder Dialog */}
+      <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Send Payment Reminder</DialogTitle>
+            <DialogDescription>
+              Send a WhatsApp reminder to {selectedInvoiceForReminder && members.find(m => m.id === selectedInvoiceForReminder.memberId)?.firstName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Template</Label>
+              <Select 
+                value={selectedReminderTemplate} 
+                onValueChange={handleTemplateChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {REMINDER_TEMPLATES.map(template => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name} ({template.timing})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Message Preview</Label>
+              <Textarea 
+                value={customReminderMessage} 
+                onChange={(e) => setCustomReminderMessage(e.target.value)}
+                className="min-h-[200px] font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                This message will be pre-filled in WhatsApp. You can edit it there before sending.
+              </p>
+            </div>
+
+            {selectedInvoiceForReminder && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>
+                  Status: <span className="font-medium text-foreground">{selectedInvoiceForReminder.status}</span>
+                  {calculateReminderStatus({dueDate: selectedInvoiceForReminder.dueDate, status: selectedInvoiceForReminder.status}).daysOverdue ? 
+                    ` • ${calculateReminderStatus({dueDate: selectedInvoiceForReminder.dueDate, status: selectedInvoiceForReminder.status}).daysOverdue} days overdue` : 
+                    ""
+                  }
+                </span>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReminderDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={sendWhatsAppReminder} className="bg-[#25D366] hover:bg-[#128C7E] text-white">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Open WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>
