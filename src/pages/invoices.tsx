@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import SEO from "@/components/SEO";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign, CheckCircle, MessageCircle, Clock, FileText, Copy, CheckCircle2 } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Plus, Search, TrendingUp, AlertCircle, Download, Trash2, Edit, DollarSign, CheckCircle, MessageCircle, Clock, FileText, Copy, CheckCircle2, AlertTriangle, FilterX, ArrowUpDown } from "lucide-react";
 import { useRouter } from "next/router";
 import { useToast } from "@/hooks/use-toast";
+import Layout from "@/components/Layout";
 import { generateInvoicePDF } from "@/lib/invoice-generator";
 import { 
   REMINDER_TEMPLATES, 
@@ -51,8 +53,8 @@ interface Member {
   address?: string;
   type: "Member" | "Sponsored" | "Scholarship";
   teamAssignment?: string;
-  feeTier?: "Standard" | "Reduced";
-  membershipCategory?: string; // Added to support new field
+  feeStructure?: "Standard" | "Reduced";
+  membershipCategory?: string;
 }
 
 interface Team {
@@ -121,8 +123,6 @@ const normalizeTeamName = (name: string) => {
   if (!name) return "";
   const normalized = name.toLowerCase().trim();
 
-  // Smart Matching for Imports
-  // Handles "Kindy/U61" -> "Kindy 1"
   if (normalized.includes("kindy") && (normalized.includes("1") || normalized.includes("u61"))) return "kindy1";
   if (normalized.includes("kindy") && (normalized.includes("2") || normalized.includes("u62"))) return "kindy2";
   
@@ -130,8 +130,8 @@ const normalizeTeamName = (name: string) => {
     .replace(/\s+/g, "")
     .replace("35+", "")
     .replace("45+", "")
-    .replace("team", "") // Handles "Social Team" vs "Social"
-    .replace(/[^a-z0-9]/g, ""); // Remove special chars
+    .replace("team", "")
+    .replace(/[^a-z0-9]/g, "");
 };
 
 const areTeamNamesMatch = (name1: string, name2: string) => {
@@ -154,6 +154,8 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<"created" | "date" | "name" | "number">("created");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -242,6 +244,35 @@ export default function Invoices() {
     }
   }, []);
 
+  // Calculate duplicates
+  const duplicateInvoiceIds = useMemo(() => {
+    const lookup = new Map<string, string[]>();
+    const duplicates: string[] = [];
+
+    invoices.forEach(inv => {
+      const key = `${inv.memberId}-${inv.billingPeriod}`;
+      const existing = lookup.get(key) || [];
+      lookup.set(key, [...existing, inv.id]);
+    });
+
+    lookup.forEach((ids) => {
+      if (ids.length > 1) {
+        duplicates.push(...ids);
+      }
+    });
+
+    return new Set(duplicates);
+  }, [invoices]);
+
+  // Auto-switch sort when duplicates mode is toggled
+  useEffect(() => {
+    if (showDuplicatesOnly) {
+      setSortBy("name");
+    } else {
+      setSortBy("created");
+    }
+  }, [showDuplicatesOnly]);
+
   const saveInvoices = (updatedInvoices: Invoice[]) => {
     setInvoices(updatedInvoices);
     localStorage.setItem("invoices", JSON.stringify(updatedInvoices));
@@ -302,7 +333,14 @@ export default function Invoices() {
       if (team && formData.billingPeriod) {
         const exemptions = initializeMonthExemptions(formData.billingPeriod);
         const isAnnual = formData.billingPeriod.includes("Annual");
-        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions, isAnnual);
+        
+        let monthlyFee = team.monthlyFee;
+        const isReduced = member.feeStructure === "Reduced";
+        if (isReduced && team.reducedMonthlyFee) {
+          monthlyFee = team.reducedMonthlyFee;
+        }
+
+        const amounts = calculateInvoiceAmount(monthlyFee, exemptions, isAnnual);
         setFormData({
           ...formData,
           memberId,
@@ -324,7 +362,14 @@ export default function Invoices() {
       if (team) {
         const exemptions = initializeMonthExemptions(billingPeriod);
         const isAnnual = billingPeriod.includes("Annual");
-        const amounts = calculateInvoiceAmount(team.monthlyFee, exemptions, isAnnual);
+
+        let monthlyFee = team.monthlyFee;
+        const isReduced = member.feeStructure === "Reduced";
+        if (isReduced && team.reducedMonthlyFee) {
+          monthlyFee = team.reducedMonthlyFee;
+        }
+
+        const amounts = calculateInvoiceAmount(monthlyFee, exemptions, isAnnual);
         setFormData({
           ...formData,
           billingPeriod,
@@ -354,7 +399,14 @@ export default function Invoices() {
     };
 
     const isAnnual = formData.billingPeriod?.includes("Annual") || false;
-    const amounts = calculateInvoiceAmount(team.monthlyFee, updatedExemptions, isAnnual);
+    
+    let monthlyFee = team.monthlyFee;
+    const isReduced = member.feeStructure === "Reduced";
+    if (isReduced && team.reducedMonthlyFee) {
+      monthlyFee = team.reducedMonthlyFee;
+    }
+
+    const amounts = calculateInvoiceAmount(monthlyFee, updatedExemptions, isAnnual);
     setFormData({
       ...formData,
       monthExemptions: updatedExemptions,
@@ -488,69 +540,76 @@ export default function Invoices() {
     setBulkStatusValue("Sent");
   };
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const member = members.find((m) => m.id === invoice.memberId);
-    const memberName = member ? `${member.firstName} ${member.lastName}`.toLowerCase() : "";
-    const memberTeam = member?.teamAssignment || "";
+  const filteredInvoices = useMemo(() => {
+    const result = invoices.filter((invoice) => {
+      const member = members.find((m) => m.id === invoice.memberId);
+      const memberName = member ? `${member.firstName} ${member.lastName}`.toLowerCase() : "";
+      const memberTeam = member?.teamAssignment || "";
 
-    const matchesSearch = memberName.includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === "all" || invoice.status === selectedStatus;
-    const matchesTeam = selectedTeam === "all" || memberTeam === selectedTeam;
+      const matchesSearch = memberName.includes(searchTerm.toLowerCase()) || (invoice.invoiceNumber && invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesStatus = selectedStatus === "all" || invoice.status === selectedStatus;
+      const matchesTeam = selectedTeam === "all" || memberTeam === selectedTeam;
+      
+      const matchesDuplicates = !showDuplicatesOnly || duplicateInvoiceIds.has(invoice.id);
 
-    return matchesSearch && matchesStatus && matchesTeam;
-  });
+      return matchesSearch && matchesStatus && matchesTeam && matchesDuplicates;
+    });
 
-  const totalRevenue = invoices
-    .filter((inv) => {
+    // Sort Logic
+    result.sort((a, b) => {
+      const memberA = members.find(m => m.id === a.memberId);
+      const memberB = members.find(m => m.id === b.memberId);
+      const nameA = memberA ? `${memberA.firstName} ${memberA.lastName}` : "";
+      const nameB = memberB ? `${memberB.firstName} ${memberB.lastName}` : "";
+
+      if (sortBy === "name") {
+        if (nameA.localeCompare(nameB) !== 0) return nameA.localeCompare(nameB);
+        return a.billingPeriod.localeCompare(b.billingPeriod); // Secondary sort by period
+      }
+      
+      if (sortBy === "date") {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+
+      if (sortBy === "number") {
+        return (a.invoiceNumber || "").localeCompare(b.invoiceNumber || "");
+      }
+
+      // Default: Created Date Descending
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    return result;
+  }, [invoices, members, searchTerm, selectedStatus, selectedTeam, showDuplicatesOnly, duplicateInvoiceIds, sortBy]);
+
+  // Updated Revenue & Outstanding Logic
+  const paidInvoicesList = invoices.filter((inv) => {
       const member = members.find((m) => m.id === inv.memberId);
       return member && (member.type === "Member" || member.type === "Sponsored") && inv.status === "Paid";
-    })
-    .reduce((sum, inv) => sum + inv.amount, 0);
+  });
+  const totalRevenue = paidInvoicesList.reduce((sum, inv) => sum + inv.amount, 0);
+  const paidCount = paidInvoicesList.length;
 
-  const outstandingAmount = invoices
-    .filter((inv) => {
+  const outstandingInvoicesList = invoices.filter((inv) => {
       const member = members.find((m) => m.id === inv.memberId);
       return member && (member.type === "Member" || member.type === "Sponsored") && inv.status !== "Paid";
-    })
-    .reduce((sum, inv) => sum + inv.amount, 0);
-
-  const outstandingCount = invoices.filter((inv) => {
-    const member = members.find((m) => m.id === inv.memberId);
-    return member && (member.type === "Member" || member.type === "Sponsored") && inv.status !== "Paid";
-  }).length;
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className: string }> = {
-      Draft: { variant: "secondary", className: "bg-gray-100 text-gray-700" },
-      Sent: { variant: "default", className: "bg-blue-100 text-blue-700" },
-      Paid: { variant: "default", className: "bg-green-100 text-green-700" },
-      Overdue: { variant: "destructive", className: "bg-red-100 text-red-700" },
-    };
-    const config = variants[status] || variants.Draft;
-    return <Badge variant={config.variant} className={config.className}>{status}</Badge>;
-  };
-
-  const calculateInvoiceAmounts = (
-    monthlyFee: number,
-    monthExemptions: MonthExemption[]
-  ) => {
-    const activeMonths = monthExemptions.filter((m) => !m.exempt).length;
-    const baseAmount = monthlyFee * activeMonths;
-    const taxAmount = baseAmount * 0.1;
-    const totalAmount = baseAmount + taxAmount;
-
-    return { baseAmount, taxAmount, totalAmount };
-  };
+  });
+  const outstandingAmount = outstandingInvoicesList.reduce((sum, inv) => sum + inv.amount, 0);
+  const outstandingCount = outstandingInvoicesList.length;
 
   const handleStatusChange = (id: string, newStatus: Invoice["status"]) => {
     const updated = invoices.map(inv => inv.id === id ? { ...inv, status: newStatus } : inv);
     saveInvoices(updated);
   };
 
-  const handleDownloadPDF = (invoice: Invoice) => {
+  const handleDownloadPDF = async (invoice: Invoice) => {
     const member = members.find(m => m.id === invoice.memberId);
     if (!member) {
-      alert("Member not found");
+      toast({
+        title: "Error",
+        description: "Member not found",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -573,8 +632,17 @@ export default function Invoices() {
       monthExemptions: invoice.monthExemptions,
     };
 
-    const pdf = generateInvoicePDF(invoiceData);
-    pdf.save(`${invoice.invoiceNumber || invoice.id}.pdf`);
+    try {
+      const pdf = await generateInvoicePDF(invoiceData);
+      pdf.save(`${invoice.invoiceNumber || invoice.id}.pdf`);
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "There was an error generating the invoice PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -595,13 +663,25 @@ export default function Invoices() {
       errors.dueDate = "Due date is required";
     }
 
-    // Validation relaxed to allow 0 amount invoices (e.g. fully exempt)
     if (formData.amount === undefined || formData.amount < 0) {
       errors.amount = "Amount cannot be negative";
     }
 
     if (formData.paymentLink && !formData.paymentLink.match(/^https?:\/\/.+/)) {
       errors.paymentLink = "Payment link must be a valid URL (starting with http:// or https://)";
+    }
+    
+    // Check for duplicate invoice
+    if (formData.memberId && formData.billingPeriod) {
+      const isDuplicate = invoices.some(inv => 
+        inv.memberId === formData.memberId && 
+        inv.billingPeriod === formData.billingPeriod && 
+        inv.id !== editingId
+      );
+      
+      if (isDuplicate) {
+        errors.billingPeriod = "An invoice already exists for this member and billing period.";
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -616,9 +696,17 @@ export default function Invoices() {
           : invoice
       );
       saveInvoices(updatedInvoices);
+      toast({
+        title: "Invoice Updated",
+        description: "Invoice details have been saved.",
+      });
     } else {
+      const member = members.find(m => m.id === formData.memberId);
+      const teamAssignment = member?.teamAssignment || "General";
+      
       const newInvoice: Invoice = {
         id: Date.now().toString(),
+        invoiceNumber: generateInvoiceNumber(formData.billingPeriod!, teamAssignment, invoices),
         memberId: formData.memberId!,
         billingPeriod: formData.billingPeriod!,
         dueDate: formData.dueDate!,
@@ -631,6 +719,10 @@ export default function Invoices() {
         createdAt: new Date().toISOString(),
       };
       saveInvoices([...invoices, newInvoice]);
+      toast({
+        title: "Invoice Created",
+        description: "New invoice has been generated.",
+      });
     }
 
     setShowAddDialog(false);
@@ -640,9 +732,6 @@ export default function Invoices() {
   const getEligibleMembersForTeam = (teamName: string) => {
     return members.filter((m) => {
       const teamMatch = areTeamNamesMatch(m.teamAssignment || "", teamName);
-      
-      // STRICT FILTER: Only "Standard" members or "Member" type get invoices.
-      // Explicitly EXCLUDE Sponsored and Scholarship from bulk generation.
       const isStandard = m.membershipCategory === "Standard" || (!m.membershipCategory && m.type === "Member");
       const isNotSponsored = m.membershipCategory !== "Sponsored" && m.type !== "Sponsored";
       const isNotScholarship = m.membershipCategory !== "Scholarship" && m.type !== "Scholarship";
@@ -682,16 +771,29 @@ export default function Invoices() {
       setFormErrors({ teamName: "No paying members found in this team" });
       return;
     }
+    
+    // Check for existing invoices for this period
+    const existingInvoicesForPeriod = invoices.filter(inv => inv.billingPeriod === bulkFormData.billingPeriod);
+    const existingMemberIds = new Set(existingInvoicesForPeriod.map(inv => inv.memberId));
+    
+    const membersToInvoice = teamMembers.filter(m => !existingMemberIds.has(m.id));
+    
+    if (membersToInvoice.length === 0) {
+      toast({
+        title: "No Invoices Generated",
+        description: "All eligible members already have invoices for this period.",
+        variant: "default"
+      });
+      setShowBulkDialog(false);
+      return;
+    }
 
     const exemptions = initializeMonthExemptions(bulkFormData.billingPeriod);
     const isAnnual = bulkFormData.billingPeriod.includes("Annual");
 
-    const newInvoices = teamMembers.map((member) => {
+    const newInvoices = membersToInvoice.map((member) => {
       let monthlyFee = team.monthlyFee;
-      
-      // Handle different fee tiers or sponsorship
-      const isReduced = member.feeTier === "Reduced";
-      
+      const isReduced = member.feeStructure === "Reduced";
       if (isReduced && team.reducedMonthlyFee) {
         monthlyFee = team.reducedMonthlyFee;
       }
@@ -700,7 +802,7 @@ export default function Invoices() {
 
       return {
         id: Date.now().toString() + Math.random(),
-        invoiceNumber: generateInvoiceNumber(bulkFormData.billingPeriod, team.name, invoices),
+        invoiceNumber: "", // Will be set in second pass
         memberId: member.id,
         billingPeriod: bulkFormData.billingPeriod,
         dueDate: bulkFormData.dueDate,
@@ -715,7 +817,23 @@ export default function Invoices() {
       };
     });
 
-    saveInvoices([...invoices, ...newInvoices]);
+    // Fix invoice numbering to ensure uniqueness in batch
+    const currentInvoices = [...invoices];
+    const finalInvoices = newInvoices.map(inv => {
+        const num = generateInvoiceNumber(inv.billingPeriod, team.name, currentInvoices);
+        const newInv = { ...inv, invoiceNumber: num };
+        currentInvoices.push(newInv);
+        return newInv;
+    });
+
+    saveInvoices(currentInvoices);
+    
+    const skippedCount = teamMembers.length - membersToInvoice.length;
+    toast({
+      title: "Bulk Generation Complete",
+      description: `Generated ${finalInvoices.length} invoices. ${skippedCount > 0 ? `Skipped ${skippedCount} existing invoices.` : ""}`,
+    });
+    
     setShowBulkDialog(false);
     setBulkFormData({
       teamName: "",
@@ -745,8 +863,6 @@ export default function Invoices() {
   // Reminder System Functions
   const openReminderDialog = (invoice: Invoice) => {
     setSelectedInvoiceForReminder(invoice);
-    
-    // Auto-select template based on status
     const status = calculateReminderStatus({ 
       dueDate: invoice.dueDate, 
       status: invoice.status 
@@ -754,8 +870,6 @@ export default function Invoices() {
     
     if (status.suggestedTemplate) {
       setSelectedReminderTemplate(status.suggestedTemplate);
-      
-      // Pre-fill message
       const template = REMINDER_TEMPLATES.find(t => t.id === status.suggestedTemplate);
       const member = members.find(m => m.id === invoice.memberId);
       
@@ -776,20 +890,17 @@ export default function Invoices() {
       setSelectedReminderTemplate("custom");
       setCustomReminderMessage("");
     }
-    
     setShowReminderDialog(true);
   };
 
   const handleTemplateChange = (templateId: string) => {
     setSelectedReminderTemplate(templateId);
-    
     if (!selectedInvoiceForReminder) return;
     
     const template = REMINDER_TEMPLATES.find(t => t.id === templateId);
     const member = members.find(m => m.id === selectedInvoiceForReminder.memberId);
     
     if (template && member) {
-      // Recalculate status data for the message
       const status = calculateReminderStatus({ 
         dueDate: selectedInvoiceForReminder.dueDate, 
         status: selectedInvoiceForReminder.status 
@@ -811,7 +922,6 @@ export default function Invoices() {
 
   const sendWhatsAppReminder = () => {
     if (!selectedInvoiceForReminder) return;
-    
     const member = members.find(m => m.id === selectedInvoiceForReminder.memberId);
     if (!member || !member.contactNumber) {
       toast({
@@ -822,11 +932,9 @@ export default function Invoices() {
       return;
     }
 
-    // Open WhatsApp
     const link = generateWhatsAppLink(member.contactNumber, customReminderMessage);
     window.open(link, '_blank');
     
-    // Log the reminder (in a real app, save to DB)
     const newLog: ReminderLog = {
       id: Math.random().toString(36).substr(2, 9),
       invoiceId: selectedInvoiceForReminder.id,
@@ -838,7 +946,6 @@ export default function Invoices() {
     
     setReminderLogs([newLog, ...reminderLogs]);
     
-    // Update invoice reminder status
     setInvoices(invoices.map(inv => {
       if (inv.id === selectedInvoiceForReminder.id) {
         return {
@@ -858,12 +965,10 @@ export default function Invoices() {
     setShowReminderDialog(false);
   };
 
-  // Reminder system state
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [selectedInvoiceForReminder, setSelectedInvoiceForReminder] = useState<Invoice | null>(null);
   const [selectedReminderTemplate, setSelectedReminderTemplate] = useState("");
   const [customReminderMessage, setCustomReminderMessage] = useState("");
-  const [showBulkReminderDialog, setShowBulkReminderDialog] = useState(false);
   const [reminderLogs, setReminderLogs] = useState<ReminderLog[]>([]);
 
   return (
@@ -872,8 +977,8 @@ export default function Invoices() {
         title="Invoices - Bali Bulldogs Club Manager"
         description="Manage quarterly member payments and track revenue"
       />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <Button
               variant="ghost"
@@ -913,6 +1018,35 @@ export default function Invoices() {
             </div>
           </div>
 
+          {duplicateInvoiceIds.size > 0 && (
+            <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Duplicate Invoices Detected</AlertTitle>
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  We found {duplicateInvoiceIds.size} invoices that appear to be duplicates (same member and billing period).
+                  This may affect your revenue reports.
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="ml-4 border-red-200 text-red-700 hover:bg-red-100"
+                  onClick={() => {
+                    if (!showDuplicatesOnly) {
+                      // We are turning ON duplicate mode - Reset filters
+                      setSelectedStatus("all");
+                      setSelectedTeam("all");
+                      setSearchTerm("");
+                    }
+                    setShowDuplicatesOnly(!showDuplicatesOnly);
+                  }}
+                >
+                  {showDuplicatesOnly ? "Show All" : "Review Duplicates"}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="border-l-4 border-l-green-600">
               <CardHeader className="pb-3">
@@ -925,7 +1059,7 @@ export default function Invoices() {
                 <div className="text-3xl font-bold text-green-700">
                   Rp {totalRevenue.toLocaleString("id-ID")}
                 </div>
-                <p className="text-sm text-gray-500 mt-1">From paid invoices</p>
+                <p className="text-sm text-gray-500 mt-1">From {paidCount} paid invoices</p>
               </CardContent>
             </Card>
 
@@ -953,48 +1087,72 @@ export default function Invoices() {
                 <div className="text-3xl font-bold text-purple-700">
                   Rp {outstandingAmount.toLocaleString("id-ID")}
                 </div>
-                <p className="text-sm text-gray-500 mt-1">Total due</p>
+                <p className="text-sm text-gray-500 mt-1">Total due from {outstandingCount} invoices</p>
               </CardContent>
             </Card>
           </div>
 
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col xl:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      placeholder="Search by member name..."
+                      placeholder="Search by member name or invoice #..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
                     />
                   </div>
                 </div>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="All Teams" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {Array.from(new Set(members.map(m => m.teamAssignment).filter(Boolean))).sort().map(team => (
-                      <SelectItem key={team} value={team!}>{team}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Draft">Draft</SelectItem>
-                    <SelectItem value="Sent">Sent</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Overdue">Overdue</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="All Teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      {Array.from(new Set(members.map(m => m.teamAssignment).filter(Boolean))).sort().map(team => (
+                        <SelectItem key={team} value={team!}>{team}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Sent">Sent</SelectItem>
+                      <SelectItem value="Paid">Paid</SelectItem>
+                      <SelectItem value="Overdue">Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <ArrowUpDown className="h-4 w-4 mr-2 text-gray-500" />
+                      <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="created">Created (Newest)</SelectItem>
+                      <SelectItem value="date">Due Date</SelectItem>
+                      <SelectItem value="name">Member Name</SelectItem>
+                      <SelectItem value="number">Invoice Number</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {showDuplicatesOnly && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowDuplicatesOnly(false)}
+                      className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 whitespace-nowrap"
+                    >
+                      <FilterX className="h-4 w-4 mr-2" />
+                      Clear Filter
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1065,9 +1223,10 @@ export default function Invoices() {
                       {filteredInvoices.map((invoice) => {
                         const member = members.find((m) => m.id === invoice.memberId);
                         const activeMonths = invoice.monthExemptions?.filter(e => !e.exempt).length || 3;
+                        const isDuplicate = duplicateInvoiceIds.has(invoice.id);
                         
                         return (
-                          <TableRow key={invoice.id}>
+                          <TableRow key={invoice.id} className={isDuplicate ? "bg-red-50 hover:bg-red-100" : ""}>
                             <TableCell>
                               <Checkbox
                                 checked={selectedInvoices.has(invoice.id)}
@@ -1077,6 +1236,12 @@ export default function Invoices() {
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {invoice.invoiceNumber || "—"}
+                              {isDuplicate && (
+                                <div className="flex items-center text-xs text-red-600 mt-1">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Duplicate
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="font-medium">
                               {member ? `${member.firstName} ${member.lastName}` : "Unknown"}
@@ -1143,7 +1308,6 @@ export default function Invoices() {
                                   <Download className="h-4 w-4" />
                                 </Button>
                                 
-                                {/* Reminder Button */}
                                 {invoice.status !== "Paid" && (
                                   <Button
                                     variant="ghost"
@@ -1183,9 +1347,8 @@ export default function Invoices() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </Layout>
 
-      {/* Add/Edit Invoice Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -1370,7 +1533,6 @@ export default function Invoices() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Generation Dialog */}
       <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1517,109 +1679,6 @@ export default function Invoices() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Status Change Dialog */}
-      <Dialog open={showBulkStatusDialog} onOpenChange={setShowBulkStatusDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Update Invoice Status</DialogTitle>
-            <DialogDescription>
-              Change the status of {selectedInvoices.size} selected invoice{selectedInvoices.size !== 1 ? "s" : ""}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>New Status *</Label>
-              <Select
-                value={bulkStatusValue}
-                onValueChange={(value) => setBulkStatusValue(value as Invoice["status"])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Draft">
-                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">Draft</Badge>
-                  </SelectItem>
-                  <SelectItem value="Sent">
-                    <Badge className="bg-blue-100 text-blue-700">Sent</Badge>
-                  </SelectItem>
-                  <SelectItem value="Paid">
-                    <Badge className="bg-green-100 text-green-700">Paid</Badge>
-                  </SelectItem>
-                  <SelectItem value="Overdue">
-                    <Badge variant="destructive" className="bg-red-100 text-red-700">Overdue</Badge>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-900">
-                This will update the status of <strong>{selectedInvoices.size}</strong> selected invoice{selectedInvoices.size !== 1 ? "s" : ""} to <strong>{bulkStatusValue}</strong>.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBulkStatusDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={confirmBulkStatusChange} className="bg-blue-600 hover:bg-blue-700">
-              Update Status
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Single Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Invoice</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for deleting this invoice. This action cannot be undone, but the deletion will be recorded for audit purposes.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Reason for Deletion *</Label>
-              <Input
-                placeholder="e.g., Duplicate entry, Member withdrew, Billing error..."
-                value={deletionReason}
-                onChange={(e) => {
-                  setDeletionReason(e.target.value);
-                  if (formErrors.deletionReason) {
-                    setFormErrors({ ...formErrors, deletionReason: "" });
-                  }
-                }}
-                className={formErrors.deletionReason ? "border-red-500" : ""}
-              />
-              {formErrors.deletionReason && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.deletionReason}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setInvoiceToDelete(null);
-                setDeletionReason("");
-                setFormErrors({});
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-            >
-              Delete Invoice
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Confirmation Dialog */}
       <Dialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1673,7 +1732,106 @@ export default function Invoices() {
         </DialogContent>
       </Dialog>
 
-      {/* Reminder Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for deleting this invoice. This action cannot be undone, but the deletion will be recorded for audit purposes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Reason for Deletion *</Label>
+              <Input
+                placeholder="e.g., Duplicate entry, Member withdrew, Billing error..."
+                value={deletionReason}
+                onChange={(e) => {
+                  setDeletionReason(e.target.value);
+                  if (formErrors.deletionReason) {
+                    setFormErrors({ ...formErrors, deletionReason: "" });
+                  }
+                }}
+                className={formErrors.deletionReason ? "border-red-500" : ""}
+              />
+              {formErrors.deletionReason && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.deletionReason}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setInvoiceToDelete(null);
+                setDeletionReason("");
+                setFormErrors({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Delete Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkStatusDialog} onOpenChange={setShowBulkStatusDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Invoice Status</DialogTitle>
+            <DialogDescription>
+              Change the status of {selectedInvoices.size} selected invoice{selectedInvoices.size !== 1 ? "s" : ""}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>New Status *</Label>
+              <Select
+                value={bulkStatusValue}
+                onValueChange={(value) => setBulkStatusValue(value as Invoice["status"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Draft">
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700">Draft</Badge>
+                  </SelectItem>
+                  <SelectItem value="Sent">
+                    <Badge className="bg-blue-100 text-blue-700">Sent</Badge>
+                  </SelectItem>
+                  <SelectItem value="Paid">
+                    <Badge className="bg-green-100 text-green-700">Paid</Badge>
+                  </SelectItem>
+                  <SelectItem value="Overdue">
+                    <Badge variant="destructive" className="bg-red-100 text-red-700">Overdue</Badge>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-900">
+                This will update the status of <strong>{selectedInvoices.size}</strong> selected invoice{selectedInvoices.size !== 1 ? "s" : ""} to <strong>{bulkStatusValue}</strong>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkStatusDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmBulkStatusChange} className="bg-blue-600 hover:bg-blue-700">
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showReminderDialog} onOpenChange={setShowReminderDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>

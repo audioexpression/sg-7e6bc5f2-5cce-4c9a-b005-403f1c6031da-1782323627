@@ -26,7 +26,28 @@ interface InvoiceData {
   }>;
 }
 
-export const generateInvoicePDF = (data: InvoiceData): jsPDF => {
+const loadImage = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = url;
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = (error) => reject(error);
+  });
+};
+
+export const generateInvoicePDF = async (data: InvoiceData): Promise<jsPDF> => {
   const doc = new jsPDF();
   
   // Colors
@@ -35,26 +56,24 @@ export const generateInvoicePDF = (data: InvoiceData): jsPDF => {
   const darkGray = "#374151";
   const lightGray = "#F3F4F6";
   
-  // Add logo (circular badge)
-  const logoX = 20;
-  const logoY = 15;
-  const logoRadius = 15;
+  // Add logo
+  try {
+    const logoData = await loadImage("/Bali_Bulldogs_Logo.png");
+    doc.addImage(logoData, "PNG", 15, 10, 25, 25);
+  } catch (error) {
+    console.error("Error loading logo:", error);
+    // Fallback if logo fails to load - simplified circle
+    const logoX = 27;
+    const logoY = 22;
+    const logoRadius = 12;
+    doc.setFillColor(accentYellow);
+    doc.circle(logoX, logoY, logoRadius, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text("BBFC", logoX, logoY + 1, { align: "center" });
+  }
   
-  // Draw yellow circle background
-  doc.setFillColor(accentYellow);
-  doc.circle(logoX, logoY, logoRadius, "F");
-  
-  // Draw blue inner circle
-  doc.setFillColor(primaryBlue);
-  doc.circle(logoX, logoY, logoRadius - 3, "F");
-  
-  // Add "BBFC" text in logo
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text("BBFC", logoX, logoY + 1, { align: "center" });
-  
-  // Club name and tagline
+  // Club name and tagline - Adjusted X position to accommodate logo
   doc.setTextColor(primaryBlue);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
@@ -95,7 +114,7 @@ export const generateInvoicePDF = (data: InvoiceData): jsPDF => {
   doc.setTextColor(darkGray);
   doc.setFontSize(9);
   yPos += 5;
-  doc.text("PT DOJI BALI INDONESIA", 20, yPos);
+  doc.text("Bali Bulldogs (PT Bulldogs Pulau Dewata)", 20, yPos);
   yPos += 4;
   doc.text("(Bali Bulldogs)", 20, yPos);
   yPos += 4;
@@ -228,12 +247,14 @@ export const generateInvoicePDF = (data: InvoiceData): jsPDF => {
   doc.text("Government Tax (10%):", summaryX, yPos);
   doc.text(`Rp ${data.taxAmount.toLocaleString("id-ID")}`, 200, yPos, { align: "right" });
   
-  // Total
-  yPos += 7;
+  // Total Line - Adjusted position to NOT overlap
+  yPos += 3; // Add spacing before line
   doc.setDrawColor(primaryBlue);
   doc.setLineWidth(0.5);
-  doc.line(summaryX, yPos - 2, 200, yPos - 2);
+  doc.line(summaryX, yPos, 200, yPos);
   
+  // Total Text
+  yPos += 6; // Move text below line
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(primaryBlue);

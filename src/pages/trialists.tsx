@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { COUNTRIES, DEFAULT_SCHOOLS } from "@/lib/constants";
 import { format, differenceInDays, parseISO, isValid } from "date-fns";
+import Layout from "@/components/Layout";
 
 type TrialStatus = "Inquiry" | "Trial Scheduled" | "Active Trial" | "Postponed" | "Converted" | "Did Not Join";
 
@@ -285,7 +286,7 @@ export default function TrialistsPage() {
       
       // Junior/Youth
       dateOfBirth: trialist.dateOfBirth,
-      age: trialist.age,
+      age: trialist.age, // Allow manual age
       primaryParentName: trialist.primaryParentName,
       primaryParentContact: trialist.primaryParentContact,
       secondaryContactName: trialist.secondaryContactName,
@@ -293,7 +294,7 @@ export default function TrialistsPage() {
       kidsNationality: trialist.kidsNationality,
       school: trialist.school,
 
-      // Adult
+      // Adult specific
       footballExperience: trialist.footballExperience,
       stayDuration: trialist.stayDuration,
       address: trialist.address,
@@ -524,7 +525,7 @@ export default function TrialistsPage() {
   return (
     <>
       <SEO title="Trialists - Bali Bulldogs" description="Manage potential new members and free trials" />
-      
+      <Layout>
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           
@@ -1318,6 +1319,7 @@ export default function TrialistsPage() {
         </Dialog>
 
       </div>
+      </Layout>
     </>
   );
 }

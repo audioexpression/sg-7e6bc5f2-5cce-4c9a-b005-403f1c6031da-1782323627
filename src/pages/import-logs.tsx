@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { FileText, Download, Trash2, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import Layout from "@/components/Layout";
 
 interface ImportLogEntry {
   id: string;
@@ -85,7 +86,7 @@ export default function ImportLogsPage() {
   return (
     <>
       <SEO title="Import Logs - Bali Bulldogs" description="Review data import history" />
-      
+      <Layout>
       <div className="min-h-screen bg-gray-50">
         <main className="max-w-7xl mx-auto w-full px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -391,6 +392,7 @@ export default function ImportLogsPage() {
           </DialogContent>
         </Dialog>
       </div>
+      </Layout>
     </>
   );
 }

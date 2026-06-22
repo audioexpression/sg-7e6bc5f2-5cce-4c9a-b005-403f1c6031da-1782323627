@@ -42,6 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import Layout from "@/components/Layout";
 
 // Types
 import { Coach, TIER_RATES, loadCoaches, saveCoaches } from "@/lib/coach-types";
@@ -460,6 +461,7 @@ export default function Coaching() {
   return (
     <>
       <SEO title="Private Coaching - Bali Bulldogs" />
+      <Layout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-lg">
@@ -1170,6 +1172,7 @@ export default function Coaching() {
           </DialogContent>
         </Dialog>
       </div>
+      </Layout>
     </>
   );
 }

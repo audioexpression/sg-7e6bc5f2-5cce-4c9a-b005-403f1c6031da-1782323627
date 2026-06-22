@@ -6,18 +6,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Users, TrendingUp, AlertCircle, DollarSign, Calendar, ArrowRight, 
-  Settings, Activity, CreditCard, Award, UserPlus, Clock, ArrowUpRight,
-  TrendingDown, Percent, BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
+  Users, TrendingUp, AlertCircle, DollarSign, Calendar,
+  Activity, CreditCard, Award, UserPlus, Clock, Percent, BarChart3, 
   Gift, Cake, CheckCircle2
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+  PieChart, Pie, Cell, AreaChart, Area
 } from "recharts";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { loadCoaches } from "@/lib/coach-types";
+import Layout from "@/components/Layout";
 
 // --- Interfaces ---
 
@@ -98,12 +97,6 @@ export default function Dashboard() {
   // Add mounted state to prevent hydration issues
   const [mounted, setMounted] = useState(false);
 
-  // Filter states
-  const [dateRange, setDateRange] = useState<"month" | "quarter" | "year" | "all" | "custom">("quarter");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedType, setSelectedType] = useState<string>("all");
-
   // Load Data
   useEffect(() => {
     setMounted(true);
@@ -122,7 +115,6 @@ export default function Dashboard() {
   // --- Calculations ---
 
   const currentDate = new Date();
-  const currentMonth = currentDate.getMonth(); // 0-11
   const currentYear = currentDate.getFullYear();
   
   // Determine Quarter
@@ -134,50 +126,6 @@ export default function Dashboard() {
     return "Q4";
   };
   const currentQuarterLabel = `${currentYear} ${getQuarter(currentDate)}`;
-
-  // Filter Logic
-  const filteredMembers = members.filter(member => {
-    // Team Filter
-    if (selectedTeam !== "all" && member.teamAssignment !== selectedTeam) return false;
-    // Category Filter
-    if (selectedCategory !== "all" && member.category !== selectedCategory) return false;
-    // Type Filter
-    if (selectedType !== "all" && member.type !== selectedType) return false;
-    
-    // Date Range Filter (based on Joining Date for members)
-    if (!member.joiningDate) return false;
-    const joinDate = new Date(member.joiningDate);
-    
-    if (dateRange === "month") {
-      return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
-    }
-    if (dateRange === "quarter") {
-      return getQuarter(joinDate) === getQuarter(currentDate) && joinDate.getFullYear() === currentYear;
-    }
-    if (dateRange === "year") {
-      return joinDate.getFullYear() === currentYear;
-    }
-    // "all" and "custom" (simplified for now) include all for date check on members list
-    // usually dashboard overview shows snapshot of current active members, 
-    // but for "New Members" stats we need time constraints.
-    // For the main list, we usually want ALL active members that match criteria, 
-    // but the KPIs (New, Revenue) will respect the date range.
-    
-    // For the purpose of "Filtered Members" list generally showing "Active Members matching criteria":
-    // If date range is "This Month", do we only show members JOINED this month? 
-    // Or members ACTIVE this month?
-    // Usually dashboards filter *Activity* by date.
-    // Let's assume filteredMembers implies "Members matching static criteria (Team/Cat/Type)".
-    // And SPECIFIC KPIs will use dateRange.
-    
-    // HOWEVER, to support the requested "Filter Dashboard Data" broadly:
-    // If user selects "This Month", they expect to see data relevant to this month.
-    // For a member list, that's ambiguous.
-    // Let's stick to: FilteredMembers respects Team, Category, Type.
-    // Date logic is applied per-metric where appropriate.
-    
-    return true;
-  });
 
   // 1. Overview KPIs
   const totalMembers = members.length;
@@ -192,17 +140,13 @@ export default function Dashboard() {
     );
   }).length;
 
-  // Paid Members (Revenue Generating)
-  const paidMembersCount = members.filter(m => 
-    m.type === "Member" && 
-    invoices.some(inv => inv.memberId === m.id && inv.status === "Paid")
-  ).length;
+  // Paid Members (Revenue Generating) - For revenue calculation
+  const payingMembersCount = members.filter(m => m.type === "Member").length;
+  const sponsoredMembersCount = members.filter(m => m.type === "Sponsored").length;
+  const scholarshipMembersCount = members.filter(m => m.type === "Scholarship").length;
 
   // 2. Financial Metrics
   const paidInvoices = invoices.filter(inv => inv.status === "Paid");
-  
-  // Total Revenue (All Time)
-  const totalRevenueAllTime = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   
   // Revenue This Quarter
   const revenueThisQuarter = paidInvoices
@@ -232,65 +176,53 @@ export default function Dashboard() {
     .slice(0, 8);
 
   // Average Revenue Per Member
-  const avgRevenuePerMember = paidMembersCount > 0 ? totalRevenueAllTime / paidMembersCount : 0;
+  const totalRevenueAllTime = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const avgRevenuePerMember = payingMembersCount > 0 ? totalRevenueAllTime / payingMembersCount : 0;
 
   // Renewals Logic
-  const membersNeedingRenewal = filteredMembers.filter(m => {
+  const membersNeedingRenewal = members.filter(m => {
     if (!m.joiningDate) return false;
     const joinDate = new Date(m.joiningDate);
     const renewalMonth = joinDate.getMonth();
     const currentMonth = new Date().getMonth();
-    // Simple check: renewal due this quarter?
     const renewalQuarter = Math.floor(renewalMonth / 3);
     const currentQuarter = Math.floor(currentMonth / 3);
     return renewalQuarter === currentQuarter;
   });
 
-  // Coaching Stats Calculations
-  // Note: Using 'sessions' (all sessions) instead of filtered to show global coaching status, 
-  // or we could use filteredSessions if we had that logic. For now, using global 'sessions'.
+  // Coaching Stats
   const completedSessions = sessions.filter(s => s.status === "Completed").length;
   const upcomingSessions = sessions.filter(s => s.status === "Scheduled").length;
   const membersWithCredits = members.filter(m => m.coachingCredits > 0);
-  
-  // 4. Coaching Revenue (Calculated here for Financials tab usage)
   const totalCoachingRevenue = sessions
     .filter(s => s.status === "Completed" || s.status === "Scheduled") 
     .reduce((sum, s) => sum + s.cost, 0);
 
-  // 5. Scholarship & Sponsorship Value (Opportunity Cost)
-  // Calculate how much revenue is "sponsored" per quarter based on team fees
+  // Scholarship & Sponsorship Value
   const scholarshipValueQuarterly = members
     .filter(m => m.type === "Scholarship" || m.type === "Sponsored")
     .reduce((sum, m) => {
       const team = teams.find(t => t.name === m.teamAssignment);
-      // Default to 0 if team not found, monthly fee * 3 for quarter
       return sum + ((team?.monthlyFee || 0) * 3);
     }, 0);
 
-  // Revenue Trends (Mock simulation based on existing invoices if periods matched, or simplified grouping)
-  // Grouping paid invoices by billing period for trend
+  // Revenue Trends
   const revenueTrendMap: Record<string, number> = {};
   paidInvoices.forEach(inv => {
     revenueTrendMap[inv.billingPeriod] = (revenueTrendMap[inv.billingPeriod] || 0) + inv.amount;
   });
-  // If not enough data, we might need dummy data for visual, but let's try to use what we have
   const revenueTrendData = Object.entries(revenueTrendMap).map(([period, amount]) => ({
     name: period,
     amount
   })).sort((a, b) => a.name.localeCompare(b.name));
 
-
-  // 3. Analytics
-  
-  // Age Group Distribution (Category: Junior, Youth, Adult)
+  // Analytics
   const ageDistribution = [
-    { name: "Junior", value: members.filter(m => m.category === "Junior").length, fill: "#FBBF24" }, // Yellow
-    { name: "Youth", value: members.filter(m => m.category === "Youth").length, fill: "#3B82F6" },   // Blue
-    { name: "Adult", value: members.filter(m => m.category === "Adult").length, fill: "#1E40AF" },   // Dark Blue
+    { name: "Junior", value: members.filter(m => m.category === "Junior").length, fill: "#FBBF24" },
+    { name: "Youth", value: members.filter(m => m.category === "Youth").length, fill: "#3B82F6" },
+    { name: "Adult", value: members.filter(m => m.category === "Adult").length, fill: "#1E40AF" },
   ];
 
-  // Team Size Changes
   const teamSizes: Record<string, number> = {};
   members.forEach(m => {
     if (m.teamAssignment) {
@@ -302,7 +234,7 @@ export default function Dashboard() {
     .sort((a, b) => b.size - a.size)
     .slice(0, 10);
 
-  // Member Growth Over Time (Cumulative)
+  // Member Growth
   const sortedJoinDates = [...members]
     .filter(m => m.joiningDate)
     .sort((a, b) => new Date(a.joiningDate).getTime() - new Date(b.joiningDate).getTime());
@@ -316,7 +248,6 @@ export default function Dashboard() {
     };
   });
   
-  // Reduce points for chart clarity
   const growthData = growthDataRaw.reduce((acc: any[], curr) => {
     const last = acc[acc.length - 1];
     if (!last || last.date !== curr.date) {
@@ -327,26 +258,14 @@ export default function Dashboard() {
     return acc;
   }, []);
 
-  // 4. Coaching
-  const coachingRevenue = sessions
+  const coachingRevenueGraph = sessions
     .filter(s => s.status === "Completed" || s.status === "Scheduled") 
     .reduce((sum, s) => sum + s.cost, 0);
 
-  // Sessions by Month (Utilization)
-  const sessionsByMonth: Record<string, number> = {};
-  sessions.forEach(s => {
-    const d = new Date(s.date);
-    const key = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-    sessionsByMonth[key] = (sessionsByMonth[key] || 0) + 1;
-  });
-  const sessionsTrendData = Object.entries(sessionsByMonth).map(([name, sessions]) => ({ name, sessions }));
-
-  // 5. Activity Feeds
   const recentMembers = [...members]
     .sort((a, b) => new Date(b.joiningDate).getTime() - new Date(a.joiningDate).getTime())
     .slice(0, 5);
 
-  // Upcoming Birthdays (This Month)
   const upcomingBirthdays = members
     .filter(m => {
       if (!m.dateOfBirth) return false;
@@ -368,6 +287,7 @@ export default function Dashboard() {
   return (
     <>
       <SEO title="Dashboard - Bali Bulldogs Club Manager" />
+      <Layout>
       <div className="min-h-screen bg-gray-50/50 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
@@ -551,77 +471,56 @@ export default function Dashboard() {
                       </div>
                     </CardContent>
                   </Card>
-
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-lg font-semibold">Recent Payments</CardTitle>
-                      <Link href="/invoices" className="text-sm text-green-600 hover:underline">View All</Link>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {recentInvoices.length > 0 ? recentInvoices.map((inv, i) => {
-                          const m = members.find(mem => mem.id === inv.memberId);
-                          return (
-                            <div key={i} className="flex justify-between items-center p-3 bg-green-50/50 rounded-lg border border-green-100">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                                  <DollarSign className="h-4 w-4 text-green-700" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-sm text-gray-900">{m ? `${m.firstName} ${m.lastName}` : "Unknown Member"}</p>
-                                  <p className="text-xs text-gray-500">{inv.billingPeriod}</p>
-                                </div>
-                              </div>
-                              <span className="font-bold text-green-700 text-sm">+{formatCurrency(inv.amount)}</span>
-                            </div>
-                          );
-                        }) : <p className="text-sm text-gray-500 py-4 text-center">No recent payments recorded.</p>}
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
 
                 {/* Right Column: Alerts & Action Items */}
                 <div className="space-y-6">
-                  {/* Overdue Alerts */}
-                  <Card className="border-t-4 border-t-red-500 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-red-600 text-lg">
-                        <AlertCircle className="h-5 w-5" />
-                        Overdue Invoices
-                      </CardTitle>
-                      <CardDescription>Action required immediately</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {outstandingInvoicesList.length > 0 ? (
-                        <div className="space-y-4">
-                          {outstandingInvoicesList.slice(0, 5).map((inv, i) => {
-                             const m = members.find(mem => mem.id === inv.memberId);
-                             return (
-                               <div key={i} className="flex justify-between items-center text-sm border-b border-gray-100 pb-2 last:border-0">
-                                 <div>
-                                   <p className="font-medium text-gray-800">{m ? `${m.firstName} ${m.lastName}` : "Unknown"}</p>
-                                   <p className="text-gray-500 text-xs">{inv.billingPeriod}</p>
-                                 </div>
-                                 <span className="font-bold text-red-600">{formatCurrency(inv.amount)}</span>
-                               </div>
-                             );
-                          })}
-                          <Button variant="outline" className="w-full text-red-600 hover:bg-red-50 border-red-200" onClick={() => router.push('/invoices')}>
-                            View All Outstanding
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="text-center py-6">
-                           <div className="bg-green-100 rounded-full h-12 w-12 flex items-center justify-center mx-auto mb-2">
-                              <Award className="h-6 w-6 text-green-600" />
-                           </div>
-                           <p className="text-sm font-medium text-gray-900">All Clear!</p>
-                           <p className="text-xs text-gray-500">No overdue invoices found.</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  {/* Financial Health Stats (Updated) */}
+                   <Card>
+                   <CardHeader>
+                      <CardTitle>Member Breakdown</CardTitle>
+                      <CardDescription>Membership type distribution</CardDescription>
+                   </CardHeader>
+                   <CardContent>
+                      <div className="space-y-6">
+                         {/* Paid */}
+                         <div>
+                            <div className="flex justify-between text-sm mb-1">
+                               <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-600"></div> Paid / Standard</span>
+                               <span className="font-bold">{members.length > 0 ? ((payingMembersCount / members.length) * 100).toFixed(0) : 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                               <div className="bg-blue-600 h-2 rounded-full" style={{width: `${members.length > 0 ? (payingMembersCount / members.length) * 100 : 0}%`}}></div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{payingMembersCount} members</p>
+                         </div>
+                         
+                         {/* Sponsored */}
+                         <div>
+                            <div className="flex justify-between text-sm mb-1">
+                               <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> Sponsored</span>
+                               <span className="font-bold">{members.length > 0 ? ((sponsoredMembersCount / members.length) * 100).toFixed(0) : 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                               <div className="bg-green-500 h-2 rounded-full" style={{width: `${members.length > 0 ? (sponsoredMembersCount / members.length) * 100 : 0}%`}}></div>
+                            </div>
+                             <p className="text-xs text-gray-500 mt-1">{sponsoredMembersCount} members</p>
+                         </div>
+
+                         {/* Scholarship */}
+                         <div>
+                            <div className="flex justify-between text-sm mb-1">
+                               <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Scholarship</span>
+                               <span className="font-bold">{members.length > 0 ? ((scholarshipMembersCount / members.length) * 100).toFixed(0) : 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2">
+                               <div className="bg-yellow-500 h-2 rounded-full" style={{width: `${members.length > 0 ? (scholarshipMembersCount / members.length) * 100 : 0}%`}}></div>
+                            </div>
+                             <p className="text-xs text-gray-500 mt-1">{scholarshipMembersCount} members</p>
+                         </div>
+                      </div>
+                   </CardContent>
+                </Card>
 
                   {/* Birthdays & Renewals */}
                   <Card>
@@ -670,40 +569,6 @@ export default function Dashboard() {
                                       Turns {new Date().getFullYear() - dob.getFullYear()}
                                     </p>
                                   </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Membership Renewals Due */}
-                      <div>
-                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Renewals This Quarter
-                        </h4>
-                        {membersNeedingRenewal.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No renewals due this quarter</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {membersNeedingRenewal.slice(0, 5).map((member, idx) => {
-                              const joinDate = new Date(member.joiningDate);
-                              const nextRenewal = new Date(joinDate);
-                              nextRenewal.setFullYear(new Date().getFullYear());
-                              if (nextRenewal < new Date()) {
-                                nextRenewal.setFullYear(nextRenewal.getFullYear() + 1);
-                              }
-                              
-                              return (
-                                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
-                                  <div>
-                                    <p className="font-medium text-sm">{member.firstName} {member.lastName}</p>
-                                    <p className="text-xs text-muted-foreground">{member.teamAssignment}</p>
-                                  </div>
-                                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                                    {nextRenewal.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </p>
                                 </div>
                               );
                             })}
@@ -821,36 +686,6 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
-
-                <Card>
-                   <CardHeader>
-                      <CardTitle>Financial Health</CardTitle>
-                      <CardDescription>Key ratios</CardDescription>
-                   </CardHeader>
-                   <CardContent>
-                      <div className="space-y-6">
-                         <div>
-                            <div className="flex justify-between text-sm mb-1">
-                               <span>Paid Memberships</span>
-                               <span className="font-bold">{((paidMembersCount / members.length) * 100).toFixed(0)}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                               <div className="bg-blue-600 h-2 rounded-full" style={{width: `${(paidMembersCount / members.length) * 100}%`}}></div>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">{paidMembersCount} paying / {members.length} total</p>
-                         </div>
-                         <div>
-                            <div className="flex justify-between text-sm mb-1">
-                               <span>Scholarship Ratio</span>
-                               <span className="font-bold">{((members.filter(m => m.type === "Scholarship").length / members.length) * 100).toFixed(0)}%</span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                               <div className="bg-yellow-500 h-2 rounded-full" style={{width: `${(members.filter(m => m.type === "Scholarship").length / members.length) * 100}%`}}></div>
-                            </div>
-                         </div>
-                      </div>
-                   </CardContent>
-                </Card>
               </div>
             </TabsContent>
 
@@ -946,7 +781,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      Rp {coachingRevenue.toLocaleString()}
+                      Rp {coachingRevenueGraph.toLocaleString()}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       From private sessions
@@ -1017,6 +852,7 @@ export default function Dashboard() {
           </Tabs>
         </div>
       </div>
+      </Layout>
     </>
   );
 }

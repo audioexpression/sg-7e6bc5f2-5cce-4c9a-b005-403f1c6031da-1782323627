@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Layout from "@/components/Layout";
 
 interface Team {
   id: string;
@@ -98,7 +99,7 @@ export default function Communication() {
         title="Communication Hub - Bali Bulldogs"
         description="Broadcast messages to team WhatsApp groups"
       />
-      
+      <Layout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex items-center justify-between mb-8">
@@ -106,9 +107,6 @@ export default function Communication() {
               <h1 className="text-4xl font-bold text-blue-900 mb-2">Communication Hub</h1>
               <p className="text-gray-600">Broadcast messages to team WhatsApp groups</p>
             </div>
-            <Button onClick={() => router.push("/settings")} variant="outline">
-              Manage Team Links
-            </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -220,6 +218,7 @@ export default function Communication() {
           </div>
         </div>
       </div>
+      </Layout>
     </>
   );
 }

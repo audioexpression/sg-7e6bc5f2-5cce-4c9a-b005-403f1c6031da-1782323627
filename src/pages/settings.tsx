@@ -15,7 +15,8 @@ import {
   Save,
   X,
   School,
-  GraduationCap
+  GraduationCap,
+  Check
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,8 @@ import {
   Coach, 
   TIER_RATES 
 } from "@/lib/coach-types";
-import { DEFAULT_SCHOOLS } from "@/lib/constants";
+import { DEFAULT_SCHOOLS, TEAM_ORDER } from "@/lib/constants";
+import Layout from "@/components/Layout";
 
 interface Team {
   id: string;
@@ -73,20 +75,35 @@ const DEFAULT_TEAMS: Team[] = [
   { id: "u12-adv", name: "U12 Adv", category: "Junior", monthlyFee: 950000 },
   { id: "u12-girls", name: "U12 Girls", category: "Junior", monthlyFee: 500000 },
   { id: "u14", name: "U14", category: "Youth", monthlyFee: 950000 },
-  { id: "u14-girls", name: "U14 Girls", category: "Youth", monthlyFee: 950000 },
   { id: "u16", name: "U16", category: "Youth", monthlyFee: 950000 },
-  { id: "u18-girls", name: "U18 Girls", category: "Youth", monthlyFee: 500000 },
   { id: "u18", name: "U18", category: "Youth", monthlyFee: 500000 },
-  { id: "u20", name: "U20", category: "Youth", monthlyFee: 0 },
-  { id: "women", name: "Women", category: "Adult", monthlyFee: 0, taxRate: 10 },
-  { id: "masters-45", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
-  { id: "legends", name: "Legends", category: "Adult", monthlyFee: 0 },
+  { id: "u18-girls", name: "U18 Girls", category: "Youth", monthlyFee: 500000 },
   { id: "social", name: "Social", category: "Adult", monthlyFee: 0, taxRate: 10 },
-  { id: "first-team", name: "1st Team", category: "Adult", monthlyFee: 0 },
+  { id: "legends", name: "Legends 35+", category: "Adult", monthlyFee: 0 },
+  { id: "masters", name: "Masters 45+", category: "Adult", monthlyFee: 0 },
 ];
 
 const calculateQuarterlyFee = (monthlyFee: number): number => {
   return monthlyFee * 3;
+};
+
+// Helper function to sort teams based on predefined order
+const sortTeams = (teamsToSort: Team[]) => {
+  return [...teamsToSort].sort((a, b) => {
+    const indexA = TEAM_ORDER.indexOf(a.name);
+    const indexB = TEAM_ORDER.indexOf(b.name);
+    
+    // If both are in the order list, sort by index
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    
+    // If only A is in list, it comes first
+    if (indexA !== -1) return -1;
+    // If only B is in list, it comes first
+    if (indexB !== -1) return 1;
+    
+    // If neither is in list, sort alphabetically
+    return a.name.localeCompare(b.name);
+  });
 };
 
 export default function Settings() {
@@ -133,6 +150,7 @@ export default function Settings() {
 
   // Schools State
   const [newSchool, setNewSchool] = useState("");
+  const [editingSchool, setEditingSchool] = useState<{ original: string, current: string } | null>(null);
 
   const [successMessage, setSuccessMessage] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -142,13 +160,50 @@ export default function Settings() {
     const savedTeams = localStorage.getItem("teams");
     if (savedTeams) {
       try {
-        setTeams(JSON.parse(savedTeams));
+        let loadedTeams = JSON.parse(savedTeams);
+        
+        // Data Migration and Cleanup
+        let changed = false;
+        
+        // 1. Remove duplicates based on ID or Name
+        const uniqueTeamsMap = new Map();
+        loadedTeams.forEach((t: Team) => {
+          if (!uniqueTeamsMap.has(t.name)) {
+            uniqueTeamsMap.set(t.name, t);
+          }
+        });
+        
+        if (loadedTeams.length !== uniqueTeamsMap.size) {
+           loadedTeams = Array.from(uniqueTeamsMap.values());
+           changed = true;
+        }
+
+        // 2. Name standardization for adult teams
+        loadedTeams = loadedTeams.map((t: Team) => {
+          // Fix Legends naming
+          if ((t.name === "Legends" || t.id === "legends") && t.name !== "Legends 35+") {
+            t.name = "Legends 35+";
+            changed = true;
+          }
+          // Fix Masters naming
+          if ((t.name === "Masters" || t.id === "masters") && t.name !== "Masters 45+") {
+            t.name = "Masters 45+";
+            changed = true;
+          }
+          return t;
+        });
+
+        if (changed) {
+          localStorage.setItem("teams", JSON.stringify(loadedTeams));
+        }
+        
+        setTeams(sortTeams(loadedTeams));
       } catch (error) {
-        setTeams(DEFAULT_TEAMS);
+        setTeams(sortTeams(DEFAULT_TEAMS));
         localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
       }
     } else {
-      setTeams(DEFAULT_TEAMS);
+      setTeams(sortTeams(DEFAULT_TEAMS));
       localStorage.setItem("teams", JSON.stringify(DEFAULT_TEAMS));
     }
 
@@ -180,7 +235,7 @@ export default function Settings() {
 
   const saveTeamsToStorage = (updatedTeams: Team[]) => {
     localStorage.setItem("teams", JSON.stringify(updatedTeams));
-    setTeams(updatedTeams);
+    setTeams(sortTeams(updatedTeams));
   };
 
   const saveCoachesToStorage = (updatedCoaches: Coach[]) => {
@@ -209,6 +264,12 @@ export default function Settings() {
     const errors: Record<string, string> = {};
     if (!newTeam.name.trim()) errors.teamName = "Team name is required";
     if (newTeam.monthlyFee < 0) errors.monthlyFee = "Fee cannot be negative";
+    
+    // Check for duplicate name
+    if (teams.some(t => t.name.toLowerCase() === newTeam.name.trim().toLowerCase())) {
+        errors.teamName = "Team already exists";
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -344,6 +405,22 @@ export default function Settings() {
     showSuccess("School added successfully!");
   };
 
+  const handleUpdateSchool = () => {
+    if (!editingSchool || !editingSchool.current.trim()) return;
+    const newName = editingSchool.current.trim();
+    const originalName = editingSchool.original;
+
+    if (schools.includes(newName) && newName !== originalName) {
+      alert("School already exists");
+      return;
+    }
+
+    const updatedSchools = schools.map(s => s === originalName ? newName : s).sort();
+    saveSchoolsToStorage(updatedSchools);
+    setEditingSchool(null);
+    showSuccess("School updated successfully!");
+  };
+
   const handleDeleteSchool = (schoolName: string) => {
     if (confirm(`Remove "${schoolName}" from the list?`)) {
       const updatedSchools = schools.filter(s => s !== schoolName);
@@ -376,6 +453,15 @@ export default function Settings() {
     Adult: teams.filter(t => t.category === "Adult").filter(t => t.name.toLowerCase().includes(teamSearchTerm.toLowerCase())),
   };
 
+  // Filter members eligible for reduced fees (teams with reducedMonthlyFee > 0)
+  const reducedFeeTeamNames = teams
+    .filter(t => (t.reducedMonthlyFee || 0) > 0)
+    .map(t => t.name);
+
+  const eligibleFeeMembers = members.filter(m => 
+    reducedFeeTeamNames.includes(m.teamAssignment)
+  );
+
   const filteredCoaches = coaches.filter(coach => {
     const matchesSearch = coach.name.toLowerCase().includes(coachSearchTerm.toLowerCase()) || coach.phone.includes(coachSearchTerm);
     const matchesTier = coachTierFilter === "All" || coach.tier === coachTierFilter;
@@ -393,7 +479,7 @@ export default function Settings() {
   return (
     <>
       <SEO title="Settings - Bali Bulldogs Club Manager" description="Manage teams, coaches, and admin staff" />
-      
+      <Layout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-yellow-50 py-8">
         <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
@@ -538,7 +624,7 @@ export default function Settings() {
                   </div>
 
                   <div className="space-y-6">
-                    {Object.entries(teamsByCategory).map(([category, categoryTeams]) => (
+                    {["Junior", "Youth", "Adult"].map((category) => (
                       <div key={category}>
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline" className="bg-gray-50">{category}</Badge>
@@ -555,12 +641,12 @@ export default function Settings() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {categoryTeams.length === 0 ? (
+                              {teamsByCategory[category as keyof typeof teamsByCategory]?.length === 0 ? (
                                 <TableRow>
                                   <TableCell colSpan={5} className="text-center text-xs text-gray-400 py-4">No teams</TableCell>
                                 </TableRow>
                               ) : (
-                                categoryTeams.map((team) => (
+                                teamsByCategory[category as keyof typeof teamsByCategory]?.map((team) => (
                                   <TableRow key={team.id}>
                                     <TableCell className="font-medium">
                                       {editingTeam?.id === team.id ? (
@@ -636,7 +722,7 @@ export default function Settings() {
                     <DollarSign className="h-6 w-6 text-blue-600" />
                     <div>
                       <CardTitle>Fee Assignments</CardTitle>
-                      <CardDescription>Adult member rates</CardDescription>
+                      <CardDescription>Members eligible for reduced rates</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -646,38 +732,44 @@ export default function Settings() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Member</TableHead>
+                          <TableHead>Team</TableHead>
                           <TableHead>Rate</TableHead>
                           <TableHead className="text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {members.filter(m => m.category === "Adult").slice(0, 10).map(member => {
-                          const isReduced = member.feeStructure === "Reduced";
-                          return (
-                            <TableRow key={member.id}>
-                              <TableCell className="text-sm font-medium">{member.firstName} {member.lastName}</TableCell>
-                              <TableCell>
-                                <Badge variant={isReduced ? "secondary" : "outline"} className={isReduced ? "bg-orange-100 text-orange-800" : ""}>
-                                  {isReduced ? "Reduced" : "Std"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button 
-                                  size="sm" variant="ghost" className="h-6 text-xs"
-                                  onClick={() => handleUpdateMemberFee(member.id, isReduced ? "Standard" : "Reduced")}
-                                >
-                                  Switch
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                         {members.filter(m => m.category === "Adult").length === 0 && (
-                          <TableRow><TableCell colSpan={3} className="text-center text-xs py-4 text-muted-foreground">No adult members</TableCell></TableRow>
-                         )}
+                        {eligibleFeeMembers.length === 0 ? (
+                           <TableRow><TableCell colSpan={4} className="text-center text-xs py-4 text-muted-foreground">No members in reduced-fee teams</TableCell></TableRow>
+                        ) : (
+                          eligibleFeeMembers.map(member => {
+                            const isReduced = member.feeStructure === "Reduced";
+                            return (
+                              <TableRow key={member.id}>
+                                <TableCell className="text-sm font-medium">{member.firstName} {member.lastName}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">{member.teamAssignment}</TableCell>
+                                <TableCell>
+                                  <Badge variant={isReduced ? "secondary" : "outline"} className={isReduced ? "bg-orange-100 text-orange-800" : ""}>
+                                    {isReduced ? "Reduced" : "Std"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    size="sm" variant="ghost" className="h-6 text-xs"
+                                    onClick={() => handleUpdateMemberFee(member.id, isReduced ? "Standard" : "Reduced")}
+                                  >
+                                    Switch
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
                       </TableBody>
                     </Table>
                    </div>
+                   <p className="text-xs text-muted-foreground mt-2">
+                     * Only shows members in teams with a "Reduced Fee" set.
+                   </p>
                 </CardContent>
               </Card>
             </div>
@@ -921,16 +1013,47 @@ export default function Settings() {
                         ) : (
                           schools.map((school) => (
                             <TableRow key={school}>
-                              <TableCell>{school}</TableCell>
+                              <TableCell>
+                                {editingSchool?.original === school ? (
+                                  <Input 
+                                    value={editingSchool.current}
+                                    onChange={(e) => setEditingSchool({ ...editingSchool, current: e.target.value })}
+                                    className="h-8"
+                                  />
+                                ) : (
+                                  school
+                                )}
+                              </TableCell>
                               <TableCell className="text-right">
-                                <Button 
-                                  size="icon" 
-                                  variant="ghost" 
-                                  className="h-6 w-6 text-red-500 hover:text-red-600"
-                                  onClick={() => handleDeleteSchool(school)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                                {editingSchool?.original === school ? (
+                                  <div className="flex justify-end gap-1">
+                                    <Button size="icon" className="h-6 w-6" onClick={handleUpdateSchool}>
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingSchool(null)}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-end gap-1">
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-6 w-6"
+                                      onClick={() => setEditingSchool({ original: school, current: school })}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-6 w-6 text-red-500 hover:text-red-600"
+                                      onClick={() => handleDeleteSchool(school)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))
@@ -944,6 +1067,7 @@ export default function Settings() {
           </div>
         </div>
       </div>
+      </Layout>
     </>
   );
 }

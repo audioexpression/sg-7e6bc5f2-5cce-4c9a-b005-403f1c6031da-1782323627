@@ -1,197 +1,63 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
+import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, X, Upload, Search, Users, UserPlus, ChevronLeft, ChevronRight, Home, DollarSign, Calendar, Settings, Pencil, User, Phone, AlertTriangle, Mail, AlertCircle, CheckCircle, XCircle } from "lucide-react";
-import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  UserPlus,
+  Search,
+  Pencil,
+  Trash2,
+  Upload,
+  X,
+  ExternalLink,
+  Check,
+  ChevronsUpDown,
+  Archive,
+  Users,
+  Shield,
+  Download
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ImageModal } from "@/components/ImageModal";
-import { useRouter } from "next/router";
+import { COUNTRIES, DEFAULT_SCHOOLS, TEAM_ORDER, POSITIONS, getCountryFlag } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
-const ROLES = ["Admin", "Coach", "Player-Coach", "Player"];
-
-const COUNTRIES = [
-  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
-  "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
-  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon",
-  "Canada", "Cape Verde", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)", "Congo (Kinshasa)",
-  "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador",
-  "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France",
-  "Gabon", "Gambia", "Germany", "Ghana", "Greece", "Guatemala", "Haiti", "Honduras", "Hungary", "Iceland",
-  "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan",
-  "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Latvia", "Lebanon", "Madagascar", "Malawi", "Malaysia", "Mali",
-  "Mauritania", "Mexico", "Moldova", "Mongolia", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nepal", "Netherlands",
-  "New Zealand", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Philippines", "Poland", "Portugal",
-  "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "Senegal", "Serbia", "Seychelles",
-  "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "South Africa", "South Korea", "Spain", "Sudan", "Sweden", "Switzerland",
-  "Tajikistan", "Tanzania", "Thailand", "Togo", "Tunisia", "Turkey", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom",
-  "England", "Scotland", "Wales", "Northern Ireland", "United States", "Uruguay", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
-];
-
-const DELETE_REASONS = [
-  "Test Account / Duplicate",
-  "Left Club",
-  "Moving Away",
-  "Injury",
-  "Financial",
-  "Other"
-];
-
-const TEAM_NAME_MAPPINGS: Record<string, string> = {
-  "toddler": "Toddler",
-  "kindy/u6 1": "Kindy/U6 1",
-  "kindy 1": "Kindy/U6 1",
-  "kindy1": "Kindy/U6 1",
-  "kindy/u61": "Kindy/U6 1",
-  "kindy u6 1": "Kindy/U6 1",
-  "u6 1": "Kindy/U6 1",
-  "kindy/u6 2": "Kindy/U6 2",
-  "kindy 2": "Kindy/U6 2",
-  "kindy2": "Kindy/U6 2",
-  "kindy/u62": "Kindy/U6 2",
-  "kindy u6 2": "Kindy/U6 2",
-  "u6 2": "Kindy/U6 2",
-  "u6": "U6",
-  "u8 dev": "U8 Dev",
-  "u8 development": "U8 Dev",
-  "u8dev": "U8 Dev",
-  "under 8 dev": "U8 Dev",
-  "under 8 development": "U8 Dev",
-  "u8 adv": "U8 Adv",
-  "u8 advanced": "U8 Adv",
-  "u8adv": "U8 Adv",
-  "under 8 adv": "U8 Adv",
-  "under 8 advanced": "U8 Adv",
-  "u10 dev": "U10 Dev",
-  "u10 development": "U10 Dev",
-  "u10dev": "U10 Dev",
-  "under 10 dev": "U10 Dev",
-  "under 10 development": "U10 Dev",
-  "u10 adv": "U10 Adv",
-  "u10 advanced": "U10 Adv",
-  "u10adv": "U10 Adv",
-  "under 10 adv": "U10 Adv",
-  "under 10 advanced": "U10 Adv",
-  "u12 dev": "U12 Dev",
-  "u12 development": "U12 Dev",
-  "u12dev": "U12 Dev",
-  "under 12 dev": "U12 Dev",
-  "under 12 development": "U12 Dev",
-  "u12 adv": "U12 Adv",
-  "u12 advanced": "U12 Adv",
-  "u12adv": "U12 Adv",
-  "under 12 adv": "U12 Adv",
-  "under 12 advanced": "U12 Adv",
-  "u12 girls": "U12 Girls",
-  "u12girls": "U12 Girls",
-  "under 12 girls": "U12 Girls",
-  "u14": "U14",
-  "under 14": "U14",
-  "u14 girls": "U14 Girls",
-  "u14girls": "U14 Girls",
-  "under 14 girls": "U14 Girls",
-  "u16": "U16",
-  "under 16": "U16",
-  "u18": "U18",
-  "under 18": "U18",
-  "u18 girls": "U18 Girls",
-  "u18girls": "U18 Girls",
-  "under 18 girls": "U18 Girls",
-  "1st team": "1st Team",
-  "first team": "1st Team",
-  "1st": "1st Team",
-  "women": "Women",
-  "womens": "Women",
-  "women's": "Women",
-  "social team": "Social Team",
-  "social": "Social Team",
-  "legends 35+": "Legends 35+",
-  "legends": "Legends 35+",
-  "legends 35": "Legends 35+",
-  "masters 45+": "Masters 45+",
-  "masters": "Masters 45+",
-  "masters 45": "Masters 45+",
-};
-
-const normalizeTeamName = (teamName: string, availableTeams: string[]): string => {
-  if (!teamName) return "";
-  const normalized = teamName.toLowerCase().trim();
-  
-  // Direct match
-  if (availableTeams.some(t => t.toLowerCase() === normalized)) {
-    return availableTeams.find(t => t.toLowerCase() === normalized) || teamName;
-  }
-  
-  // Check mappings
-  if (TEAM_NAME_MAPPINGS[normalized]) {
-    const mapped = TEAM_NAME_MAPPINGS[normalized];
-    // Verify mapped name exists in available teams
-    if (availableTeams.includes(mapped)) {
-      return mapped;
-    }
-  }
-  
-  // Partial match (e.g., "u6" matches "U6")
-  const partialMatch = availableTeams.find(t => 
-    t.toLowerCase().includes(normalized) || normalized.includes(t.toLowerCase())
-  );
-  
-  return partialMatch || teamName;
-};
-
-const getCategoryForTeam = (teamName: string, teams: any[]): "Junior" | "Youth" | "Adult" | undefined => {
-  const team = teams.find(t => t.name === teamName);
-  return team?.category;
-};
-
-const formatDateDisplay = (dateString?: string): string => {
-  if (!dateString) return "—";
-  let date: Date;
-  if (dateString.includes("/")) {
-    const parts = dateString.split("/");
-    if (parts.length === 3) {
-      date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-    } else {
-      date = new Date(dateString);
-    }
-  } else {
-    date = new Date(dateString);
-  }
-  if (isNaN(date.getTime())) return "—";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-};
-
-const convertToInputDate = (dateString?: string): string => {
-  if (!dateString) return "";
-  if (dateString.includes("/")) {
-    const parts = dateString.split("/");
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
-    }
-  }
-  return dateString;
-};
-
-const convertFromInputDate = (dateString: string): string => {
-  if (!dateString) return "";
-  if (dateString.includes("-")) {
-    const parts = dateString.split("-");
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-  }
-  return dateString;
-};
+type MemberType = "Junior" | "Youth" | "Adult";
+type MemberRole = "Player" | "Coach" | "Admin";
+type MembershipCategory = "Standard" | "Sponsored" | "Scholarship";
+type Position = typeof POSITIONS[number];
 
 interface Member {
   id: string;
@@ -203,1952 +69,2167 @@ interface Member {
   address: string;
   email: string;
   shirtNumber: string;
-  category: "Junior" | "Youth" | "Adult";
-  type: "Member" | "Sponsored" | "Scholarship";
-  role: "Player" | "Coach" | "Admin" | "Player-Coach";
-  teamAssignment: string;
+  type: MemberType;
+  role: MemberRole;
+  team: string;
+  position?: Position;
+  membershipCategory: MembershipCategory;
   joiningDate: string;
   contactNumber: string;
   primaryContact: string;
   primaryContactNumber: string;
+  primaryContactMemberId?: string;
   secondaryContact: string;
   secondaryContactNumber: string;
+  secondaryContactMemberId?: string;
   medicalNotes: string;
   coachingCredits: number;
-  profileImage?: string;
-  isArchived: boolean;
-  archiveReason?: "Joined Another Team" | "Left Bali" | "Retired from playing" | "Longterm Injury" | "Other";
-  archiveReasonDetails?: string;
-  archiveDate?: string;
+  photoUrl?: string;
+  school?: string;
+  archived?: boolean;
 }
 
-interface Team {
-  id: string;
-  name: string;
-  category: "Junior" | "Youth" | "Adult";
-  monthlyFee: number;
+interface CSVMapping {
+  [key: string]: string;
 }
 
-interface ImportMessage {
-  row: number;
-  field?: string;
-  message: string;
-  data?: any;
-}
+const generateMembershipId = (existingIds: string[]): string => {
+  const year = new Date().getFullYear();
+  let counter = 1;
+  let newId = `BBFC-${year}-${String(counter).padStart(4, "0")}`;
 
-interface ImportResult {
-  successes: Array<{ row: number; name: string; team: string }>;
-  errors: Array<{ row: number; field?: string; message: string; data?: any }>;
-  warnings: Array<{ row: number; message: string }>;
-}
-
-const generateMembershipId = (members: Member[], joiningYear?: string): string => {
-  const year = joiningYear ? new Date(joiningYear).getFullYear() : new Date().getFullYear();
-  const yearPrefix = `BBFC-${year}-`;
-  const yearMembers = members.filter(m => m.membershipId?.startsWith(yearPrefix));
-  if (yearMembers.length === 0) {
-    return `${yearPrefix}0001`;
+  while (existingIds.includes(newId)) {
+    counter++;
+    newId = `BBFC-${year}-${String(counter).padStart(4, "0")}`;
   }
-  const numbers = yearMembers
-    .map(m => {
-      const match = m.membershipId.match(/BBFC-\d{4}-(\d{4})/);
-      return match ? parseInt(match[1]) : 0;
-    })
-    .filter(n => !isNaN(n));
-  const maxNumber = Math.max(...numbers, 0);
-  const nextNumber = (maxNumber + 1).toString().padStart(4, "0");
-  return `${yearPrefix}${nextNumber}`;
+
+  return newId;
 };
 
-const batchAssignMembershipIds = (members: Member[]): Member[] => {
-  const membersWithoutIds = members.filter(m => !m.membershipId);
-  if (membersWithoutIds.length === 0) return members;
-  membersWithoutIds.sort((a, b) => {
-    const dateA = a.joiningDate ? new Date(a.joiningDate).getTime() : 0;
-    const dateB = b.joiningDate ? new Date(b.joiningDate).getTime() : 0;
-    return dateA - dateB;
-  });
-  const updatedMembers = [...members];
-  membersWithoutIds.forEach(member => {
-    const index = updatedMembers.findIndex(m => m.id === member.id);
-    if (index !== -1) {
-      const newId = generateMembershipId(updatedMembers, member.joiningDate);
-      updatedMembers[index] = { ...updatedMembers[index], membershipId: newId };
-    }
-  });
-  return updatedMembers;
-};
-
-export default function MembersPage() {
-  const router = useRouter();
+export default function Members() {
   const [members, setMembers] = useState<Member[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedTeam, setSelectedTeam] = useState("all");
-  const [selectedType, setSelectedType] = useState("all");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = useState(false);
-  const [previewPhotoUrl, setPreviewPhotoUrl] = useState("");
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterTeam, setFilterTeam] = useState("all");
-  const [filterRole, setFilterRole] = useState("");
-  const [filterMembershipCategory, setFilterMembershipCategory] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [formData, setFormData] = useState<Partial<Member>>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    contactNumber: "",
-    shirtNumber: "",
-    category: "Junior",
-    role: "Player",
-    teamAssignment: "",
-    nationality: "",
-    address: "",
-    type: "Member",
-    joiningDate: new Date().toISOString().split('T')[0],
-    medicalNotes: "",
-    coachingCredits: 0,
-    profileImage: "",
-    isArchived: false
-  });
-
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
-  const [bulkTeam, setBulkTeam] = useState("");
-  const [bulkCategory, setBulkCategory] = useState("");
-  const [bulkRole, setBulkRole] = useState("");
-  const [bulkMembershipCategory, setBulkMembershipCategory] = useState("");
-  const [bulkNationality, setBulkNationality] = useState("");
-  const [selectedImage, setSelectedImage] = useState<{ url: string; name: string } | null>(null);
-  const [teamsData, setTeamsData] = useState<any[]>([]);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importData, setImportData] = useState<Partial<Member>[]>([]);
-  const [duplicates, setDuplicates] = useState<Array<{ imported: Partial<Member>; existing: Member; index: number }>>([]);
-  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
-  const [currentDuplicateIndex, setCurrentDuplicateIndex] = useState(0);
-  const [duplicateResolutions, setDuplicateResolutions] = useState<Record<number, "skip" | "overwrite" | "create">>({});
-  const [importResultsOpen, setImportResultsOpen] = useState(false);
-  const [importResults, setImportResults] = useState<ImportResult | null>(null);
-  const [batchAssignDialogOpen, setBatchAssignDialogOpen] = useState(false);
-  const [showResultsDialog, setShowResultsDialog] = useState(false);
-  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [memberToArchive, setMemberToArchive] = useState<Member | null>(null);
-  const [archiveReason, setArchiveReason] = useState<string>("");
-  const [archiveReasonDetails, setArchiveReasonDetails] = useState<string>("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [membershipFilter, setMembershipFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
-  const [importTargetTeam, setImportTargetTeam] = useState<string>("auto");
-  
-  // Delete Dialog State
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
-  const [deleteReason, setDeleteReason] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false);
+  const [bulkUpdateField, setBulkUpdateField] = useState<string | null>(null);
+  const [bulkUpdateValue, setBulkUpdateValue] = useState("");
+
+  // Member lookup state
+  const [primaryContactOpen, setPrimaryContactOpen] = useState(false);
+  const [secondaryContactOpen, setSecondaryContactOpen] = useState(false);
+  const [primaryContactSearch, setPrimaryContactSearch] = useState("");
+  const [secondaryContactSearch, setSecondaryContactSearch] = useState("");
+
+  // CSV Import state
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<string[][]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvMapping, setCsvMapping] = useState<CSVMapping>({});
+  const [importStep, setImportStep] = useState<"upload" | "map" | "preview">(
+    "upload"
+  );
+  const [previewData, setPreviewData] = useState<Partial<Member>[]>([]);
+
+  const [formData, setFormData] = useState<Omit<Member, "id" | "membershipId">>(
+    {
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      nationality: "",
+      address: "",
+      email: "",
+      shirtNumber: "",
+      type: "Junior",
+      role: "Player",
+      team: "",
+      position: undefined,
+      membershipCategory: "Standard",
+      joiningDate: new Date().toISOString().split("T")[0],
+      contactNumber: "",
+      primaryContact: "",
+      primaryContactNumber: "",
+      primaryContactMemberId: undefined,
+      secondaryContact: "",
+      secondaryContactNumber: "",
+      secondaryContactMemberId: undefined,
+      medicalNotes: "",
+      coachingCredits: 0,
+      school: "",
+    }
+  );
 
   useEffect(() => {
     const savedMembers = localStorage.getItem("members");
     if (savedMembers) {
       setMembers(JSON.parse(savedMembers));
     }
-    const savedTeams = localStorage.getItem("teams");
-    if (savedTeams) {
-      const parsedTeams = JSON.parse(savedTeams);
-      setTeams(parsedTeams);
-      setTeamsData(parsedTeams);
-    }
   }, []);
 
-  useEffect(() => {
-    const { memberId } = router.query;
-    if (memberId && typeof memberId === "string") {
-      const member = members.find(m => m.id === memberId);
-      if (member) {
-        setEditingMember(member);
-        setIsDialogOpen(true);
-        router.replace("/members", undefined, { shallow: true });
+  const saveMembers = (updatedMembers: Member[]) => {
+    setMembers(updatedMembers);
+    localStorage.setItem("members", JSON.stringify(updatedMembers));
+  };
+
+  const handlePrimaryContactSelect = (memberId: string) => {
+    const selectedMember = members.find((m) => m.id === memberId);
+    if (selectedMember) {
+      setFormData({
+        ...formData,
+        primaryContact: `${selectedMember.firstName} ${selectedMember.lastName}`,
+        primaryContactNumber: selectedMember.contactNumber,
+        primaryContactMemberId: memberId,
+      });
+    }
+    setPrimaryContactOpen(false);
+  };
+
+  const handleSecondaryContactSelect = (memberId: string) => {
+    const selectedMember = members.find((m) => m.id === memberId);
+    if (selectedMember) {
+      setFormData({
+        ...formData,
+        secondaryContact: `${selectedMember.firstName} ${selectedMember.lastName}`,
+        secondaryContactNumber: selectedMember.contactNumber,
+        secondaryContactMemberId: memberId,
+      });
+    }
+    setSecondaryContactOpen(false);
+  };
+
+  const clearPrimaryContactLink = () => {
+    setFormData({
+      ...formData,
+      primaryContactMemberId: undefined,
+    });
+  };
+
+  const clearSecondaryContactLink = () => {
+    setFormData({
+      ...formData,
+      secondaryContactMemberId: undefined,
+    });
+  };
+
+  const handleAddMember = () => {
+    const existingIds = members.map((m) => m.membershipId);
+    const newMember: Member = {
+      ...formData,
+      id: Date.now().toString(),
+      membershipId: generateMembershipId(existingIds),
+    };
+    saveMembers([...members, newMember]);
+    setIsAddDialogOpen(false);
+    resetForm();
+  };
+
+  const handleEditMember = () => {
+    if (!selectedMember) return;
+    const updatedMembers = members.map((m) =>
+      m.id === selectedMember.id ? { ...selectedMember, ...formData } : m
+    );
+    saveMembers(updatedMembers);
+    setIsEditDialogOpen(false);
+    setSelectedMember(null);
+    resetForm();
+  };
+
+  const handleDeleteMember = (id: string) => {
+    if (confirm("Are you sure you want to delete this member?")) {
+      saveMembers(members.filter((m) => m.id !== id));
+      if (selectedMemberIds.includes(id)) {
+        setSelectedMemberIds(selectedMemberIds.filter((mid) => mid !== id));
       }
     }
-  }, [router.query, members]);
+  };
 
-  const teamOptions = teams.map(t => t.name);
-  
-  const teamsByCategory = {
-    Junior: teams.filter(t => t.category === "Junior").map(t => t.name),
-    Youth: teams.filter(t => t.category === "Youth").map(t => t.name),
-    Adult: teams.filter(t => t.category === "Adult").map(t => t.name),
+  const handleArchiveMember = (id: string) => {
+    const updatedMembers = members.map((m) =>
+      m.id === id ? { ...m, archived: !m.archived } : m
+    );
+    saveMembers(updatedMembers);
+  };
+
+  // Bulk Actions
+  const toggleSelectMember = (id: string) => {
+    if (selectedMemberIds.includes(id)) {
+      setSelectedMemberIds(selectedMemberIds.filter((mid) => mid !== id));
+    } else {
+      setSelectedMemberIds([...selectedMemberIds, id]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedMemberIds.length === filteredMembers.length) {
+      setSelectedMemberIds([]);
+    } else {
+      setSelectedMemberIds(filteredMembers.map((m) => m.id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to delete ${selectedMemberIds.length} members?`)) {
+      saveMembers(members.filter((m) => !selectedMemberIds.includes(m.id)));
+      setSelectedMemberIds([]);
+    }
+  };
+
+  const handleBulkArchive = (archive: boolean) => {
+    const updatedMembers = members.map((m) =>
+      selectedMemberIds.includes(m.id) ? { ...m, archived: archive } : m
+    );
+    saveMembers(updatedMembers);
+    setSelectedMemberIds([]);
+  };
+
+  const handleBulkUpdate = () => {
+    if (!bulkUpdateField || !bulkUpdateValue) return;
+
+    const updatedMembers = members.map((m) => {
+      if (selectedMemberIds.includes(m.id)) {
+        // Map the field name to the actual member property
+        const fieldMap: Record<string, string> = {
+          "team": "team",
+          "category": "membershipCategory",
+          "type": "type",
+          "role": "role",
+          "position": "position",
+          "school": "school"
+        };
+        
+        const actualField = fieldMap[bulkUpdateField] || bulkUpdateField;
+        
+        return {
+          ...m,
+          [actualField]: bulkUpdateValue
+        };
+      }
+      return m;
+    });
+
+    saveMembers(updatedMembers);
+    setIsBulkUpdateDialogOpen(false);
+    setSelectedMemberIds([]);
+    setBulkUpdateField(null);
+    setBulkUpdateValue("");
+  };
+
+  const openBulkUpdateDialog = (field: string) => {
+    setBulkUpdateField(field);
+    setBulkUpdateValue("");
+    setIsBulkUpdateDialogOpen(true);
+  };
+
+  const openEditDialog = (member: Member) => {
+    setSelectedMember(member);
+    setFormData({
+      firstName: member.firstName,
+      lastName: member.lastName,
+      dateOfBirth: member.dateOfBirth,
+      nationality: member.nationality,
+      address: member.address,
+      email: member.email,
+      shirtNumber: member.shirtNumber,
+      type: member.type,
+      role: member.role,
+      team: member.team,
+      position: member.position,
+      membershipCategory: member.membershipCategory,
+      joiningDate: member.joiningDate,
+      contactNumber: member.contactNumber,
+      primaryContact: member.primaryContact,
+      primaryContactNumber: member.primaryContactNumber,
+      primaryContactMemberId: member.primaryContactMemberId,
+      secondaryContact: member.secondaryContact,
+      secondaryContactNumber: member.secondaryContactNumber,
+      secondaryContactMemberId: member.secondaryContactMemberId,
+      medicalNotes: member.medicalNotes,
+      coachingCredits: member.coachingCredits,
+      photoUrl: member.photoUrl,
+      school: member.school,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const openViewDialog = (member: Member) => {
+    setSelectedMember(member);
+    setIsViewDialogOpen(true);
   };
 
   const resetForm = () => {
     setFormData({
       firstName: "",
       lastName: "",
-      email: "",
-      contactNumber: "",
-      shirtNumber: "",
-      category: "Junior",
-      role: "Player",
-      teamAssignment: "",
+      dateOfBirth: "",
       nationality: "",
       address: "",
-      type: "Member",
-      joiningDate: new Date().toISOString().split('T')[0],
+      email: "",
+      shirtNumber: "",
+      type: "Junior",
+      role: "Player",
+      team: "",
+      position: undefined,
+      membershipCategory: "Standard",
+      joiningDate: new Date().toISOString().split("T")[0],
+      contactNumber: "",
+      primaryContact: "",
+      primaryContactNumber: "",
+      primaryContactMemberId: undefined,
+      secondaryContact: "",
+      secondaryContactNumber: "",
+      secondaryContactMemberId: undefined,
       medicalNotes: "",
       coachingCredits: 0,
-      profileImage: "",
-      isArchived: false
-    });
-    setValidationErrors({});
-    setEditingMember(null);
-  };
-
-  const handleEdit = (member: Member) => {
-    setEditingMember(member);
-    setFormData({ 
-      ...member,
-      profileImage: member.profileImage || ""
-    });
-    setIsDialogOpen(true);
-  };
-
-  const initiateDelete = (member: Member) => {
-    setMemberToDelete(member);
-    setDeleteReason("");
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (!memberToDelete) return;
-    
-    console.log(`Deleting member ${memberToDelete.firstName} ${memberToDelete.lastName}. Reason: ${deleteReason}`);
-    
-    const updated = members.filter((m) => m.id !== memberToDelete.id);
-    setMembers(updated);
-    localStorage.setItem("members", JSON.stringify(updated));
-    
-    setDeleteDialogOpen(false);
-    setMemberToDelete(null);
-    setDeleteReason("");
-  };
-
-  const handleDeleteMembers = () => {
-    if (confirm(`Are you sure you want to delete ${selectedMembers.length} members? This action cannot be undone.`)) {
-      const updated = members.filter(m => !selectedMembers.includes(m.id));
-      setMembers(updated);
-      localStorage.setItem("members", JSON.stringify(updated));
-      setSelectedMembers([]);
-    }
-  };
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, profileImage: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.firstName || !formData.lastName) return;
-
-    let updatedMembers;
-    if (editingMember) {
-      updatedMembers = members.map((m) =>
-        m.id === editingMember.id ? { 
-          ...m, 
-          ...formData,
-          profileImage: formData.profileImage || m.profileImage
-        } as Member : m
-      );
-    } else {
-      const newMember = {
-        ...formData,
-        id: crypto.randomUUID(),
-        membershipId: generateMembershipId(members, formData.joiningDate),
-        joiningDate: formData.joiningDate || new Date().toISOString().split("T")[0],
-      } as Member;
-      updatedMembers = [...members, newMember];
-    }
-
-    setMembers(updatedMembers);
-    localStorage.setItem("members", JSON.stringify(updatedMembers));
-    setIsDialogOpen(false);
-    resetForm();
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setFilterCategory("all");
-    setFilterTeam("all");
-    setFilterRole("");
-    setFilterMembershipCategory("");
-    setCurrentPage(1);
-  };
-
-  const parseCSV = (text: string): Partial<Member>[] => {
-    const lines = text.split("\n").filter(line => line.trim());
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-    const data: Partial<Member>[] = [];
-    const warnings: string[] = [];
-    const errors: Array<{ row: number; field?: string; message: string; data?: any }> = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(",").map(v => v.trim());
-      const member: Partial<Member> = {
-        category: "Junior",
-        type: "Member",
-        role: "Player",
-        coachingCredits: 0,
-        teamAssignment: "",
-        joiningDate: new Date().toISOString().split("T")[0],
-        membershipId: "",
-      };
-
-      headers.forEach((header, index) => {
-        const value = values[index];
-        if (!value) return;
-
-        if (header.includes("membership") && header.includes("id")) member.membershipId = value;
-        else if (header.includes("first") || header === "firstname") member.firstName = value;
-        else if (header.includes("last") || header === "lastname" || header === "surname") member.lastName = value;
-        else if (header.includes("email")) {
-          if (value.includes("@")) {
-            member.email = value;
-          } else {
-            errors.push({ row: i + 1, field: "email", message: `Invalid email format: "${value}"` });
-          }
-        }
-        else if (header.includes("phone") || header.includes("contact")) member.contactNumber = value;
-        else if (header.includes("shirt") || header.includes("number")) member.shirtNumber = value;
-        else if (header.includes("team")) {
-          const normalizedTeam = normalizeTeamName(value, teamOptions);
-          if (normalizedTeam && teamOptions.includes(normalizedTeam)) {
-            member.teamAssignment = normalizedTeam;
-          } else {
-            warnings.push(`Row ${i + 1}: Team "${value}" not recognized, mapped to "${normalizedTeam || 'None'}"`);
-          }
-        }
-        else if (header.includes("category")) {
-          const cat = value.toLowerCase();
-          if (cat.includes("junior")) member.category = "Junior";
-          else if (cat.includes("youth")) member.category = "Youth";
-          else if (cat.includes("adult")) member.category = "Adult";
-          else {
-            errors.push({ row: i + 1, field: "category", message: `Invalid category: "${value}"` });
-          }
-        }
-        else if (header.includes("role")) {
-          const roleValue = value as string;
-          if (ROLES.includes(roleValue)) {
-            member.role = roleValue as "Admin" | "Coach" | "Player-Coach" | "Player";
-          } else {
-            warnings.push(`Row ${i + 1}: Role "${value}" not recognized, defaulted to "Player"`);
-            member.role = "Player";
-          }
-        }
-        else if (header.includes("dob") || header.includes("birth")) {
-          const converted = convertFromInputDate(value);
-          member.dateOfBirth = converted;
-        }
-        else if (header.includes("nationality")) {
-          if (COUNTRIES.includes(value)) {
-            member.nationality = value;
-          } else {
-            warnings.push(`Row ${i + 1}: Nationality "${value}" not in standard list`);
-            member.nationality = value;
-          }
-        }
-        else if (header.includes("address")) member.address = value;
-      });
-
-      if (!member.firstName || !member.lastName) {
-        errors.push({ 
-          row: i + 1, 
-          field: "name", 
-          message: "Missing first name or last name", 
-          data: { firstName: member.firstName, lastName: member.lastName } 
-        });
-      } else {
-        data.push(member);
-      }
-    }
-
-    (data as any).importWarnings = warnings;
-    (data as any).importErrors = errors;
-
-    return data;
-  };
-
-  const parseExcel = async (file: File): Promise<Partial<Member>[]> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = (window as any).XLSX.read(data, { type: "array" });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
-          const warnings: string[] = [];
-          const errors: Array<{ row: number; field?: string; message: string; data?: any }> = [];
-
-          const members: Partial<Member>[] = jsonData.map((row: any, index: number) => {
-            const teamValue = row["Team"] || row["team"] || "";
-            const normalizedTeam = normalizeTeamName(teamValue, teamOptions);
-            const dobValue = row["Date of Birth"] || row["DOB"] || row["dob"] || "";
-            const convertedDob = convertFromInputDate(dobValue);
-
-            const rawRole = row["Role"] || row["role"] || "Player";
-            let role: "Admin" | "Coach" | "Player-Coach" | "Player" = "Player";
-            if (rawRole === "Admin" || rawRole === "Coach" || rawRole === "Player-Coach" || rawRole === "Player") {
-              role = rawRole;
-            }
-
-            const member: Partial<Member> = {
-              id: Date.now().toString() + index,
-              membershipId: row["Membership ID"] || row["MembershipID"] || row["membership id"] || "",
-              firstName: row["First Name"] || row["FirstName"] || row["first name"] || "",
-              lastName: row["Last Name"] || row["LastName"] || row["last name"] || row["surname"] || "",
-              email: row["Email"] || row["email"] || "",
-              contactNumber: row["Contact Number"] || row["Phone"] || row["contact number"] || "",
-              shirtNumber: row["Shirt Number"] || row["Number"] || row["shirt number"] || "",
-              role: role,
-              teamAssignment: normalizedTeam,
-              category: (row["Category"] || row["category"] || "Junior") as "Junior" | "Youth" | "Adult",
-              dateOfBirth: convertedDob,
-              nationality: row["Nationality"] || row["nationality"] || "",
-              address: row["Address"] || row["address"] || "",
-              type: "Member",
-              joiningDate: new Date().toISOString().split("T")[0],
-              medicalNotes: row["Medical Notes"] || row["MedicalNotes"] || row["medical notes"] || "",
-              coachingCredits: parseInt(row["Coaching Credits"] || row["CoachingCredits"] || row["coaching credits"] || "0") || 0,
-              profileImage: row["Photo URL"] || row["PhotoURL"] || row["Photo"] || row["photo url"] || "",
-              isArchived: false
-            };
-
-            if (!member.firstName || !member.lastName) {
-              errors.push({ 
-                row: index + 2, 
-                field: "name", 
-                message: "Missing first name or last name",
-                data: { firstName: member.firstName, lastName: member.lastName }
-              });
-            }
-
-            return member;
-          }).filter((m: any) => m.firstName && m.lastName);
-
-          (members as any).importWarnings = warnings;
-          (members as any).importErrors = errors;
-
-          resolve(members);
-        } catch (error) {
-          console.error("Error parsing Excel:", error);
-          alert("Error parsing Excel file. Please check the format.");
-          resolve([]);
-        }
-      };
-      reader.readAsArrayBuffer(file);
+      school: "",
     });
   };
 
-  const findDuplicates = (imported: Partial<Member>[]): Array<{ imported: Partial<Member>; existing: Member; index: number }> => {
-    const dupes: Array<{ imported: Partial<Member>; existing: Member; index: number }> = [];
-    
-    imported.forEach((imp, index) => {
-      const existing = members.find(m => 
-        m.firstName.toLowerCase() === imp.firstName?.toLowerCase() &&
-        m.lastName.toLowerCase() === imp.lastName?.toLowerCase()
-      );
-      
-      if (existing) {
-        dupes.push({ imported: imp, existing, index });
-      }
-    });
-
-    return dupes;
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEdit: boolean = false
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImportFile(file);
-    let parsed: Partial<Member>[] = [];
-
-    if (file.name.endsWith(".csv")) {
-      const text = await file.text();
-      parsed = parseCSV(text);
-    } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-      if (!(window as any).XLSX) {
-        const script = document.createElement("script");
-        script.src = "https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js";
-        script.onload = async () => {
-          parsed = await parseExcel(file);
-          processImport(parsed);
-        };
-        document.head.appendChild(script);
-        return;
-      } else {
-        parsed = await parseExcel(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const photoUrl = reader.result as string;
+      if (isEdit && selectedMember) {
+        setSelectedMember({ ...selectedMember, photoUrl });
       }
-    } else {
-      alert("Please upload a CSV or Excel file (.csv, .xlsx, .xls)");
-      return;
-    }
-
-    processImport(parsed);
-  };
-
-  const processImport = (parsed: Partial<Member>[]) => {
-    if (parsed.length === 0) {
-      alert("No valid data found in the file. Please check the format.");
-      return;
-    }
-
-    // Apply default team if selected and not set to "auto"
-    if (importTargetTeam && importTargetTeam !== "auto") {
-      const detectedCategory = getCategoryForTeam(importTargetTeam, teams);
-      
-      parsed = parsed.map(member => ({
-        ...member,
-        teamAssignment: importTargetTeam,
-        category: detectedCategory || member.category
-      }));
-    }
-
-    setImportData(parsed);
-    const dupes = findDuplicates(parsed);
-
-    if (dupes.length > 0) {
-      setDuplicates(dupes);
-      setCurrentDuplicateIndex(0);
-      setShowDuplicateDialog(true);
-      setIsImportOpen(false);
-    } else {
-      finalizeImport(parsed, {});
-    }
-  };
-
-  const handleDuplicateResolution = (resolution: "skip" | "overwrite" | "create") => {
-    const newResolutions = { ...duplicateResolutions, [currentDuplicateIndex]: resolution };
-    setDuplicateResolutions(newResolutions);
-
-    if (currentDuplicateIndex < duplicates.length - 1) {
-      setCurrentDuplicateIndex(currentDuplicateIndex + 1);
-    } else {
-      finalizeImport(importData, newResolutions);
-      setShowDuplicateDialog(false);
-    }
-  };
-
-  const finalizeImport = (data: Partial<Member>[], resolutions: Record<number, "skip" | "overwrite" | "create">) => {
-    let updatedMembers = [...members];
-    let imported = 0;
-    let skipped = 0;
-    let overwritten = 0;
-    
-    const successes: Array<{ row: number; name: string; team: string }> = [];
-    const errors: Array<{ row: number; field?: string; message: string; data?: any }> = (data as any).importErrors || [];
-    const warnings: Array<{ row: number; message: string }> = ((data as any).importWarnings || []).map((w: string) => {
-      const match = w.match(/Row (\d+): (.+)/);
-      return match ? { row: parseInt(match[1]), message: match[2] } : { row: 0, message: w };
-    });
-    const duplicateActions: Array<{ row: number; name: string; action: string }> = [];
-
-    data.forEach((item, index) => {
-      const duplicate = duplicates.find(d => d.index === index);
-      
-      if (duplicate) {
-        const resolution = resolutions[duplicates.indexOf(duplicate)] || "skip";
-        
-        if (resolution === "skip") {
-          skipped++;
-          duplicateActions.push({ 
-            row: index + 2, 
-            name: `${item.firstName} ${item.lastName}`, 
-            action: "Skipped" 
-          });
-          return;
-        } else if (resolution === "overwrite") {
-          updatedMembers = updatedMembers.map(m => 
-            m.id === duplicate.existing.id 
-              ? { ...m, ...item, id: m.id } as Member
-              : m
-          );
-          overwritten++;
-          duplicateActions.push({ 
-            row: index + 2, 
-            name: `${item.firstName} ${item.lastName}`, 
-            action: "Updated existing record" 
-          });
-          successes.push({ 
-            row: index + 2, 
-            name: `${item.firstName} ${item.lastName}`, 
-            team: item.teamAssignment || "No team" 
-          });
-          return;
-        }
-      }
-
-      const newMember: Member = {
-        id: crypto.randomUUID(),
-        membershipId: item.membershipId || generateMembershipId(updatedMembers, item.joiningDate),
-        firstName: item.firstName || "",
-        lastName: item.lastName || "",
-        dateOfBirth: item.dateOfBirth || "",
-        nationality: item.nationality || "",
-        address: item.address || "",
-        email: item.email || "",
-        shirtNumber: item.shirtNumber || "",
-        category: item.category || "Junior",
-        type: item.type || "Member",
-        role: item.role || "Player",
-        teamAssignment: item.teamAssignment || "",
-        joiningDate: item.joiningDate || new Date().toISOString().split("T")[0],
-        contactNumber: item.contactNumber || "",
-        primaryContact: item.primaryContact || "",
-        primaryContactNumber: item.primaryContactNumber || "",
-        secondaryContact: item.secondaryContact || "",
-        secondaryContactNumber: item.secondaryContactNumber || "",
-        medicalNotes: item.medicalNotes || "",
-        coachingCredits: item.coachingCredits || 0,
-        profileImage: item.profileImage,
-        isArchived: false,
-      };
-
-      updatedMembers.push(newMember);
-      imported++;
-      successes.push({ 
-        row: index + 2, 
-        name: `${newMember.firstName} ${newMember.lastName}`, 
-        team: newMember.teamAssignment || "No team" 
-      });
-    });
-
-    setMembers(updatedMembers);
-    localStorage.setItem("members", JSON.stringify(updatedMembers));
-
-    const importLog = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      fileName: importFile?.name || "unknown",
-      totalRows: data.length,
-      successCount: imported + overwritten,
-      errorCount: errors.length,
-      warningCount: warnings.length,
-      duplicatesResolved: duplicateActions.length,
-      details: {
-        successes,
-        errors,
-        warnings,
-        duplicates: duplicateActions,
-      },
+      setFormData({ ...formData, photoUrl });
     };
-
-    const existingLogs = JSON.parse(localStorage.getItem("importLogs") || "[]");
-    existingLogs.unshift(importLog);
-    localStorage.setItem("importLogs", JSON.stringify(existingLogs.slice(0, 50)));
-
-    setImportResults({
-      successes,
-      errors,
-      warnings,
-    });
-    setShowResultsDialog(true);
-    
-    setIsImportOpen(false);
-    setImportData([]);
-    setDuplicates([]);
-    setDuplicateResolutions({});
-    setCurrentDuplicateIndex(0);
-    setImportFile(null);
-    setImportTargetTeam("auto");
+    reader.readAsDataURL(file);
   };
 
-  const handleSelectAll = () => {
-    if (selectedMembers.length === currentMembers.length) {
-      setSelectedMembers([]);
-    } else {
-      setSelectedMembers(currentMembers.map(m => m.id));
-    }
+  // CSV Import Functions
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCsvFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const rows = text.split("\n").map((row) => row.split(","));
+      const headers = rows[0].map((h) => h.trim());
+      const data = rows.slice(1).filter((row) => row.some((cell) => cell.trim()));
+
+      setCsvHeaders(headers);
+      setCsvData(data);
+      setImportStep("map");
+
+      // Auto-map common field names
+      const autoMapping: CSVMapping = {};
+      headers.forEach((header) => {
+        const lower = header.toLowerCase().trim();
+        if (lower.includes("first") && lower.includes("name"))
+          autoMapping[header] = "firstName";
+        else if (lower.includes("last") && lower.includes("name"))
+          autoMapping[header] = "lastName";
+        else if (lower.includes("email")) autoMapping[header] = "email";
+        else if (lower.includes("phone") || lower.includes("contact"))
+          autoMapping[header] = "contactNumber";
+        else if (lower.includes("dob") || lower.includes("birth"))
+          autoMapping[header] = "dateOfBirth";
+        else if (lower.includes("national")) autoMapping[header] = "nationality";
+        else if (lower.includes("address")) autoMapping[header] = "address";
+        else if (lower.includes("team")) autoMapping[header] = "team";
+        else if (lower.includes("type")) autoMapping[header] = "type";
+        else if (lower.includes("role")) autoMapping[header] = "role";
+        else if (lower.includes("shirt") || lower.includes("number"))
+          autoMapping[header] = "shirtNumber";
+        else if (lower.includes("position")) autoMapping[header] = "position";
+        else if (lower.includes("school")) autoMapping[header] = "school";
+      });
+      setCsvMapping(autoMapping);
+    };
+    reader.readAsText(file);
   };
 
-  const handleSelectMember = (id: string) => {
-    setSelectedMembers(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleBulkUpdate = () => {
-    if (selectedMembers.length === 0) return;
-
-    const updatedMembers = members.map(member => {
-      if (selectedMembers.includes(member.id)) {
-        const updates: Partial<Member> = {};
-        if (bulkTeam && bulkTeam !== "keep_current") updates.teamAssignment = bulkTeam;
-        if (bulkCategory && bulkCategory !== "keep_current") updates.category = bulkCategory as "Junior" | "Youth" | "Adult";
-        if (bulkRole && bulkRole !== "keep_current") updates.role = bulkRole as "Player" | "Coach" | "Admin" | "Player-Coach";
-        if (bulkMembershipCategory && bulkMembershipCategory !== "keep_current") updates.type = bulkMembershipCategory as "Member" | "Sponsored" | "Scholarship";
-        if (bulkNationality && bulkNationality !== "keep_current") updates.nationality = bulkNationality;
-        return { ...member, ...updates };
-      }
+  const handlePreviewImport = () => {
+    const mappedData: Partial<Member>[] = csvData.map((row) => {
+      const member: Partial<Member> = {};
+      csvHeaders.forEach((header, index) => {
+        const mappedField = csvMapping[header];
+        if (mappedField && row[index]) {
+          const value = row[index].trim();
+          if (mappedField === "coachingCredits") {
+            member[mappedField] = parseInt(value) || 0;
+          } else if (mappedField === "position") {
+            const pos = value.toUpperCase();
+            if (["N/A", "GK", "DEF", "MID", "FWD"].includes(pos)) {
+              member[mappedField] = pos as Position;
+            }
+          } else {
+            (member as Record<string, string>)[mappedField] = value;
+          }
+        }
+      });
       return member;
     });
-
-    setMembers(updatedMembers);
-    localStorage.setItem("members", JSON.stringify(updatedMembers));
-    setSelectedMembers([]);
-    setIsBulkActionsOpen(false);
-    setBulkTeam("");
-    setBulkCategory("");
-    setBulkRole("");
-    setBulkMembershipCategory("");
-    setBulkNationality("");
+    setPreviewData(mappedData);
+    setImportStep("preview");
   };
 
-  const handleBatchAssignIds = () => {
-    const updatedMembers = batchAssignMembershipIds(members);
-    setMembers(updatedMembers);
-    localStorage.setItem("members", JSON.stringify(updatedMembers));
-    setBatchAssignDialogOpen(false);
+  const handleConfirmImport = () => {
+    const existingIds = members.map((m) => m.membershipId);
+    const newMembers: Member[] = previewData.map((data) => ({
+      id: Date.now().toString() + Math.random(),
+      membershipId: generateMembershipId(existingIds),
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      dateOfBirth: data.dateOfBirth || "",
+      nationality: data.nationality || "",
+      address: data.address || "",
+      email: data.email || "",
+      shirtNumber: data.shirtNumber || "",
+      type: (data.type as MemberType) || "Junior",
+      role: (data.role as MemberRole) || "Player",
+      team: data.team || "",
+      position: data.position,
+      membershipCategory:
+        (data.membershipCategory as MembershipCategory) || "Standard",
+      joiningDate: data.joiningDate || new Date().toISOString().split("T")[0],
+      contactNumber: data.contactNumber || "",
+      primaryContact: data.primaryContact || "",
+      primaryContactNumber: data.primaryContactNumber || "",
+      secondaryContact: data.secondaryContact || "",
+      secondaryContactNumber: data.secondaryContactNumber || "",
+      medicalNotes: data.medicalNotes || "",
+      coachingCredits: data.coachingCredits || 0,
+      school: data.school || "",
+    }));
+
+    saveMembers([...members, ...newMembers]);
+    setIsImportDialogOpen(false);
+    resetImportState();
   };
 
-  const handleArchiveMember = () => {
-    if (!memberToArchive) return;
+  const resetImportState = () => {
+    setCsvFile(null);
+    setCsvData([]);
+    setCsvHeaders([]);
+    setCsvMapping({});
+    setImportStep("upload");
+    setPreviewData([]);
+  };
 
-    const updatedMembers = members.map(m => 
-      m.id === memberToArchive.id 
-        ? { 
-            ...m, 
-            isArchived: true, 
-            archiveReason: archiveReason as Member["archiveReason"],
-            archiveReasonDetails: archiveReason === "Other" ? archiveReasonDetails : undefined,
-            archiveDate: new Date().toISOString()
-          } 
-        : m
+  const filteredMembers = members.filter((member) => {
+    const matchesSearch =
+      member.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.membershipId.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      categoryFilter === "all" || member.type === categoryFilter;
+    const matchesTeam = 
+      teamFilter === "all" 
+        ? true 
+        : teamFilter === "unassigned" 
+          ? !member.team 
+          : member.team === teamFilter;
+    const matchesMembership =
+      membershipFilter === "all" ||
+      member.membershipCategory === membershipFilter;
+    const matchesArchived = showArchived ? true : !member.archived;
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesTeam &&
+      matchesMembership &&
+      matchesArchived
     );
+  });
 
-    setMembers(updatedMembers);
-    localStorage.setItem("members", JSON.stringify(updatedMembers));
-    setArchiveDialogOpen(false);
-    setMemberToArchive(null);
-    setArchiveReason("");
-    setArchiveReasonDetails("");
-  };
-
-  const handleReactivateMember = (memberId: string) => {
-    const updatedMembers = members.map(m =>
-      m.id === memberId
-        ? {
-            ...m,
-            isArchived: false,
-            archiveReason: undefined,
-            archiveReasonDetails: undefined,
-            archiveDate: undefined
-          }
-        : m
-    );
-
-    setMembers(updatedMembers);
-    localStorage.setItem("members", JSON.stringify(updatedMembers));
-  };
-
-  const openArchiveDialog = (member: Member) => {
-    setMemberToArchive(member);
-    setArchiveDialogOpen(true);
-  };
-
-  const filteredAndSortedMembers = members.filter((member) => {
-    if (!showArchived && member.isArchived) return false;
-
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = 
-      member.membershipId?.toLowerCase().includes(searchLower) ||
-      member.firstName.toLowerCase().includes(searchLower) ||
-      member.lastName.toLowerCase().includes(searchLower) ||
-      member.email.toLowerCase().includes(searchLower) ||
-      member.contactNumber.includes(searchLower);
-
-    const matchesCategory = filterCategory === "all" || member.category === filterCategory;
-    const matchesTeam = filterTeam === "all" || member.teamAssignment === filterTeam;
-    const matchesRole = filterRole === "" || member.role === filterRole;
-    const matchesMembershipStatus = 
-      filterMembershipCategory === "all" || member.type === filterMembershipCategory;
-
-    return matchesSearch && matchesCategory && matchesTeam && matchesRole && matchesMembershipStatus;
-  }).sort((a, b) => a.firstName.localeCompare(b.firstName));
-
-  const totalPages = Math.ceil(filteredAndSortedMembers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentMembers = filteredAndSortedMembers.slice(startIndex, endIndex);
-
-  const currentDuplicate = duplicates[currentDuplicateIndex];
-
-  const getMembershipBadgeColor = (type: string) => {
-    switch (type) {
-      case "Member":
-        return "bg-blue-100 text-blue-800 border-blue-300";
-      case "Sponsored":
-        return "bg-green-100 text-green-800 border-green-300";
-      case "Scholarship":
-        return "bg-purple-100 text-purple-800 border-purple-300";
+  const getPositionBadgeColor = (position?: Position) => {
+    if (!position) return "bg-gray-100 text-gray-800";
+    switch (position) {
+      case "N/A":
+        return "bg-gray-100 text-gray-600";
+      case "GK":
+        return "bg-yellow-100 text-yellow-800";
+      case "DEF":
+        return "bg-blue-100 text-blue-800";
+      case "MID":
+        return "bg-green-100 text-green-800";
+      case "FWD":
+        return "bg-red-100 text-red-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "—";
-    return formatDateDisplay(dateString);
-  };
+  const ContactLookupSection = ({
+    label,
+    contactType,
+  }: {
+    label: string;
+    contactType: "primary" | "secondary";
+  }) => {
+    const isPrimary = contactType === "primary";
+    const isOpen = isPrimary ? primaryContactOpen : secondaryContactOpen;
+    const setOpen = isPrimary ? setPrimaryContactOpen : setSecondaryContactOpen;
+    const searchValue = isPrimary ? primaryContactSearch : secondaryContactSearch;
+    const setSearchValue = isPrimary ? setPrimaryContactSearch : setSecondaryContactSearch;
+    const linkedMemberId = isPrimary ? formData.primaryContactMemberId : formData.secondaryContactMemberId;
+    const contactName = isPrimary ? formData.primaryContact : formData.secondaryContact;
+    const contactNumber = isPrimary ? formData.primaryContactNumber : formData.secondaryContactNumber;
+    const handleSelect = isPrimary ? handlePrimaryContactSelect : handleSecondaryContactSelect;
+    const clearLink = isPrimary ? clearPrimaryContactLink : clearSecondaryContactLink;
 
-  const stats = {
-    total: members.filter(m => !m.isArchived).length,
-    newThisMonth: members.filter(m => {
-      if (m.isArchived) return false;
-      const joiningDate = new Date(m.joiningDate);
-      const now = new Date();
-      return joiningDate.getMonth() === now.getMonth() && 
-             joiningDate.getFullYear() === now.getFullYear();
-    }).length,
-    juniors: members.filter(m => !m.isArchived && m.category === "Junior").length,
-    youth: members.filter(m => !m.isArchived && m.category === "Youth").length,
-    adults: members.filter(m => !m.isArchived && m.category === "Adult").length
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <div className="flex gap-2">
+          <Popover open={isOpen} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={isOpen}
+                className="flex-1 justify-between"
+              >
+                {linkedMemberId
+                  ? `🔗 ${contactName}`
+                  : contactName || "Select or type name..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0">
+              <Command>
+                <CommandInput
+                  placeholder="Search members..."
+                  value={searchValue}
+                  onValueChange={setSearchValue}
+                />
+                <CommandList>
+                  <CommandEmpty>No member found.</CommandEmpty>
+                  <CommandGroup className="max-h-64 overflow-auto">
+                    {members
+                      .filter((m) => !m.archived)
+                      .map((member) => (
+                        <CommandItem
+                          key={member.id}
+                          value={`${member.firstName} ${member.lastName}`}
+                          onSelect={() => handleSelect(member.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              linkedMemberId === member.id
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          <div className="flex items-center gap-2">
+                            {member.photoUrl ? (
+                              <img
+                                src={member.photoUrl}
+                                alt=""
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">
+                                {member.firstName[0]}
+                                {member.lastName[0]}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium">
+                                {member.firstName} {member.lastName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {member.team || "No team"} • {member.contactNumber || "No phone"}
+                              </div>
+                            </div>
+                          </div>
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {linkedMemberId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearLink}
+              className="text-red-600 hover:text-red-700"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {!linkedMemberId && (
+          <Input
+            placeholder="Or type name manually"
+            value={contactName}
+            onChange={(e) =>
+              isPrimary
+                ? setFormData({ ...formData, primaryContact: e.target.value })
+                : setFormData({ ...formData, secondaryContact: e.target.value })
+            }
+          />
+        )}
+        <div>
+          <Label htmlFor={`${contactType}-number`}>
+            {label} Number {linkedMemberId && "(Auto-filled from member)"}
+          </Label>
+          <Input
+            id={`${contactType}-number`}
+            value={contactNumber}
+            onChange={(e) =>
+              isPrimary
+                ? setFormData({
+                    ...formData,
+                    primaryContactNumber: e.target.value,
+                  })
+                : setFormData({
+                    ...formData,
+                    secondaryContactNumber: e.target.value,
+                  })
+            }
+            placeholder="+62..."
+            disabled={!!linkedMemberId}
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
     <>
-      <SEO title="Members - Bali Bulldogs" description="Club Member Management" />
-      
-      <div className="min-h-screen bg-gray-50">
-        <main className="max-w-7xl mx-auto w-full px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between w-full">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="showArchived"
-                    checked={showArchived}
-                    onChange={(e) => setShowArchived(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label htmlFor="showArchived" className="text-sm font-medium">
-                    Show Archived Members
-                  </label>
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                {members.some(m => !m.membershipId) && (
-                  <Button
-                    onClick={() => setBatchAssignDialogOpen(true)}
-                    variant="outline"
-                    className="border-yellow-500/30 bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 dark:text-yellow-400"
-                  >
-                    <AlertCircle className="mr-2 h-4 w-4" />
-                    Assign IDs ({members.filter(m => !m.membershipId).length})
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setIsImportOpen(true)}
-                  variant="outline"
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import Data
-                </Button>
-                <Button
-                  onClick={() => {
-                    resetForm();
-                    setIsDialogOpen(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Member
-                </Button>
-              </div>
+      <SEO
+        title="Members | Bali Bulldogs FC"
+        description="Manage club members, players, coaches, and staff"
+      />
+      <Layout>
+        <div className="container mx-auto px-4 py-8 pb-32">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-2">Member Database</h1>
+            <p className="text-muted-foreground">
+              Manage all club members, players, and staff
+            </p>
+          </div>
+
+          {/* Action Bar */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search name, email, membership ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setIsImportDialogOpen(true)}
+                variant="outline"
+                className="gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Import Data
+              </Button>
+              <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add Member
+              </Button>
             </div>
           </div>
 
-          {selectedMembers.length > 0 && (
-            <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-blue-900">
-                    {selectedMembers.length} member{selectedMembers.length !== 1 ? "s" : ""} selected
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedMembers([])}
-                  >
-                    Clear Selection
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setIsBulkActionsOpen(true)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Bulk Update
-                  </Button>
-                  <Button
-                    onClick={handleDeleteMembers}
-                    variant="destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Selected
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Filters */}
+          <div className="flex flex-wrap gap-4 mb-6">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Junior">Junior</SelectItem>
+                <SelectItem value="Youth">Youth</SelectItem>
+                <SelectItem value="Adult">Adult</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <div className="bg-white rounded-lg border shadow-sm p-4 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-              <div className="lg:col-span-2 relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search name, email, membership ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
-              </div>
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Junior">Junior</SelectItem>
-                  <SelectItem value="Youth">Youth</SelectItem>
-                  <SelectItem value="Adult">Adult</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterTeam} onValueChange={setFilterTeam}>
-                <SelectTrigger><SelectValue placeholder="Team" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {filterCategory === "all" ? teamOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>) : (teamsByCategory[filterCategory as keyof typeof teamsByCategory] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filterMembershipCategory} onValueChange={setFilterMembershipCategory}>
-                <SelectTrigger><SelectValue placeholder="Membership Type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Member">Member</SelectItem>
-                  <SelectItem value="Sponsored">Sponsored</SelectItem>
-                  <SelectItem value="Scholarship">Scholarship</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Teams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                <SelectItem value="unassigned">No Team Assigned</SelectItem>
+                {TEAM_ORDER.map((team) => (
+                  <SelectItem key={team} value={team}>
+                    {team}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={membershipFilter}
+              onValueChange={setMembershipFilter}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Membership" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Memberships</SelectItem>
+                <SelectItem value="Standard">Standard</SelectItem>
+                <SelectItem value="Sponsored">Sponsored</SelectItem>
+                <SelectItem value="Scholarship">Scholarship</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={(checked) =>
+                  setShowArchived(checked as boolean)
+                }
+              />
+              <label
+                htmlFor="show-archived"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Show Archived Members
+              </label>
             </div>
 
-            {(searchTerm || filterTeam !== "all" || filterCategory !== "all" || filterMembershipCategory) && (
-              <Button variant="ghost" onClick={handleClearFilters} className="text-red-600 mb-3">
-                <X className="w-4 h-4 mr-1" />Clear Filters
+            {(searchQuery ||
+              categoryFilter !== "all" ||
+              teamFilter !== "all" ||
+              membershipFilter !== "all") && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter("all");
+                  setTeamFilter("all");
+                  setMembershipFilter("all");
+                }}
+                className="gap-2 text-red-600 hover:text-red-700"
+              >
+                <X className="h-4 w-4" />
+                Clear Filters
               </Button>
             )}
+          </div>
 
-            <div className="w-full overflow-x-auto border rounded-lg">
-              <div style={{ minWidth: "1200px" }}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12 sticky left-0 bg-white z-10">
-                        <Checkbox
-                          checked={selectedMembers.length === currentMembers.length && currentMembers.length > 0}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead className="text-left font-bold">Photo</TableHead>
-                      <TableHead className="text-left font-bold">Membership ID</TableHead>
-                      <TableHead className="text-left font-bold">Name</TableHead>
-                      <TableHead className="min-w-[120px]">Team</TableHead>
-                      <TableHead className="min-w-[80px]">Category</TableHead>
-                      <TableHead className="min-w-[100px]">Role</TableHead>
-                      <TableHead className="min-w-[110px]">Membership</TableHead>
-                      <TableHead className="min-w-[80px]">Shirt #</TableHead>
-                      <TableHead className="min-w-[100px]">DOB</TableHead>
-                      <TableHead className="min-w-[130px]">Nationality</TableHead>
-                      <TableHead className="min-w-[150px]">Address</TableHead>
-                      <TableHead className="min-w-[180px]">Email</TableHead>
-                      <TableHead className="min-w-[140px]">Contact</TableHead>
-                      <TableHead className="min-w-[100px]">Joined</TableHead>
-                      <TableHead className="min-w-[180px]">Primary Contact</TableHead>
-                      <TableHead className="min-w-[180px]">Secondary Contact</TableHead>
-                      <TableHead className="min-w-[200px]">Medical Notes</TableHead>
-                      <TableHead className="text-right sticky right-0 bg-white z-10 min-w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentMembers.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={19} className="text-center py-8 text-gray-500">
-                          No members found. Try adjusting filters or adding a new member.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      currentMembers.map((member) => (
-                        <TableRow key={member.id} className="hover:bg-muted/50">
-                          <TableCell className="sticky left-0 bg-white z-10">
-                            <Checkbox
-                              checked={selectedMembers.includes(member.id)}
-                              onCheckedChange={() => handleSelectMember(member.id)}
+          {/* Members Table */}
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ minWidth: "1200px" }}>
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="text-left p-4 font-semibold w-12">
+                      <Checkbox
+                        checked={
+                          filteredMembers.length > 0 &&
+                          selectedMemberIds.length === filteredMembers.length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th className="text-left p-4 font-semibold">Photo</th>
+                    <th className="text-left p-4 font-semibold">
+                      Membership ID
+                    </th>
+                    <th className="text-left p-4 font-semibold">Name</th>
+                    <th className="text-left p-4 font-semibold">Team</th>
+                    <th className="text-left p-4 font-semibold">Category</th>
+                    <th className="text-left p-4 font-semibold">Role</th>
+                    <th className="text-left p-4 font-semibold">Membership</th>
+                    <th className="text-left p-4 font-semibold">Shirt #</th>
+                    <th className="text-left p-4 font-semibold">Position</th>
+                    <th className="text-left p-4 font-semibold">DOB</th>
+                    <th className="text-left p-4 font-semibold">Nationality</th>
+                    <th className="text-left p-4 font-semibold">Address</th>
+                    <th className="text-left p-4 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.length === 0 ? (
+                    <tr>
+                      <td colSpan={14} className="text-center py-12">
+                        <p className="text-muted-foreground">
+                          No members found. Add your first member to get
+                          started.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMembers.map((member) => (
+                      <tr
+                        key={member.id}
+                        className={`border-b hover:bg-muted/30 cursor-pointer ${
+                          member.archived ? "opacity-50" : ""
+                        } ${selectedMemberIds.includes(member.id) ? "bg-blue-50/50" : ""}`}
+                        onClick={() => openViewDialog(member)}
+                      >
+                        <td
+                          className="p-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={selectedMemberIds.includes(member.id)}
+                            onCheckedChange={() => toggleSelectMember(member.id)}
+                          />
+                        </td>
+                        <td className="p-4">
+                          {member.photoUrl ? (
+                            <ImageModal
+                              src={member.photoUrl}
+                              alt={`${member.firstName} ${member.lastName}`}
+                              className="w-10 h-10 rounded-full object-cover"
                             />
-                          </TableCell>
-                          <TableCell>
-                            <button
-                              onClick={() => {
-                                if (member.profileImage) {
-                                  setSelectedImage({
-                                    url: member.profileImage,
-                                    name: `${member.firstName} ${member.lastName}`
-                                  });
-                                }
-                              }}
-                              className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full cursor-pointer"
-                            >
-                              <Avatar>
-                                <AvatarImage src={member.profileImage} alt={`${member.firstName} ${member.lastName}`} />
-                                <AvatarFallback>
-                                  {member.firstName[0]}{member.lastName[0]}
-                                </AvatarFallback>
-                              </Avatar>
-                            </button>
-                          </TableCell>
-                          <TableCell className="text-sm font-mono text-muted-foreground">
-                            <span className="inline-flex items-center gap-2">
-                              {member.membershipId}
-                              {member.isArchived && (
-                                <span className="px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded">
-                                  ARCHIVED
-                                </span>
-                              )}
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
-                          <TableCell>{member.teamAssignment || "—"}</TableCell>
-                          <TableCell><Badge variant="outline">{member.category}</Badge></TableCell>
-                          <TableCell>{member.role}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={getMembershipBadgeColor(member.type)}>
-                              {member.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{member.shirtNumber || "—"}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatDateDisplay(member.dateOfBirth)}
-                          </TableCell>
-                          <TableCell>{member.nationality || "—"}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {member.address || "—"}
-                          </TableCell>
-                          <TableCell>
-                            {member.email ? (
-                              <a
-                                href={`mailto:${member.email}`}
-                                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline text-sm"
-                              >
-                                <Mail className="h-3 w-3" />
-                                {member.email}
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {member.contactNumber ? (
-                              <a
-                                href={`https://wa.me/${member.contactNumber.replace(/[^0-9]/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 text-green-600 hover:text-green-700 hover:underline"
-                              >
-                                <Phone className="h-4 w-4" />
-                                {member.contactNumber}
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatDate(member.joiningDate)}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {member.primaryContact ? (
-                              <div>
-                                <div className="font-medium">{member.primaryContact}</div>
-                                {member.primaryContactNumber && (
-                                  <a
-                                    href={`tel:${member.primaryContactNumber}`}
-                                    className="text-blue-600 hover:underline text-xs"
-                                  >
-                                    {member.primaryContactNumber}
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {member.secondaryContact ? (
-                              <div>
-                                <div className="font-medium">{member.secondaryContact}</div>
-                                {member.secondaryContactNumber && (
-                                  <a
-                                    href={`tel:${member.secondaryContactNumber}`}
-                                    className="text-blue-600 hover:underline text-xs"
-                                  >
-                                    {member.secondaryContactNumber}
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {member.medicalNotes ? (
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                                <span className="text-sm text-muted-foreground" title={member.medicalNotes}>
-                                  {member.medicalNotes.length > 50 
-                                    ? `${member.medicalNotes.substring(0, 50)}...` 
-                                    : member.medicalNotes}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right sticky right-0 bg-white z-10">
-                            <div className="flex justify-end gap-2">
-                              {member.isArchived ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleReactivateMember(member.id)}
-                                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                                >
-                                  Reactivate
-                                </Button>
-                              ) : (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleEdit(member)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => initiateDelete(member)}
-                                    className="text-red-600 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                              {member.firstName[0]}
+                              {member.lastName[0]}
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                          )}
+                        </td>
+                        <td className="p-4 font-mono text-sm">
+                          {member.membershipId}
+                        </td>
+                        <td className="p-4 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">
+                              {getCountryFlag(member.nationality)}
+                            </span>
+                            <span>
+                              {member.firstName} {member.lastName}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4">{member.team || "—"}</td>
+                        <td className="p-4">
+                          <Badge
+                            variant="outline"
+                            className={
+                              member.type === "Junior"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : member.type === "Youth"
+                                ? "bg-purple-50 text-purple-700 border-purple-200"
+                                : "bg-green-50 text-green-700 border-green-200"
+                            }
+                          >
+                            {member.type}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          <Badge variant="secondary">{member.role}</Badge>
+                        </td>
+                        <td className="p-4">
+                          <Badge
+                            variant="outline"
+                            className={
+                              member.membershipCategory === "Scholarship"
+                                ? "bg-purple-50 text-purple-700 border-purple-200"
+                                : member.membershipCategory === "Sponsored"
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                : "bg-gray-50 text-gray-700 border-gray-200"
+                            }
+                          >
+                            {member.membershipCategory}
+                          </Badge>
+                        </td>
+                        <td className="p-4">{member.shirtNumber || "—"}</td>
+                        <td className="p-4">
+                          {member.position ? (
+                            <Badge
+                              className={getPositionBadgeColor(member.position)}
+                            >
+                              {member.position}
+                            </Badge>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-muted-foreground">
+                          {member.dateOfBirth || "—"}
+                        </td>
+                        <td className="p-4">{member.nationality || "—"}</td>
+                        <td className="p-4">{member.address || "—"}</td>
+                        <td
+                          className="p-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(member)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteMember(member.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
+          </Card>
 
-            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
-              <div>Showing {startIndex + 1}-{Math.min(endIndex, filteredAndSortedMembers.length)} of {filteredAndSortedMembers.length}</div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  <ChevronLeft className="w-4 h-4" />
+          <div className="mt-4 text-sm text-muted-foreground">
+            Showing {filteredMembers.length} of {members.filter(m => !m.archived).length} members
+            {showArchived && ` (${members.filter(m => m.archived).length} archived)`}
+          </div>
+        </div>
+
+        {/* Bulk Action Bar */}
+        {selectedMemberIds.length > 0 && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t shadow-lg z-50 animate-in slide-in-from-bottom-5">
+            <div className="container mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <span className="font-semibold text-lg">
+                  {selectedMemberIds.length} Selected
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedMemberIds([])}>
+                  Clear Selection
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                  <ChevronRight className="w-4 h-4" />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBulkUpdateDialog("team")}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Update Team
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBulkUpdateDialog("category")}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Update Membership
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBulkUpdateDialog("type")}
+                >
+                  Update Type
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBulkUpdateDialog("role")}
+                >
+                  Update Role
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBulkUpdateDialog("position")}
+                >
+                  Update Position
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openBulkUpdateDialog("school")}
+                >
+                  Update School
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkArchive(!showArchived)}
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  {showArchived ? "Unarchive" : "Archive"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
                 </Button>
               </div>
             </div>
           </div>
-        </main>
+        )}
 
-        <Dialog open={isBulkActionsOpen} onOpenChange={setIsBulkActionsOpen}>
-          <DialogContent className="sm:max-w-md">
+        {/* Bulk Update Dialog */}
+        <Dialog open={isBulkUpdateDialogOpen} onOpenChange={setIsBulkUpdateDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Bulk Update Members</DialogTitle>
-              <DialogDescription>
-                Update {selectedMembers.length} selected member{selectedMembers.length !== 1 ? "s" : ""}
-              </DialogDescription>
+              <DialogTitle>
+                Bulk Update {
+                  bulkUpdateField === "team" ? "Team" :
+                  bulkUpdateField === "category" ? "Membership Category" :
+                  bulkUpdateField === "type" ? "Type" :
+                  bulkUpdateField === "role" ? "Role" :
+                  bulkUpdateField === "position" ? "Position" :
+                  bulkUpdateField === "school" ? "School" : ""
+                }
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Change Team</label>
-                <Select value={bulkTeam} onValueChange={setBulkTeam}>
-                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keep_current">Keep Current</SelectItem>
-                    {teamOptions.map((team) => (
-                      <SelectItem key={team} value={team}>{team}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Change Category</label>
-                <Select value={bulkCategory} onValueChange={setBulkCategory}>
-                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keep_current">Keep Current</SelectItem>
-                    <SelectItem value="Junior">Junior</SelectItem>
-                    <SelectItem value="Youth">Youth</SelectItem>
-                    <SelectItem value="Adult">Adult</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Change Role</label>
-                <Select value={bulkRole} onValueChange={setBulkRole}>
-                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keep_current">Keep Current</SelectItem>
-                    {ROLES.map(role => (
-                      <SelectItem key={role} value={role}>{role}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Change Membership</label>
-                <Select value={bulkMembershipCategory} onValueChange={setBulkMembershipCategory}>
-                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keep_current">Keep Current</SelectItem>
-                    <SelectItem value="Member">Member</SelectItem>
-                    <SelectItem value="Sponsored">Sponsored</SelectItem>
-                    <SelectItem value="Scholarship">Scholarship</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Change Nationality</label>
-                <Select value={bulkNationality} onValueChange={setBulkNationality}>
-                  <SelectTrigger><SelectValue placeholder="Keep Current" /></SelectTrigger>
-                  <SelectContent className="max-h-[200px]">
-                    <SelectItem value="keep_current">Keep Current</SelectItem>
-                    {COUNTRIES.map(country => (
-                      <SelectItem key={country} value={country}>{country}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="py-4">
+              <Label>
+                Select New Value
+              </Label>
+              <Select value={bulkUpdateValue} onValueChange={setBulkUpdateValue}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {bulkUpdateField === "team" && TEAM_ORDER.map((team) => (
+                    <SelectItem key={team} value={team}>
+                      {team}
+                    </SelectItem>
+                  ))}
+                  {bulkUpdateField === "category" && (
+                    <>
+                      <SelectItem value="Standard">Standard</SelectItem>
+                      <SelectItem value="Sponsored">Sponsored</SelectItem>
+                      <SelectItem value="Scholarship">Scholarship</SelectItem>
+                    </>
+                  )}
+                  {bulkUpdateField === "type" && (
+                    <>
+                      <SelectItem value="Junior">Junior</SelectItem>
+                      <SelectItem value="Youth">Youth</SelectItem>
+                      <SelectItem value="Adult">Adult</SelectItem>
+                    </>
+                  )}
+                  {bulkUpdateField === "role" && (
+                    <>
+                      <SelectItem value="Player">Player</SelectItem>
+                      <SelectItem value="Coach">Coach</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                    </>
+                  )}
+                  {bulkUpdateField === "position" && POSITIONS.map((pos) => (
+                    <SelectItem key={pos} value={pos}>
+                      {pos}
+                    </SelectItem>
+                  ))}
+                  {bulkUpdateField === "school" && DEFAULT_SCHOOLS.map((school) => (
+                    <SelectItem key={school} value={school}>
+                      {school}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setIsBulkActionsOpen(false)}>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkUpdateDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button onClick={handleBulkUpdate} className="bg-blue-600 hover:bg-blue-700">
-                Update {selectedMembers.length} Member{selectedMembers.length !== 1 ? "s" : ""}
+                Update {selectedMemberIds.length} Members
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {/* Add Member Dialog */}
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {editingMember ? "Edit Member" : "Add New Member"}
-              </DialogTitle>
+              <DialogTitle>Add New Member</DialogTitle>
             </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-6 py-4">
-              {editingMember && editingMember.membershipId && (
-                <div className="rounded-lg border-2 border-blue-500/30 bg-blue-500/5 p-4">
-                  <Label className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                    Membership ID (Permanent)
-                  </Label>
-                  <p className="mt-1 font-mono text-lg font-bold text-blue-700 dark:text-blue-300">
-                    {editingMember.membershipId}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    This ID is unique and permanent. It will never change.
-                  </p>
-                </div>
-              )}
-              {!editingMember && (
-                <div className="rounded-lg border-2 border-green-500/30 bg-green-500/5 p-4">
-                  <Label className="text-sm font-semibold text-green-600 dark:text-green-400">
-                    Membership ID
-                  </Label>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    A unique membership ID will be automatically assigned when you create this member.
-                  </p>
-                  <p className="mt-2 font-mono text-sm font-semibold text-green-700 dark:text-green-300">
-                    Format: BBFC-{new Date(formData.joiningDate || Date.now()).getFullYear()}-####
-                  </p>
-                </div>
-              )}
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Personal Information */}
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Profile Photo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={formData.profileImage} alt="Profile" />
-                        <AvatarFallback className="text-2xl">
-                          {formData.firstName?.[0]}{formData.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      {formData.profileImage && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, profileImage: "" })}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setFormData({ ...formData, profileImage: reader.result as string });
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upload a profile photo (JPG, PNG, GIF)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>First Name *</Label>
-                    <Input value={formData.firstName || ""} onChange={e => setFormData({...formData, firstName: e.target.value})} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Last Name *</Label>
-                    <Input value={formData.lastName || ""} onChange={e => setFormData({...formData, lastName: e.target.value})} required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date of Birth</Label>
-                    <Input 
-                      type="date" 
-                      value={convertToInputDate(formData.dateOfBirth)} 
-                      onChange={e => setFormData({...formData, dateOfBirth: convertFromInputDate(e.target.value)})} 
-                    />
-                    {formData.dateOfBirth && (
-                      <p className="text-xs text-muted-foreground">
-                        Format: {formatDateDisplay(formData.dateOfBirth)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nationality</Label>
-                    <Select value={formData.nationality || ""} onValueChange={(v: string) => setFormData({...formData, nationality: v})}>
-                      <SelectTrigger><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                      <SelectContent>
-                        {COUNTRIES.map(country => (
-                          <SelectItem key={country} value={country}>{country}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Input value={formData.address || ""} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Full address" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" value={formData.email || ""} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="member@example.com" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Contact Number</Label>
-                    <Input value={formData.contactNumber || ""} onChange={e => setFormData({...formData, contactNumber: e.target.value})} placeholder="+62..." />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Category</Label>
-                    <Select value={formData.category} onValueChange={(v: any) => setFormData({...formData, category: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Junior">Junior</SelectItem>
-                        <SelectItem value="Youth">Youth</SelectItem>
-                        <SelectItem value="Adult">Adult</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Team</Label>
-                    <Select value={formData.teamAssignment} onValueChange={v => setFormData({...formData, teamAssignment: v})}>
-                      <SelectTrigger><SelectValue placeholder="Select Team" /></SelectTrigger>
-                      <SelectContent>
-                        {(teamsByCategory[formData.category as keyof typeof teamsByCategory] || []).map(t => (
-                          <SelectItem key={t} value={t}>{t}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Shirt Number</Label>
-                    <Input type="number" value={formData.shirtNumber || ""} onChange={e => setFormData({...formData, shirtNumber: e.target.value})} placeholder="e.g., 10" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Select value={formData.role} onValueChange={v => setFormData({...formData, role: v as any})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Membership Category</Label>
-                    <Select value={formData.type} onValueChange={(v: "Member" | "Sponsored" | "Scholarship") => setFormData({...formData, type: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Member">Member</SelectItem>
-                        <SelectItem value="Sponsored">Sponsored</SelectItem>
-                        <SelectItem value="Scholarship">Scholarship</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Joining Date</Label>
-                  <Input 
-                    type="date" 
-                    value={convertToInputDate(formData.joiningDate)} 
-                    onChange={e => setFormData({...formData, joiningDate: convertFromInputDate(e.target.value)})} 
+                <h3 className="font-semibold text-lg">Personal Information</h3>
+                <div>
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, firstName: e.target.value })
+                    }
                   />
-                  {formData.joiningDate && (
-                    <p className="text-xs text-muted-foreground">
-                      Format: {formatDateDisplay(formData.joiningDate)}
-                    </p>
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lastName: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dateOfBirth: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nationality">Nationality</Label>
+                  <Select
+                    value={formData.nationality}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, nationality: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select nationality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <Command>
+                        <CommandInput placeholder="Search country..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>No country found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-auto">
+                            {COUNTRIES.map((country) => (
+                              <SelectItem key={country} value={country}>
+                                {getCountryFlag(country)} {country}
+                              </SelectItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="address">Address (Area of Bali)</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    placeholder="e.g., Canggu, Seminyak, Ubud"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="school">School</Label>
+                  <Select
+                    value={formData.school}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, school: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select school" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEFAULT_SCHOOLS.map((school) => (
+                        <SelectItem key={school} value={school}>
+                          {school}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="photo">Photo</Label>
+                  <Input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePhotoUpload(e)}
+                  />
+                  {formData.photoUrl && (
+                    <ImageModal
+                      src={formData.photoUrl}
+                      alt="Member photo"
+                      className="mt-2 w-24 h-24 rounded-lg object-cover"
+                    />
                   )}
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Primary Contact</Label>
-                  <Input value={formData.primaryContact || ""} onChange={e => setFormData({...formData, primaryContact: e.target.value})} placeholder="Parent/Guardian name" />
+              {/* Club Details */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Club Details</h3>
+                <div>
+                  <Label htmlFor="type">Type *</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: MemberType) =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Junior">Junior</SelectItem>
+                      <SelectItem value="Youth">Youth</SelectItem>
+                      <SelectItem value="Adult">Adult</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Primary Contact Number</Label>
-                  <Input value={formData.primaryContactNumber || ""} onChange={e => setFormData({...formData, primaryContactNumber: e.target.value})} placeholder="+62..." />
+                <div>
+                  <Label htmlFor="role">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: MemberRole) =>
+                      setFormData({ ...formData, role: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Player">Player</SelectItem>
+                      <SelectItem value="Coach">Coach</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Secondary Contact</Label>
-                  <Input value={formData.secondaryContact || ""} onChange={e => setFormData({...formData, secondaryContact: e.target.value})} placeholder="Emergency contact name" />
+                <div>
+                  <Label htmlFor="team">Team Assignment</Label>
+                  <Select
+                    value={formData.team}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, team: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEAM_ORDER.map((team) => (
+                        <SelectItem key={team} value={team}>
+                          {team}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Secondary Contact Number</Label>
-                  <Input value={formData.secondaryContactNumber || ""} onChange={e => setFormData({...formData, secondaryContactNumber: e.target.value})} placeholder="+62..." />
+                <div>
+                  <Label htmlFor="position">Position</Label>
+                  <Select
+                    value={formData.position}
+                    onValueChange={(value: Position) =>
+                      setFormData({ ...formData, position: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POSITIONS.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Medical Notes</Label>
-                  <Textarea 
-                    value={formData.medicalNotes || ""} 
-                    onChange={e => setFormData({...formData, medicalNotes: e.target.value})} 
-                    placeholder="Any medical conditions, allergies, or special needs"
-                    rows={3}
+                <div>
+                  <Label htmlFor="shirtNumber">Shirt Number</Label>
+                  <Input
+                    id="shirtNumber"
+                    type="number"
+                    value={formData.shirtNumber}
+                    onChange={(e) =>
+                      setFormData({ ...formData, shirtNumber: e.target.value })
+                    }
                   />
                 </div>
-              </div>
+                <div>
+                  <Label htmlFor="membershipCategory">
+                    Membership Category
+                  </Label>
+                  <Select
+                    value={formData.membershipCategory}
+                    onValueChange={(value: MembershipCategory) =>
+                      setFormData({ ...formData, membershipCategory: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Standard">Standard</SelectItem>
+                      <SelectItem value="Sponsored">Sponsored</SelectItem>
+                      <SelectItem value="Scholarship">Scholarship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="joiningDate">Joining Date</Label>
+                  <Input
+                    id="joiningDate"
+                    type="date"
+                    value={formData.joiningDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, joiningDate: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="coachingCredits">Coaching Credits</Label>
+                  <Input
+                    id="coachingCredits"
+                    type="number"
+                    value={formData.coachingCredits}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        coachingCredits: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button type="submit">Save Member</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Import Member Data</DialogTitle>
-              <DialogDescription>
-                Upload a CSV or Excel file (.csv, .xlsx, .xls) with member information
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div className="space-y-2">
-                <Label>Default Team (Optional)</Label>
-                <Select value={importTargetTeam} onValueChange={setImportTargetTeam}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Auto-detect from file" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto-detect from file</SelectItem>
-                    {teamOptions.map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  If selected, ALL members in this file will be assigned to this team.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Upload File</Label>
-                <Input 
-                  type="file" 
-                  accept=".csv,.xlsx,.xls" 
-                  onChange={handleFileSelect}
+                {/* Contact & Safety */}
+                <h3 className="font-semibold text-lg mt-6">
+                  Contact & Safety
+                </h3>
+                <div>
+                  <Label htmlFor="contactNumber">Contact Number</Label>
+                  <Input
+                    id="contactNumber"
+                    value={formData.contactNumber}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        contactNumber: e.target.value,
+                      })
+                    }
+                    placeholder="+62..."
+                  />
+                </div>
+                <ContactLookupSection
+                  label="Primary Contact (Parent/Guardian)"
+                  contactType="primary"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Expected columns: First Name, Last Name, Email, Contact Number, Team, Category, Role, etc.
-                </p>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-6 w-6 text-yellow-500" />
-                Duplicate Member Found
-              </DialogTitle>
-              <DialogDescription>
-                Member {currentDuplicateIndex + 1} of {duplicates.length} duplicates
-              </DialogDescription>
-            </DialogHeader>
-
-            {currentDuplicate && (
-              <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="font-semibold text-lg mb-3">Importing:</p>
-                  <p className="text-sm">
-                    <strong>{currentDuplicate.imported.firstName} {currentDuplicate.imported.lastName}</strong>
-                    {currentDuplicate.imported.email && <span className="block text-gray-600">{currentDuplicate.imported.email}</span>}
-                    {currentDuplicate.imported.teamAssignment && <span className="block text-gray-600">Team: {currentDuplicate.imported.teamAssignment}</span>}
-                  </p>
+                <ContactLookupSection
+                  label="Secondary Contact"
+                  contactType="secondary"
+                />
+                <div>
+                  <Label htmlFor="medicalNotes">
+                    Medical Notes (Allergies, Conditions)
+                  </Label>
+                  <Textarea
+                    id="medicalNotes"
+                    value={formData.medicalNotes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, medicalNotes: e.target.value })
+                    }
+                    rows={4}
+                  />
                 </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="font-semibold text-lg mb-3">Already exists in database:</p>
-                  <p className="text-sm">
-                    <strong>{currentDuplicate.existing.firstName} {currentDuplicate.existing.lastName}</strong>
-                    {currentDuplicate.existing.email && <span className="block text-gray-600">{currentDuplicate.existing.email}</span>}
-                    {currentDuplicate.existing.teamAssignment && <span className="block text-gray-600">Team: {currentDuplicate.existing.teamAssignment}</span>}
-                  </p>
-                </div>
-
-                <p className="text-sm text-gray-600">How would you like to handle this duplicate?</p>
-              </div>
-            )}
-
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => handleDuplicateResolution("skip")}
-                className="w-full sm:w-auto"
-              >
-                Skip Import
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => handleDuplicateResolution("overwrite")}
-                className="w-full sm:w-auto"
-              >
-                Update Existing
-              </Button>
-              <Button 
-                onClick={() => handleDuplicateResolution("create")}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
-              >
-                Create Duplicate
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {importResults && importResults.errors.length === 0 ? (
-                  <>
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                    Import Successful!
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-6 w-6 text-yellow-600" />
-                    Import Completed with Issues
-                  </>
-                )}
-              </DialogTitle>
-              <DialogDescription>
-                Review the import results below
-              </DialogDescription>
-            </DialogHeader>
-
-            {importResults && (
-              <div className="space-y-6 py-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-green-50 p-4 rounded-lg text-center border border-green-200">
-                    <div className="text-3xl font-bold text-green-700">{importResults.successes.length}</div>
-                    <div className="text-sm text-green-600 mt-1">Successfully Imported</div>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-lg text-center border border-red-200">
-                    <div className="text-3xl font-bold text-red-700">{importResults.errors.length}</div>
-                    <div className="text-sm text-red-600 mt-1">Errors</div>
-                  </div>
-                  <div className="bg-yellow-50 p-4 rounded-lg text-center border border-yellow-200">
-                    <div className="text-3xl font-bold text-yellow-700">{importResults.warnings.length}</div>
-                    <div className="text-sm text-yellow-600 mt-1">Warnings</div>
-                  </div>
-                </div>
-
-                {importResults.errors.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 text-red-700 flex items-center gap-2">
-                      <XCircle className="w-5 h-5" />
-                      Errors ({importResults.errors.length})
-                    </h3>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {importResults.errors.map((error, idx) => (
-                        <div key={idx} className="bg-red-50 p-3 rounded border border-red-200">
-                          <div className="font-medium text-red-900">
-                            <span className="font-mono text-sm">Row {error.row}:</span> {error.message}
-                          </div>
-                          {error.field && (
-                            <div className="text-sm text-red-700 mt-1">
-                              Field: <span className="font-mono">{error.field}</span>
-                            </div>
-                          )}
-                          {error.data && (
-                            <div className="text-xs text-red-600 mt-1 font-mono bg-red-100 p-2 rounded">
-                              {JSON.stringify(error.data)}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {importResults.warnings.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 text-yellow-700 flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5" />
-                      Warnings ({importResults.warnings.length})
-                    </h3>
-                    <div className="space-y-1 max-h-48 overflow-y-auto">
-                      {importResults.warnings.map((warning, idx) => (
-                        <div key={idx} className="bg-yellow-50 p-2 rounded border border-yellow-200 text-sm">
-                          <span className="font-mono text-yellow-700">Row {warning.row}:</span>{" "}
-                          <span className="text-yellow-900">{warning.message}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {importResults.successes.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 text-green-700 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5" />
-                      Successfully Imported ({importResults.successes.length})
-                    </h3>
-                    <div className="max-h-60 overflow-y-auto">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {importResults.successes.map((item, idx) => (
-                          <div key={idx} className="bg-green-50 p-2 rounded border border-green-200 text-sm">
-                            <span className="font-mono text-xs text-green-700">Row {item.row}:</span>{" "}
-                            <span className="font-medium">{item.name}</span>
-                            {item.team && <span className="text-green-700"> → {item.team}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-900">
-                    📋 A detailed log of this import has been saved. View all import history in{" "}
-                    <button
-                      onClick={() => {
-                        setShowResultsDialog(false);
-                        window.location.href = "/import-logs";
-                      }}
-                      className="font-semibold underline hover:text-blue-700"
-                    >
-                      Import Logs
-                    </button>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button onClick={() => setShowResultsDialog(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={batchAssignDialogOpen} onOpenChange={setBatchAssignDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                Assign Membership IDs
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-                  <div>
-                    <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-300">
-                      {members.filter(m => !m.membershipId).length} members need IDs
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      This will assign unique membership IDs to all existing members who don't have one.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">ID Format</Label>
-                <div className="rounded-md border bg-muted/50 p-3">
-                  <p className="font-mono text-sm font-semibold">BBFC-YYYY-####</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    BBFC = Bali Bulldogs FC<br/>
-                    YYYY = Year joined<br/>
-                    #### = Sequential number (0001, 0002, etc.)
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                  These IDs are permanent
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Once assigned, membership IDs never change, even if the member moves teams or changes details.
-                </p>
               </div>
             </div>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setBatchAssignDialogOpen(false)}
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  resetForm();
+                }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleBatchAssignIds}
+                onClick={handleAddMember}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Assign IDs
+                Add Member
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+        {/* Edit Member Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Archive Member</DialogTitle>
-              <DialogDescription>
-                {memberToArchive && (
-                  <>
-                    Archive <strong>{memberToArchive.firstName} {memberToArchive.lastName}</strong>
-                    <br />
-                    <span className="text-xs text-muted-foreground mt-1 block">
-                      Member ID: {memberToArchive.membershipId}
-                    </span>
-                  </>
-                )}
-                <br />
-                This will remove them from active rosters but preserve their record for future reactivation.
-              </DialogDescription>
+              <DialogTitle>Edit Member</DialogTitle>
             </DialogHeader>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Reason for Archiving *</label>
-                <Select value={archiveReason} onValueChange={setArchiveReason}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select reason..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Joined Another Team">Joined Another Team</SelectItem>
-                    <SelectItem value="Left Bali">Left Bali</SelectItem>
-                    <SelectItem value="Retired from playing">Retired from playing</SelectItem>
-                    <SelectItem value="Longterm Injury">Longterm Injury</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {archiveReason === "Other" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Personal Information</h3>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Please specify *</label>
-                  <textarea
-                    value={archiveReasonDetails}
-                    onChange={(e) => setArchiveReasonDetails(e.target.value)}
-                    placeholder="Enter reason for archiving..."
-                    className="w-full px-3 py-2 border rounded-md min-h-[80px]"
+                  <Label htmlFor="edit-firstName">First Name *</Label>
+                  <Input
+                    id="edit-firstName"
+                    value={formData.firstName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, firstName: e.target.value })
+                    }
                   />
                 </div>
-              )}
+                <div>
+                  <Label htmlFor="edit-lastName">Last Name *</Label>
+                  <Input
+                    id="edit-lastName"
+                    value={formData.lastName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lastName: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-dateOfBirth">Date of Birth</Label>
+                  <Input
+                    id="edit-dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dateOfBirth: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-nationality">Nationality</Label>
+                  <Select
+                    value={formData.nationality}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, nationality: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select nationality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <Command>
+                        <CommandInput placeholder="Search country..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>No country found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-auto">
+                            {COUNTRIES.map((country) => (
+                              <SelectItem key={country} value={country}>
+                                {getCountryFlag(country)} {country}
+                              </SelectItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-address">Address (Area of Bali)</Label>
+                  <Input
+                    id="edit-address"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    placeholder="e.g., Canggu, Seminyak, Ubud"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-school">School</Label>
+                  <Select
+                    value={formData.school}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, school: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select school" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEFAULT_SCHOOLS.map((school) => (
+                        <SelectItem key={school} value={school}>
+                          {school}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-photo">Photo</Label>
+                  <Input
+                    id="edit-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePhotoUpload(e, true)}
+                  />
+                  {formData.photoUrl && (
+                    <ImageModal
+                      src={formData.photoUrl}
+                      alt="Member photo"
+                      className="mt-2 w-24 h-24 rounded-lg object-cover"
+                    />
+                  )}
+                </div>
+              </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> You can reactivate this member later if they return to the club. 
-                  Their membership ID and all information will be preserved.
-                </p>
+              {/* Club Details */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Club Details</h3>
+                <div>
+                  <Label htmlFor="edit-type">Type *</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: MemberType) =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Junior">Junior</SelectItem>
+                      <SelectItem value="Youth">Youth</SelectItem>
+                      <SelectItem value="Adult">Adult</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-role">Role *</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: MemberRole) =>
+                      setFormData({ ...formData, role: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Player">Player</SelectItem>
+                      <SelectItem value="Coach">Coach</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-team">Team Assignment</Label>
+                  <Select
+                    value={formData.team}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, team: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEAM_ORDER.map((team) => (
+                        <SelectItem key={team} value={team}>
+                          {team}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-position">Position</Label>
+                  <Select
+                    value={formData.position}
+                    onValueChange={(value: Position) =>
+                      setFormData({ ...formData, position: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POSITIONS.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-shirtNumber">Shirt Number</Label>
+                  <Input
+                    id="edit-shirtNumber"
+                    type="number"
+                    value={formData.shirtNumber}
+                    onChange={(e) =>
+                      setFormData({ ...formData, shirtNumber: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-membershipCategory">
+                    Membership Category
+                  </Label>
+                  <Select
+                    value={formData.membershipCategory}
+                    onValueChange={(value: MembershipCategory) =>
+                      setFormData({ ...formData, membershipCategory: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Standard">Standard</SelectItem>
+                      <SelectItem value="Sponsored">Sponsored</SelectItem>
+                      <SelectItem value="Scholarship">Scholarship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-joiningDate">Joining Date</Label>
+                  <Input
+                    id="edit-joiningDate"
+                    type="date"
+                    value={formData.joiningDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, joiningDate: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-coachingCredits">Coaching Credits</Label>
+                  <Input
+                    id="edit-coachingCredits"
+                    type="number"
+                    value={formData.coachingCredits}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        coachingCredits: parseInt(e.target.value) || 0,
+                      })
+                    }
+                  />
+                </div>
+
+                {/* Contact & Safety */}
+                <h3 className="font-semibold text-lg mt-6">
+                  Contact & Safety
+                </h3>
+                <div>
+                  <Label htmlFor="edit-contactNumber">Contact Number</Label>
+                  <Input
+                    id="edit-contactNumber"
+                    value={formData.contactNumber}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        contactNumber: e.target.value,
+                      })
+                    }
+                    placeholder="+62..."
+                  />
+                </div>
+                <ContactLookupSection
+                  label="Primary Contact (Parent/Guardian)"
+                  contactType="primary"
+                />
+                <ContactLookupSection
+                  label="Secondary Contact"
+                  contactType="secondary"
+                />
+                <div>
+                  <Label htmlFor="edit-medicalNotes">
+                    Medical Notes (Allergies, Conditions)
+                  </Label>
+                  <Textarea
+                    id="edit-medicalNotes"
+                    value={formData.medicalNotes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, medicalNotes: e.target.value })
+                    }
+                    rows={4}
+                  />
+                </div>
               </div>
             </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
-                  setArchiveDialogOpen(false);
-                  setMemberToArchive(null);
-                  setArchiveReason("");
-                  setArchiveReasonDetails("");
+                  if (selectedMember) {
+                    handleArchiveMember(selectedMember.id);
+                    setIsEditDialogOpen(false);
+                  }
+                }}
+                className={
+                  selectedMember?.archived
+                    ? "text-green-600 hover:text-green-700"
+                    : "text-orange-600 hover:text-orange-700"
+                }
+              >
+                {selectedMember?.archived ? "Unarchive" : "Archive"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedMember(null);
+                  resetForm();
                 }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleArchiveMember}
-                disabled={!archiveReason || (archiveReason === "Other" && !archiveReasonDetails.trim())}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleEditMember}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                Archive Member
+                Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+        {/* View Member Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-                Delete Member
-              </DialogTitle>
-              <DialogDescription>
-                {memberToDelete && (
-                  <>
-                    Are you sure you want to permanently delete <strong>{memberToDelete.firstName} {memberToDelete.lastName}</strong>?
-                    <br />
-                    <span className="text-xs text-muted-foreground mt-1 block">
-                      Member ID: {memberToDelete.membershipId}
-                    </span>
-                  </>
+              <DialogTitle>Member Profile</DialogTitle>
+            </DialogHeader>
+            {selectedMember && (
+              <div className="space-y-6">
+                {/* Header with Photo */}
+                <div className="flex items-start gap-6">
+                  {selectedMember.photoUrl ? (
+                    <ImageModal
+                      src={selectedMember.photoUrl}
+                      alt={`${selectedMember.firstName} ${selectedMember.lastName}`}
+                      className="w-32 h-32 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-4xl">
+                      {selectedMember.firstName[0]}
+                      {selectedMember.lastName[0]}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-2xl font-bold">
+                        {selectedMember.firstName} {selectedMember.lastName}
+                      </h2>
+                      <span className="text-3xl">
+                        {getCountryFlag(selectedMember.nationality)}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground font-mono text-sm mb-3">
+                      {selectedMember.membershipId}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Badge
+                        variant="outline"
+                        className={
+                          selectedMember.type === "Junior"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : selectedMember.type === "Youth"
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : "bg-green-50 text-green-700 border-green-200"
+                        }
+                      >
+                        {selectedMember.type}
+                      </Badge>
+                      <Badge variant="secondary">{selectedMember.role}</Badge>
+                      <Badge
+                        variant="outline"
+                        className={
+                          selectedMember.membershipCategory === "Scholarship"
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : selectedMember.membershipCategory === "Sponsored"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            : "bg-gray-50 text-gray-700 border-gray-200"
+                        }
+                      >
+                        {selectedMember.membershipCategory}
+                      </Badge>
+                      {selectedMember.position && (
+                        <Badge
+                          className={getPositionBadgeColor(
+                            selectedMember.position
+                          )}
+                        >
+                          {selectedMember.position}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsViewDialogOpen(false);
+                          openEditDialog(selectedMember);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      {selectedMember.contactNumber && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            window.open(
+                              `https://wa.me/${selectedMember.contactNumber.replace(
+                                /[^0-9]/g,
+                                ""
+                              )}`,
+                              "_blank"
+                            )
+                          }
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          WhatsApp
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-semibold mb-3">Personal Information</h3>
+                    <dl className="space-y-2 text-sm">
+                      <div>
+                        <dt className="text-muted-foreground">Date of Birth</dt>
+                        <dd className="font-medium">
+                          {selectedMember.dateOfBirth || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Nationality</dt>
+                        <dd className="font-medium flex items-center gap-2">
+                          <span>
+                            {getCountryFlag(selectedMember.nationality)}
+                          </span>
+                          {selectedMember.nationality || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Address</dt>
+                        <dd className="font-medium">
+                          {selectedMember.address || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Email</dt>
+                        <dd className="font-medium">
+                          {selectedMember.email || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">School</dt>
+                        <dd className="font-medium">
+                          {selectedMember.school || "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-3">Club Details</h3>
+                    <dl className="space-y-2 text-sm">
+                      <div>
+                        <dt className="text-muted-foreground">Team</dt>
+                        <dd className="font-medium">
+                          {selectedMember.team || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Position</dt>
+                        <dd className="font-medium">
+                          {selectedMember.position || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Shirt Number</dt>
+                        <dd className="font-medium">
+                          {selectedMember.shirtNumber || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Joining Date</dt>
+                        <dd className="font-medium">
+                          {selectedMember.joiningDate || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">
+                          Coaching Credits
+                        </dt>
+                        <dd className="font-medium">
+                          {selectedMember.coachingCredits}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div>
+                  <h3 className="font-semibold mb-3">Contact Information</h3>
+                  <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <dt className="text-muted-foreground">Contact Number</dt>
+                      <dd className="font-medium">
+                        {selectedMember.contactNumber || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Primary Contact {selectedMember.primaryContactMemberId && "🔗"}</dt>
+                      <dd className="font-medium">
+                        {selectedMember.primaryContact || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">
+                        Primary Contact Number
+                      </dt>
+                      <dd className="font-medium">
+                        {selectedMember.primaryContactNumber || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">
+                        Secondary Contact {selectedMember.secondaryContactMemberId && "🔗"}
+                      </dt>
+                      <dd className="font-medium">
+                        {selectedMember.secondaryContact || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">
+                        Secondary Contact Number
+                      </dt>
+                      <dd className="font-medium">
+                        {selectedMember.secondaryContactNumber || "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+
+                {/* Medical Notes */}
+                {selectedMember.medicalNotes && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Medical Notes</h3>
+                    <p className="text-sm bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      {selectedMember.medicalNotes}
+                    </p>
+                  </div>
                 )}
-                <br />
-                <span className="font-semibold text-red-600">This action cannot be undone.</span> All data for this member will be lost.
-              </DialogDescription>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Import CSV Dialog */}
+        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Import Members from CSV</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="delete-reason">Reason for deletion *</Label>
-                <Select value={deleteReason} onValueChange={setDeleteReason}>
-                  <SelectTrigger id="delete-reason">
-                    <SelectValue placeholder="Select a reason..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELETE_REASONS.map((reason) => (
-                      <SelectItem key={reason} value={reason}>
-                        {reason}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {deleteReason === "Other" && (
-                <div className="space-y-2">
-                  <Label>Please specify details (Optional)</Label>
-                  <Input placeholder="Additional details..." />
+            {importStep === "upload" && (
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <Label
+                    htmlFor="csv-upload"
+                    className="cursor-pointer text-blue-600 hover:text-blue-700"
+                  >
+                    Click to upload CSV file
+                  </Label>
+                  <Input
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Upload your Excel/CSV file with member data
+                  </p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDeleteDialogOpen(false);
-                  setMemberToDelete(null);
-                  setDeleteReason("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={confirmDelete}
-                disabled={!deleteReason}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Permanently Delete
-              </Button>
-            </DialogFooter>
+            {importStep === "map" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Map your CSV columns to member fields. Common fields have been
+                  auto-mapped.
+                </p>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {csvHeaders.map((header) => (
+                    <div
+                      key={header}
+                      className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <Label className="text-sm font-medium">{header}</Label>
+                      </div>
+                      <div className="flex-1">
+                        <Select
+                          value={csvMapping[header] || ""}
+                          onValueChange={(value) =>
+                            setCsvMapping({ ...csvMapping, [header]: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select field" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Skip</SelectItem>
+                            <SelectItem value="firstName">First Name</SelectItem>
+                            <SelectItem value="lastName">Last Name</SelectItem>
+                            <SelectItem value="email">Email</SelectItem>
+                            <SelectItem value="contactNumber">
+                              Contact Number
+                            </SelectItem>
+                            <SelectItem value="dateOfBirth">
+                              Date of Birth
+                            </SelectItem>
+                            <SelectItem value="nationality">
+                              Nationality
+                            </SelectItem>
+                            <SelectItem value="address">Address</SelectItem>
+                            <SelectItem value="team">Team</SelectItem>
+                            <SelectItem value="type">Type</SelectItem>
+                            <SelectItem value="role">Role</SelectItem>
+                            <SelectItem value="position">Position</SelectItem>
+                            <SelectItem value="shirtNumber">
+                              Shirt Number
+                            </SelectItem>
+                            <SelectItem value="membershipCategory">
+                              Membership Category
+                            </SelectItem>
+                            <SelectItem value="school">School</SelectItem>
+                            <SelectItem value="primaryContact">
+                              Primary Contact
+                            </SelectItem>
+                            <SelectItem value="primaryContactNumber">
+                              Primary Contact Number
+                            </SelectItem>
+                            <SelectItem value="medicalNotes">
+                              Medical Notes
+                            </SelectItem>
+                            <SelectItem value="coachingCredits">
+                              Coaching Credits
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={resetImportState}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handlePreviewImport}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Preview Import
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+
+            {importStep === "preview" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Preview: {previewData.length} members will be imported
+                </p>
+                <div className="max-h-96 overflow-y-auto border rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="text-left p-2">First Name</th>
+                        <th className="text-left p-2">Last Name</th>
+                        <th className="text-left p-2">Team</th>
+                        <th className="text-left p-2">Position</th>
+                        <th className="text-left p-2">Email</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.map((member, index) => (
+                        <tr key={index} className="border-t">
+                          <td className="p-2">{member.firstName || "—"}</td>
+                          <td className="p-2">{member.lastName || "—"}</td>
+                          <td className="p-2">{member.team || "—"}</td>
+                          <td className="p-2">{member.position || "—"}</td>
+                          <td className="p-2">{member.email || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={resetImportState}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmImport}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Confirm Import
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
-
-        <ImageModal
-          imageUrl={selectedImage?.url || ""}
-          name={selectedImage?.name || ""}
-          isOpen={!!selectedImage}
-          onClose={() => setSelectedImage(null)}
-        />
-      </div>
+      </Layout>
     </>
   );
 }
