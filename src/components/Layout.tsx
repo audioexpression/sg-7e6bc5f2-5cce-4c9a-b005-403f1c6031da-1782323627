@@ -91,9 +91,6 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
               <p className="font-bold text-lg text-yellow-300 mb-1">
-                PT DOJI BALI INDONESIA (Bali Bulldogs)
-              </p>
-              <p className="text-sm text-muted-foreground">
                 Bali Bulldogs (PT Bulldogs Pulau Dewata)
               </p>
               <p className="text-sm text-blue-200">
