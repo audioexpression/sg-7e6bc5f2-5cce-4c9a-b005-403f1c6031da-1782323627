@@ -514,6 +514,75 @@ export default function Members() {
     resetImportState();
   };
 
+  const handleExportCSV = () => {
+    const headers = [
+      "Membership ID",
+      "First Name",
+      "Last Name",
+      "Date of Birth",
+      "Nationality",
+      "Address",
+      "Email",
+      "Type",
+      "Role",
+      "Team",
+      "Position",
+      "Shirt Number",
+      "Membership Category",
+      "Joining Date",
+      "Contact Number",
+      "Primary Contact",
+      "Primary Contact Number",
+      "Secondary Contact",
+      "Secondary Contact Number",
+      "Medical Notes",
+      "Coaching Credits",
+      "School"
+    ];
+
+    const rows = members
+      .filter((m) => !m.archived)
+      .map((m) => [
+        m.membershipId,
+        m.firstName,
+        m.lastName,
+        m.dateOfBirth,
+        m.nationality,
+        m.address,
+        m.email,
+        m.type,
+        m.role,
+        m.team,
+        m.position || "",
+        m.shirtNumber,
+        m.membershipCategory,
+        m.joiningDate,
+        m.contactNumber,
+        m.primaryContact,
+        m.primaryContactNumber,
+        m.secondaryContact,
+        m.secondaryContactNumber,
+        m.medicalNotes,
+        m.coachingCredits,
+        m.school || ""
+      ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bali-bulldogs-members-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const resetImportState = () => {
     setCsvFile(null);
     setCsvData([]);
@@ -737,6 +806,15 @@ export default function Members() {
               />
             </div>
             <div className="flex gap-2">
+              <Button
+                onClick={handleExportCSV}
+                variant="outline"
+                className="gap-2"
+                disabled={members.filter((m) => !m.archived).length === 0}
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
               <Button
                 onClick={() => setIsImportDialogOpen(true)}
                 variant="outline"
