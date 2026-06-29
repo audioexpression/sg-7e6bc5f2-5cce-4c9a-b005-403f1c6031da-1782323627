@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import {
   Dialog,
   DialogContent,
@@ -411,49 +413,91 @@ export default function Members() {
     reader.readAsDataURL(file);
   };
 
-  // CSV Import Functions
+  // CSV/Excel Import Functions
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setCsvFile(file);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const rows = text.split("\n").map((row) => row.split(","));
-      const headers = rows[0].map((h) => h.trim());
-      const data = rows.slice(1).filter((row) => row.some((cell) => cell.trim()));
+    const fileName = file.name.toLowerCase();
 
-      setCsvHeaders(headers);
-      setCsvData(data);
-      setImportStep("map");
+    if (fileName.endsWith(".csv")) {
+      // Parse CSV with PapaParse
+      Papa.parse(file, {
+        complete: (results) => {
+          const data = results.data as string[][];
+          if (data.length === 0) return;
 
-      // Auto-map common field names
-      const autoMapping: CSVMapping = {};
-      headers.forEach((header) => {
-        const lower = header.toLowerCase().trim();
-        if (lower.includes("first") && lower.includes("name"))
-          autoMapping[header] = "firstName";
-        else if (lower.includes("last") && lower.includes("name"))
-          autoMapping[header] = "lastName";
-        else if (lower.includes("email")) autoMapping[header] = "email";
-        else if (lower.includes("phone") || lower.includes("contact"))
-          autoMapping[header] = "contactNumber";
-        else if (lower.includes("dob") || lower.includes("birth"))
-          autoMapping[header] = "dateOfBirth";
-        else if (lower.includes("national")) autoMapping[header] = "nationality";
-        else if (lower.includes("address")) autoMapping[header] = "address";
-        else if (lower.includes("team")) autoMapping[header] = "team";
-        else if (lower.includes("type")) autoMapping[header] = "type";
-        else if (lower.includes("role")) autoMapping[header] = "role";
-        else if (lower.includes("shirt") || lower.includes("number"))
-          autoMapping[header] = "shirtNumber";
-        else if (lower.includes("position")) autoMapping[header] = "position";
-        else if (lower.includes("school")) autoMapping[header] = "school";
+          const headers = data[0].map((h) => h.trim()).filter(h => h);
+          const rows = data.slice(1).filter((row) => 
+            row.some((cell) => cell && cell.trim())
+          );
+
+          setCsvHeaders(headers);
+          setCsvData(rows);
+          setImportStep("map");
+          applyAutoMapping(headers);
+        },
+        error: (error) => {
+          alert(`Error parsing CSV: ${error.message}`);
+        },
       });
-      setCsvMapping(autoMapping);
-    };
-    reader.readAsText(file);
+    } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+      // Parse Excel with XLSX
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
+
+          if (jsonData.length === 0) return;
+
+          const headers = jsonData[0].map((h) => String(h || "").trim()).filter(h => h);
+          const rows = jsonData.slice(1).filter((row) =>
+            row.some((cell) => cell && String(cell).trim())
+          );
+
+          setCsvHeaders(headers);
+          setCsvData(rows.map(row => row.map(cell => String(cell || ""))));
+          setImportStep("map");
+          applyAutoMapping(headers);
+        } catch (error) {
+          alert(`Error parsing Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert("Please upload a CSV or Excel file (.csv, .xlsx, .xls)");
+    }
+  };
+
+  const applyAutoMapping = (headers: string[]) => {
+    // Auto-map common field names
+    const autoMapping: CSVMapping = {};
+    headers.forEach((header) => {
+      const lower = header.toLowerCase().trim();
+      if (lower.includes("first") && lower.includes("name"))
+        autoMapping[header] = "firstName";
+      else if (lower.includes("last") && lower.includes("name"))
+        autoMapping[header] = "lastName";
+      else if (lower.includes("email")) autoMapping[header] = "email";
+      else if (lower.includes("phone") || lower.includes("contact"))
+        autoMapping[header] = "contactNumber";
+      else if (lower.includes("dob") || lower.includes("birth"))
+        autoMapping[header] = "dateOfBirth";
+      else if (lower.includes("national")) autoMapping[header] = "nationality";
+      else if (lower.includes("address")) autoMapping[header] = "address";
+      else if (lower.includes("team")) autoMapping[header] = "team";
+      else if (lower.includes("type")) autoMapping[header] = "type";
+      else if (lower.includes("role")) autoMapping[header] = "role";
+      else if (lower.includes("shirt") || lower.includes("number"))
+        autoMapping[header] = "shirtNumber";
+      else if (lower.includes("position")) autoMapping[header] = "position";
+      else if (lower.includes("school")) autoMapping[header] = "school";
+    });
+    setCsvMapping(autoMapping);
   };
 
   const handlePreviewImport = () => {
@@ -2178,17 +2222,17 @@ export default function Members() {
                     htmlFor="csv-upload"
                     className="cursor-pointer text-blue-600 hover:text-blue-700"
                   >
-                    Click to upload CSV file
+                    Click to upload CSV or Excel file
                   </Label>
                   <Input
                     id="csv-upload"
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
                   <p className="text-sm text-muted-foreground mt-2">
-                    Upload your Excel/CSV file with member data
+                    Upload your Excel (.xlsx, .xls) or CSV file with member data
                   </p>
                 </div>
               </div>
