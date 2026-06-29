@@ -11,8 +11,8 @@ Update Next.js from 15.2.8 to the latest stable version, ensuring all related de
 
 ## Checklist
 - [x] Check current Next.js version (15.2.8)
-- [ ] Update Next.js to latest version
-- [ ] Update React and React DOM if needed
-- [ ] Update ESLint config
+- [x] Update Next.js to latest version
+- [x] Update React and React DOM if needed
+- [x] Update ESLint config
 - [ ] Install updated dependencies
 - [ ] Verify build passes
