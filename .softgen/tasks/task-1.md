@@ -14,5 +14,11 @@ Update Next.js from 15.2.8 to the latest stable version, ensuring all related de
 - [x] Update Next.js to latest version
 - [x] Update React and React DOM if needed
 - [x] Update ESLint config
-- [ ] Install updated dependencies
-- [ ] Verify build passes
+- [x] Install updated dependencies
+- [x] Verify build passes
+
+## Acceptance
+- Next.js updated from 15.2.8 to 15.5.7
+- Build passes without errors
+- All pages compile successfully
+- Config deprecation warnings resolved
