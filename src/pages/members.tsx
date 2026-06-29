@@ -53,6 +53,7 @@ import { Badge } from "@/components/ui/badge";
 import { ImageModal } from "@/components/ImageModal";
 import { COUNTRIES, DEFAULT_SCHOOLS, TEAM_ORDER, POSITIONS, getCountryFlag } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { generateSampleMembers } from "@/lib/sample-data";
 
 type MemberType = "Junior" | "Youth" | "Adult";
 type MemberRole = "Player" | "Coach" | "Admin";
@@ -806,6 +807,19 @@ export default function Members() {
               />
             </div>
             <div className="flex gap-2">
+              {members.length === 0 && (
+                <Button
+                  onClick={() => {
+                    const sampleData = generateSampleMembers();
+                    saveMembers(sampleData);
+                  }}
+                  variant="outline"
+                  className="gap-2 border-dashed border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Load Sample Data
+                </Button>
+              )}
               <Button
                 onClick={handleExportCSV}
                 variant="outline"
