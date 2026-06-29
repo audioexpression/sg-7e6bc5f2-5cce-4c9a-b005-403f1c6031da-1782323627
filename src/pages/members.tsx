@@ -2211,16 +2211,16 @@ export default function Members() {
                       </div>
                       <div className="flex-1">
                         <Select
-                          value={csvMapping[header] || ""}
+                          value={csvMapping[header] || "_skip"}
                           onValueChange={(value) =>
-                            setCsvMapping({ ...csvMapping, [header]: value })
+                            setCsvMapping({ ...csvMapping, [header]: value === "_skip" ? "" : value })
                           }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select field" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Skip</SelectItem>
+                            <SelectItem value="_skip">Skip</SelectItem>
                             <SelectItem value="firstName">First Name</SelectItem>
                             <SelectItem value="lastName">Last Name</SelectItem>
                             <SelectItem value="email">Email</SelectItem>
